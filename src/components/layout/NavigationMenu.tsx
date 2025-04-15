@@ -10,7 +10,8 @@ import {
   FileText, 
   Settings,
   KanbanSquare,
-  FolderKanban
+  FolderKanban,
+  FileSpreadsheet
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
@@ -50,8 +51,14 @@ const NavigationMenu = () => {
           <SidebarMenu>
             {mainNavItems.map((item) => (
               <SidebarMenuItem key={item.path}>
-                <SidebarMenuButton asChild active={location.pathname === item.path}>
-                  <Link to={item.path} className="flex items-center gap-2">
+                <SidebarMenuButton asChild>
+                  <Link 
+                    to={item.path} 
+                    className={cn(
+                      "flex items-center gap-2",
+                      location.pathname === item.path && "bg-accent text-accent-foreground"
+                    )}
+                  >
                     <item.icon className="h-4 w-4" />
                     <span>{item.label}</span>
                   </Link>
@@ -68,8 +75,14 @@ const NavigationMenu = () => {
           <SidebarMenu>
             {departmentsNavItems.map((item) => (
               <SidebarMenuItem key={item.path}>
-                <SidebarMenuButton asChild active={location.pathname === item.path}>
-                  <Link to={item.path} className="flex items-center gap-2">
+                <SidebarMenuButton asChild>
+                  <Link 
+                    to={item.path} 
+                    className={cn(
+                      "flex items-center gap-2",
+                      location.pathname === item.path && "bg-accent text-accent-foreground"
+                    )}
+                  >
                     <item.icon className="h-4 w-4" />
                     <span>{item.label}</span>
                   </Link>
@@ -84,8 +97,14 @@ const NavigationMenu = () => {
         <SidebarGroupContent>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild active={location.pathname === "/settings"}>
-                <Link to="/settings" className="flex items-center gap-2">
+              <SidebarMenuButton asChild>
+                <Link 
+                  to="/settings" 
+                  className={cn(
+                    "flex items-center gap-2",
+                    location.pathname === "/settings" && "bg-accent text-accent-foreground"
+                  )}
+                >
                   <Settings className="h-4 w-4" />
                   <span>Settings</span>
                 </Link>
