@@ -1,0 +1,190 @@
+
+import React, { useState } from "react";
+import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
+import { MoreHorizontal, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+export interface KanbanTask {
+  id: string;
+  title: string;
+  description?: string;
+  priority: "low" | "medium" | "high";
+  dueDate?: string;
+  assignee?: {
+    name: string;
+    avatar?: string;
+    initials: string;
+  };
+}
+
+export interface KanbanColumn {
+  id: string;
+  title: string;
+  tasks: KanbanTask[];
+}
+
+interface ProjectKanbanProps {
+  initialColumns: KanbanColumn[];
+  onTaskMove?: (result: any) => void;
+}
+
+const ProjectKanban: React.FC<ProjectKanbanProps> = ({ initialColumns, onTaskMove }) => {
+  const [columns, setColumns] = useState<KanbanColumn[]>(initialColumns);
+
+  const priorityColors = {
+    low: "bg-blue-500",
+    medium: "bg-amber-500",
+    high: "bg-red-500",
+  };
+
+  const handleDragEnd = (result: any) => {
+    const { destination, source, draggableId } = result;
+
+    // Dropped outside a droppable area
+    if (!destination) return;
+
+    // Dropped in the same position
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
+
+    // Find the task that was dragged
+    const sourceColumn = columns.find(col => col.id === source.droppableId);
+    const destinationColumn = columns.find(col => col.id === destination.droppableId);
+
+    if (!sourceColumn || !destinationColumn) return;
+
+    // Task moved within the same column
+    if (source.droppableId === destination.droppableId) {
+      const newTasks = Array.from(sourceColumn.tasks);
+      const [removed] = newTasks.splice(source.index, 1);
+      newTasks.splice(destination.index, 0, removed);
+
+      const newColumns = columns.map(col => 
+        col.id === sourceColumn.id ? { ...col, tasks: newTasks } : col
+      );
+
+      setColumns(newColumns);
+    } 
+    // Task moved to a different column
+    else {
+      const sourceTasks = Array.from(sourceColumn.tasks);
+      const [removed] = sourceTasks.splice(source.index, 1);
+      const destinationTasks = Array.from(destinationColumn.tasks);
+      destinationTasks.splice(destination.index, 0, removed);
+
+      const newColumns = columns.map(col => {
+        if (col.id === source.droppableId) {
+          return { ...col, tasks: sourceTasks };
+        }
+        if (col.id === destination.droppableId) {
+          return { ...col, tasks: destinationTasks };
+        }
+        return col;
+      });
+
+      setColumns(newColumns);
+    }
+
+    if (onTaskMove) {
+      onTaskMove(result);
+    }
+  };
+
+  return (
+    <DragDropContext onDragEnd={handleDragEnd}>
+      <div className="flex gap-4 overflow-x-auto pb-4">
+        {columns.map((column) => (
+          <div key={column.id} className="kanban-column">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium text-sm">{column.title} ({column.tasks.length})</h3>
+              <Button variant="ghost" size="icon" className="h-7 w-7">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <Droppable droppableId={column.id}>
+              {(provided) => (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className="min-h-[200px]"
+                >
+                  {column.tasks.map((task, index) => (
+                    <Draggable key={task.id} draggableId={task.id} index={index}>
+                      {(provided) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          className="task-card"
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-medium text-sm">{task.title}</h4>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6">
+                                  <MoreHorizontal className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-36">
+                                <DropdownMenuItem>Edit</DropdownMenuItem>
+                                <DropdownMenuItem>Assign</DropdownMenuItem>
+                                <DropdownMenuItem className="text-red-500">Delete</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                          {task.description && (
+                            <p className="text-xs text-muted-foreground mb-2">
+                              {task.description}
+                            </p>
+                          )}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {task.assignee && (
+                                <Avatar className="h-5 w-5">
+                                  <AvatarImage src={task.assignee.avatar} />
+                                  <AvatarFallback className="text-[10px]">
+                                    {task.assignee.initials}
+                                  </AvatarFallback>
+                                </Avatar>
+                              )}
+                              {task.dueDate && (
+                                <span className="text-xs text-muted-foreground">
+                                  {task.dueDate}
+                                </span>
+                              )}
+                            </div>
+                            <Badge 
+                              className={`${priorityColors[task.priority]} text-white text-xs px-1.5 py-0.5`}
+                            >
+                              {task.priority}
+                            </Badge>
+                          </div>
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </div>
+        ))}
+      </div>
+    </DragDropContext>
+  );
+};
+
+export default ProjectKanban;

@@ -1,0 +1,129 @@
+
+import React from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { MoreHorizontal, Plus } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+export interface Lead {
+  id: string;
+  name: string;
+  company: string;
+  email: string;
+  phone: string;
+  status: "new" | "contacted" | "qualified" | "proposal" | "negotiation" | "won" | "lost";
+  source: string;
+  assignedTo: {
+    name: string;
+    avatar?: string;
+    initials: string;
+  };
+  date: string;
+}
+
+interface LeadsListProps {
+  leads: Lead[];
+}
+
+const LeadsList: React.FC<LeadsListProps> = ({ leads }) => {
+  const statusColors: Record<Lead["status"], string> = {
+    new: "bg-purple-500",
+    contacted: "bg-blue-500",
+    qualified: "bg-indigo-500",
+    proposal: "bg-amber-500",
+    negotiation: "bg-orange-500",
+    won: "bg-green-500",
+    lost: "bg-red-500",
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>Leads</CardTitle>
+        <Button size="sm">
+          <Plus className="mr-2 h-4 w-4" />
+          Add Lead
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Company</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Source</TableHead>
+              <TableHead>Assigned To</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead className="w-[50px]"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {leads.map((lead) => (
+              <TableRow key={lead.id}>
+                <TableCell>
+                  <div className="font-medium">{lead.name}</div>
+                  <div className="text-sm text-muted-foreground">{lead.email}</div>
+                </TableCell>
+                <TableCell>{lead.company}</TableCell>
+                <TableCell>
+                  <Badge className={`${statusColors[lead.status]} text-white`}>
+                    {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
+                  </Badge>
+                </TableCell>
+                <TableCell>{lead.source}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={lead.assignedTo.avatar} />
+                      <AvatarFallback>{lead.assignedTo.initials}</AvatarFallback>
+                    </Avatar>
+                    <span>{lead.assignedTo.name}</span>
+                  </div>
+                </TableCell>
+                <TableCell>{lead.date}</TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem>View Details</DropdownMenuItem>
+                      <DropdownMenuItem>Edit Lead</DropdownMenuItem>
+                      <DropdownMenuItem>Convert to Project</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-red-500">Delete Lead</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default LeadsList;
