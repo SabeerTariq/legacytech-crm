@@ -3,7 +3,7 @@ import React from "react";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Bell, LogOut, Menu, MessageCircle, User } from "lucide-react";
+import { Bell, LogOut, Menu, MessageCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import NavigationMenu from "@/components/layout/NavigationMenu";
@@ -67,10 +67,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         <div className="flex flex-col flex-1 overflow-hidden">
           <header className="h-14 border-b flex items-center justify-between px-6">
             <div className="flex items-center">
-              <SidebarTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Menu className="h-5 w-5" />
-                </Button>
+              {/* Fix: Remove asChild from SidebarTrigger or ensure it has a single child */}
+              <SidebarTrigger>
+                <Menu className="h-5 w-5" />
               </SidebarTrigger>
               <div className="ml-4 text-lg font-medium">Command Center</div>
             </div>
