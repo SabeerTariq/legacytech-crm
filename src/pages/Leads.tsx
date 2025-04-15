@@ -4,14 +4,14 @@ import MainLayout from "@/components/layout/MainLayout";
 import LeadsList, { Lead } from "@/components/leads/LeadsList";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Upload } from "lucide-react";
+import { Search, Upload, UserPlus } from "lucide-react";
 import LeadUploadModal from "@/components/leads/LeadUploadModal";
+import LeadAddModal from "@/components/leads/LeadAddModal";
 
 const Leads = () => {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
-  
-  // Mock lead data
-  const leads: Lead[] = [
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [leads, setLeads] = useState<Lead[]>([
     {
       id: "1",
       name: "John Smith",
@@ -96,11 +96,15 @@ const Leads = () => {
       },
       date: "1 month ago",
     },
-  ];
+  ]);
 
   const handleUploadComplete = () => {
     // In a real app, we would refresh leads data here
     console.log("Upload completed");
+  };
+
+  const handleAddLead = (newLead: Lead) => {
+    setLeads(prevLeads => [newLead, ...prevLeads]);
   };
 
   return (
@@ -124,16 +128,31 @@ const Leads = () => {
               <Upload className="mr-2 h-4 w-4" />
               Upload
             </Button>
-            <Button className="sm:flex-1">Add Lead</Button>
+            <Button 
+              className="sm:flex-1"
+              onClick={() => setAddModalOpen(true)}
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add Lead
+            </Button>
           </div>
         </div>
 
-        <LeadsList leads={leads} />
+        <LeadsList 
+          leads={leads}
+          onAddLeadClick={() => setAddModalOpen(true)}
+        />
         
         <LeadUploadModal 
           open={uploadModalOpen} 
           onOpenChange={setUploadModalOpen} 
           onUploadComplete={handleUploadComplete}
+        />
+
+        <LeadAddModal
+          open={addModalOpen}
+          onOpenChange={setAddModalOpen}
+          onLeadAdded={handleAddLead}
         />
       </div>
     </MainLayout>

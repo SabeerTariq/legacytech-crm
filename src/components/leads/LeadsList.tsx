@@ -40,9 +40,10 @@ export interface Lead {
 
 interface LeadsListProps {
   leads: Lead[];
+  onAddLeadClick?: () => void;
 }
 
-const LeadsList: React.FC<LeadsListProps> = ({ leads }) => {
+const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick }) => {
   const statusColors: Record<Lead["status"], string> = {
     new: "bg-purple-500",
     contacted: "bg-blue-500",
@@ -57,7 +58,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads }) => {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Leads</CardTitle>
-        <Button size="sm">
+        <Button size="sm" onClick={onAddLeadClick}>
           <Plus className="mr-2 h-4 w-4" />
           Add Lead
         </Button>
