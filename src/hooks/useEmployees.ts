@@ -18,6 +18,7 @@ export const useEmployees = (department: string) => {
 
       return data.map(employee => ({
         ...employee,
+        joinDate: employee.join_date,
         performance: employee.performance as EmployeeProfile["performance"]
       }));
     }
