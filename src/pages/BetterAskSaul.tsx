@@ -39,14 +39,22 @@ const BetterAskSaul = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw new Error(`Failed to call Supabase function: ${error.message}`);
+      }
+
+      if (!data || !data.response) {
+        console.error('Invalid response from Supabase function:', data);
+        throw new Error('Invalid response from Saul');
+      }
 
       setMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
     } catch (error) {
       console.error('Error:', error);
       toast({
         title: "Error",
-        description: "Failed to get response from Saul",
+        description: `Failed to get response from Saul: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -96,7 +104,7 @@ const BetterAskSaul = () => {
                 disabled={isLoading}
               />
               <Button type="submit" disabled={isLoading}>
-                Send
+                {isLoading ? 'Thinking...' : 'Send'}
               </Button>
             </form>
           </CardContent>
