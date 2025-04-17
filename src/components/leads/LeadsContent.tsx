@@ -15,12 +15,15 @@ const LeadsContent = ({
   isLoading,
   onLeadClick,
 }: LeadsContentProps) => {
-  const filteredLeads = leads.filter(lead => searchQuery ? 
-    lead.client_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    (lead.company && lead.company.toLowerCase().includes(searchQuery.toLowerCase())) || 
-    lead.email_address.toLowerCase().includes(searchQuery.toLowerCase())
-    : true
-  );
+  // Simplified filtering logic to ensure all leads are displayed properly
+  const filteredLeads = searchQuery
+    ? leads.filter(
+        (lead) =>
+          lead.client_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (lead.company && lead.company.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          lead.email_address.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : leads;
 
   console.log("Leads data:", leads);
   console.log("Filtered leads:", filteredLeads);

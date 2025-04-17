@@ -15,7 +15,7 @@ export const useLeads = () => {
   } = useQuery({
     queryKey: ['leads'],
     queryFn: async () => {
-      // Remove user filtering to see all leads
+      // Fetch all leads without user filtering
       const { data: leadsData, error: leadsError } = await supabase
         .from('leads')
         .select(`
@@ -94,8 +94,10 @@ export const useLeads = () => {
       console.log("Processed leads:", processedLeads);
       return processedLeads;
     },
-    // Enable the query regardless of user authentication status
+    // Always enable the query to fetch leads regardless of user authentication status
     enabled: true,
+    // Refetch data periodically to ensure we have the latest data
+    refetchInterval: 30000,
   });
 
   const addLeadMutation = useMutation({

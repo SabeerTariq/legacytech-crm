@@ -24,6 +24,8 @@ const Leads = () => {
     deleteLeadMutation,
   } = useLeads();
 
+  console.log("All leads in Leads page:", leads);
+
   const handleAddLead = (newLead: Omit<Lead, 'id' | 'assignedTo' | 'date'>) => {
     addLeadMutation.mutate(newLead);
     setAddModalOpen(false);
