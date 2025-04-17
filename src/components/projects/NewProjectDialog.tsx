@@ -68,12 +68,7 @@ const NewProjectDialog: React.FC<NewProjectDialogProps> = ({
   });
 
   const onSubmit = (values: ProjectFormValues) => {
-    // Here we would typically save to a database
     onProjectCreated(values);
-    toast({
-      title: "Project created",
-      description: `Project "${values.name}" has been created successfully.`,
-    });
   };
 
   return (
