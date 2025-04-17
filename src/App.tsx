@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -20,14 +19,13 @@ import NotFound from "./pages/NotFound";
 import Calendar from "./pages/Calendar";
 import Documents from "./pages/Documents";
 import Settings from "./pages/Settings";
-import BetterAskSaul from "./pages/BetterAskSaul"; // New BetterAskSaul page import
 
 // Auth Pages
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
-import Payments from './pages/Payments';
+import Payments from './pages/Payments';  // New Payments page import
 
 // Department Pages
 import Design from "./pages/departments/Design";
@@ -72,7 +70,6 @@ const App = () => (
             <Route path="/documents" element={<ProtectedRoute><Documents /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
-            <Route path="/better-ask-saul" element={<ProtectedRoute><BetterAskSaul /></ProtectedRoute>} />
             
             {/* Department routes */}
             <Route path="/departments/design" element={<ProtectedRoute><Design /></ProtectedRoute>} />
