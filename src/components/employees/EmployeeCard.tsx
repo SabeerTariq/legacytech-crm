@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
@@ -102,7 +101,7 @@ const EmployeeCard = ({ employee, onEdit }: EmployeeCardProps) => {
           </div>
           <Progress 
             value={progressValue} 
-            className="h-2" 
+            className="h-2"
             indicatorClassName={cn(
               progressValue >= 70 ? "bg-green-500" : "bg-red-500"
             )}

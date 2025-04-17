@@ -4,6 +4,7 @@ import { Users, Target, BarChart } from "lucide-react";
 import { useEmployees } from "@/hooks/useEmployees";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import EmployeeCard from "@/components/employees/EmployeeCard";
 import { cn } from "@/lib/utils";
 
 interface TeamStats {
@@ -36,65 +37,77 @@ const TeamPerformanceCard = ({ department }: { department: string }) => {
     : 0;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">{department} Team</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Team Size</span>
-          </div>
-          <span className="text-2xl font-bold">{stats.totalEmployees}</span>
-        </div>
-
-        <div className={cn(
-          "space-y-2 rounded-lg p-3",
-          avgSalesProgress >= 70 ? "bg-green-500/10" : "bg-red-500/10"
-        )}>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">{department} Team</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Target className="h-4 w-4" />
-              <span className="text-sm">Average Sales Progress</span>
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Team Size</span>
             </div>
+            <span className="text-2xl font-bold">{stats.totalEmployees}</span>
           </div>
-          <Progress 
-            value={avgSalesProgress} 
-            className="h-2"
-            className={cn(
-              avgSalesProgress >= 70 ? "bg-green-500" : "bg-red-500"
-            )}
-          />
-          <div className="flex justify-between text-xs">
-            <span>Team Average</span>
-            <Badge variant={avgSalesProgress >= 70 ? "default" : "destructive"}>
-              {avgSalesProgress.toFixed(1)}%
-            </Badge>
-          </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <BarChart className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">Projects</span>
+          <div className={cn(
+            "space-y-2 rounded-lg p-3",
+            avgSalesProgress >= 70 ? "bg-green-500/10" : "bg-red-500/10"
+          )}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                <span className="text-sm">Average Sales Progress</span>
+              </div>
             </div>
-            <p className="text-2xl font-bold">{stats.totalProjectsCompleted}</p>
+            <Progress 
+              value={avgSalesProgress} 
+              className={cn(
+                "h-2",
+                avgSalesProgress >= 70 ? "bg-green-500" : "bg-red-500"
+              )}
+            />
+            <div className="flex justify-between text-xs">
+              <span>Team Average</span>
+              <Badge variant={avgSalesProgress >= 70 ? "default" : "destructive"}>
+                {avgSalesProgress.toFixed(1)}%
+              </Badge>
+            </div>
           </div>
-          <div className="space-y-1">
-            <span className="text-sm">Tasks</span>
-            <p className="text-2xl font-bold">{stats.totalTasksCompleted}</p>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <BarChart className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">Projects</span>
+              </div>
+              <p className="text-2xl font-bold">{stats.totalProjectsCompleted}</p>
+            </div>
+            <div className="space-y-1">
+              <span className="text-sm">Tasks</span>
+              <p className="text-2xl font-bold">{stats.totalTasksCompleted}</p>
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {employees.map((employee) => (
+          <EmployeeCard 
+            key={employee.id} 
+            employee={employee} 
+            onEdit={() => {}} 
+          />
+        ))}
+      </div>
+    </div>
   );
 };
 
 const TeamPerformance = () => {
   return (
-    <div className="grid gap-6 md:grid-cols-2">
+    <div className="grid gap-6">
       <TeamPerformanceCard department="Business Development" />
       <TeamPerformanceCard department="Project Management" />
     </div>
