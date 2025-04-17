@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,6 +15,7 @@ export const useLeads = () => {
   } = useQuery({
     queryKey: ['leads'],
     queryFn: async () => {
+      // Remove user filtering to see all leads
       const { data: leadsData, error: leadsError } = await supabase
         .from('leads')
         .select(`
@@ -47,6 +47,8 @@ export const useLeads = () => {
         return [];
       }
 
+      console.log("Fetched leads from Supabase:", leadsData);
+      
       const processedLeads = await Promise.all(leadsData.map(async (lead) => {
         let profileData = null;
         
@@ -89,9 +91,11 @@ export const useLeads = () => {
         };
       }));
 
+      console.log("Processed leads:", processedLeads);
       return processedLeads;
     },
-    enabled: !!user,
+    // Enable the query regardless of user authentication status
+    enabled: true,
   });
 
   const addLeadMutation = useMutation({

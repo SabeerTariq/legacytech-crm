@@ -1,7 +1,6 @@
 
 import React from "react";
 import LeadsList, { Lead } from "@/components/leads/LeadsList";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface LeadsContentProps {
   leads: Lead[];
