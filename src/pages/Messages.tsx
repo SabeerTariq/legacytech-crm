@@ -57,50 +57,53 @@ const Messages: React.FC = () => {
   }, [isMobile]);
 
   useEffect(() => {
-    // Fetch users for the MultiSelect
-    const fetchUsers = async () => {
-      if (!user) return;
+    // Fetch users for the MultiSelect when the dialog is opened
+    if (isNewConversationDialogOpen && user) {
+      fetchUsers();
+    }
+  }, [isNewConversationDialogOpen, user]);
 
-      setIsLoadingUsers(true);
+  const fetchUsers = async () => {
+    if (!user) return;
 
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, full_name')
-          .neq('id', user.id); // Exclude current user
+    setIsLoadingUsers(true);
+    setUsers([]); // Reset users to prevent issues with stale data
 
-        if (error) {
-          console.error('Error fetching users:', error);
-          toast({
-            title: "Error fetching users",
-            description: error.message,
-            variant: "destructive"
-          });
-          setUsers([]);
-          return;
-        }
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .neq('id', user.id); // Exclude current user
 
-        if (data) {
-          const formattedUsers = data.map(u => ({
-            value: u.id,
-            label: u.full_name || u.id
-          }));
-          
-          setUsers(formattedUsers);
-        } else {
-          // Initialize with empty array if no data
-          setUsers([]);
-        }
-      } catch (err) {
-        console.error('Exception fetching users:', err);
-        setUsers([]);
-      } finally {
-        setIsLoadingUsers(false);
+      if (error) {
+        console.error('Error fetching users:', error);
+        toast({
+          title: "Error fetching users",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
       }
-    };
 
-    fetchUsers();
-  }, [user, toast]);
+      if (data) {
+        const formattedUsers = data.map(u => ({
+          value: u.id,
+          label: u.full_name || u.id
+        }));
+        
+        setUsers(formattedUsers);
+      }
+    } catch (err) {
+      console.error('Exception fetching users:', err);
+      toast({
+        title: "Error",
+        description: "Could not load users. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
 
   const handleSendMessage = () => {
     if (selectedConversation && newMessageText.trim()) {
@@ -143,6 +146,14 @@ const Messages: React.FC = () => {
     conv.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Reset participant selection when dialog closes
+  const handleDialogOpenChange = (open: boolean) => {
+    setIsNewConversationDialogOpen(open);
+    if (!open) {
+      setSelectedParticipants([]);
+    }
+  };
+
   return (
     <MainLayout>
       <div className="h-[calc(100vh-8rem)] flex flex-col">
@@ -167,7 +178,7 @@ const Messages: React.FC = () => {
           
           <Dialog 
             open={isNewConversationDialogOpen} 
-            onOpenChange={setIsNewConversationDialogOpen}
+            onOpenChange={handleDialogOpenChange}
           >
             <DialogTrigger asChild>
               <Button variant="outline">
