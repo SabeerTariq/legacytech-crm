@@ -30,6 +30,10 @@ import Payments from './pages/Payments';  // New Payments page import
 // Department Pages
 import Design from "./pages/departments/Design";
 import Development from "./pages/departments/Development";
+import Marketing from "./pages/departments/Marketing";
+import Content from "./pages/departments/Content";
+import BusinessDevelopment from "./pages/departments/BusinessDevelopment";
+import ProjectManagement from "./pages/departments/ProjectManagement";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -70,10 +74,10 @@ const App = () => (
             {/* Department routes */}
             <Route path="/departments/design" element={<ProtectedRoute><Design /></ProtectedRoute>} />
             <Route path="/departments/development" element={<ProtectedRoute><Development /></ProtectedRoute>} />
-            <Route path="/departments/marketing" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
-            <Route path="/departments/content" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
-            <Route path="/departments/business-development" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
-            <Route path="/departments/project-management" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+            <Route path="/departments/marketing" element={<ProtectedRoute><Marketing /></ProtectedRoute>} />
+            <Route path="/departments/content" element={<ProtectedRoute><Content /></ProtectedRoute>} />
+            <Route path="/departments/business-development" element={<ProtectedRoute><BusinessDevelopment /></ProtectedRoute>} />
+            <Route path="/departments/project-management" element={<ProtectedRoute><ProjectManagement /></ProtectedRoute>} />
             
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
