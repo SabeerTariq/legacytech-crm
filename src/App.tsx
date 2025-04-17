@@ -10,6 +10,7 @@ import Projects from "./pages/Projects";
 import Tasks from "./pages/Tasks";
 import Messages from "./pages/Messages";
 import SalesForm from "./pages/SalesForm";
+import MarketingAutomation from "./pages/MarketingAutomation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/sales-form" element={<SalesForm />} />
+          <Route path="/automation" element={<MarketingAutomation />} />
           {/* Department routes */}
           <Route path="/departments/design" element={<Tasks />} />
           <Route path="/departments/development" element={<Tasks />} />

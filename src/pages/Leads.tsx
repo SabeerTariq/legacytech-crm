@@ -25,6 +25,7 @@ const Leads = () => {
         initials: "AJ",
       },
       date: "Today",
+      value: 2500,
     },
     {
       id: "2",
@@ -39,6 +40,7 @@ const Leads = () => {
         initials: "MG",
       },
       date: "Yesterday",
+      value: 3800,
     },
     {
       id: "3",
@@ -53,6 +55,7 @@ const Leads = () => {
         initials: "JS",
       },
       date: "3 days ago",
+      value: 5200,
     },
     {
       id: "4",
@@ -67,6 +70,7 @@ const Leads = () => {
         initials: "SW",
       },
       date: "1 week ago",
+      value: 12000,
     },
     {
       id: "5",
@@ -81,6 +85,7 @@ const Leads = () => {
         initials: "DL",
       },
       date: "2 weeks ago",
+      value: 18500,
     },
     {
       id: "6",
@@ -95,6 +100,7 @@ const Leads = () => {
         initials: "AJ",
       },
       date: "1 month ago",
+      value: 8900,
     },
   ]);
 

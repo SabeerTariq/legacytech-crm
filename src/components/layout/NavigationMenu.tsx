@@ -11,7 +11,8 @@ import {
   Settings,
   KanbanSquare,
   FolderKanban,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Zap
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
@@ -32,6 +33,7 @@ const NavigationMenu = () => {
     { icon: Briefcase, label: "Projects", path: "/projects" },
     { icon: KanbanSquare, label: "Tasks", path: "/tasks" },
     { icon: MessageSquare, label: "Messages", path: "/messages" },
+    { icon: Zap, label: "Automation", path: "/automation" },
     { icon: Calendar, label: "Calendar", path: "/calendar" },
     { icon: FileText, label: "Documents", path: "/documents" },
   ];

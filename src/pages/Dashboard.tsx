@@ -4,8 +4,10 @@ import MainLayout from "@/components/layout/MainLayout";
 import StatCard from "@/components/dashboard/StatCard";
 import RecentActivity from "@/components/dashboard/RecentActivity";
 import ProjectsOverview from "@/components/dashboard/ProjectsOverview";
-import { AreaChart, BarChart, Calendar, DollarSign, Users } from "lucide-react";
+import { AreaChart, BarChart, Calendar, DollarSign, Users, Zap, Mail, MessageSquare, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import MarketingMetrics from "@/components/dashboard/MarketingMetrics";
+import CampaignPerformance from "@/components/dashboard/CampaignPerformance";
 
 const Dashboard = () => {
   // Mock data for dashboard components
@@ -27,6 +29,33 @@ const Dashboard = () => {
       value: "$48,500",
       icon: <DollarSign />,
       trend: { value: 5, positive: true },
+    },
+    {
+      title: "Conversion Rate",
+      value: "8.4%",
+      icon: <TrendingUp />,
+      trend: { value: 1.2, positive: true },
+    },
+  ];
+
+  const marketingStats = [
+    {
+      title: "Email Opens",
+      value: "68%",
+      icon: <Mail />,
+      trend: { value: 4, positive: true },
+    },
+    {
+      title: "SMS Delivery",
+      value: "98%",
+      icon: <MessageSquare />,
+      trend: { value: 2, positive: true },
+    },
+    {
+      title: "Automations",
+      value: "12",
+      icon: <Zap />,
+      trend: { value: 3, positive: true },
     },
     {
       title: "Tasks Due",
@@ -127,27 +156,27 @@ const Dashboard = () => {
         </div>
         
         <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle>Revenue Trend</CardTitle>
-              <CardDescription>
-                Monthly revenue for the current year
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[200px] flex items-center justify-center border-dashed border-2 rounded-md">
-                <div className="flex flex-col items-center text-muted-foreground">
-                  <AreaChart className="h-8 w-8 mb-1" />
-                  <span>Revenue chart will render here</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <RecentActivity activities={activities} />
+          <MarketingMetrics />
+          <CampaignPerformance />
         </div>
 
-        <ProjectsOverview projects={projects} />
+        <h2 className="text-2xl font-semibold mt-8">Marketing Overview</h2>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {marketingStats.map((stat, i) => (
+            <StatCard
+              key={`marketing-${i}`}
+              title={stat.title}
+              value={stat.value}
+              icon={stat.icon}
+              trend={stat.trend}
+            />
+          ))}
+        </div>
+        
+        <div className="grid gap-6 md:grid-cols-2">
+          <RecentActivity activities={activities} />
+          <ProjectsOverview projects={projects} />
+        </div>
       </div>
     </MainLayout>
   );
