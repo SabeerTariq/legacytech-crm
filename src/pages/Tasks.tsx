@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import ProjectKanban from "@/components/projects/ProjectKanban";
 import { KanbanColumn, KanbanTask } from "@/components/projects/ProjectKanban";
@@ -7,10 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CalendarIcon, Filter, PlusCircle } from "lucide-react";
+import { toast } from "sonner";
+import NewTaskDialog from "@/components/tasks/NewTaskDialog";
 
 const Tasks = () => {
+  const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("all");
+  
   // Mock data for tasks by department
-  const departmentColumns: Record<string, KanbanColumn[]> = {
+  const [departmentColumns, setDepartmentColumns] = useState<Record<string, KanbanColumn[]>>({
     design: [
       {
         id: "todo",
@@ -233,6 +237,31 @@ const Tasks = () => {
         ],
       },
     ],
+  });
+
+  const handleTaskCreated = (taskData: any) => {
+    // Create a new task with unique ID
+    const newTask: KanbanTask = {
+      id: `${taskData.department}-${Date.now()}`,
+      title: taskData.title,
+      description: taskData.description,
+      priority: taskData.priority,
+      dueDate: taskData.dueDate,
+      assignee: {
+        name: "You",
+        initials: "YO",
+      },
+    };
+
+    // Add the new task to the todo column of the appropriate department
+    const updatedDepartmentColumns = { ...departmentColumns };
+    updatedDepartmentColumns[taskData.department][0].tasks = [
+      newTask,
+      ...updatedDepartmentColumns[taskData.department][0].tasks,
+    ];
+
+    setDepartmentColumns(updatedDepartmentColumns);
+    toast.success("Task created successfully!");
   };
 
   return (
@@ -249,14 +278,14 @@ const Tasks = () => {
               <CalendarIcon className="mr-2 h-4 w-4" />
               Calendar
             </Button>
-            <Button>
+            <Button onClick={() => setIsNewTaskDialogOpen(true)}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Task
             </Button>
           </div>
         </div>
 
-        <Tabs defaultValue="all">
+        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4">
             <TabsTrigger value="all">All Tasks</TabsTrigger>
             <TabsTrigger value="design">Design</TabsTrigger>
@@ -278,9 +307,9 @@ const Tasks = () => {
                       title: "To Do",
                       tasks: [
                         ...departmentColumns.design[0].tasks,
-                        ...departmentColumns.development[0].tasks,
-                        ...departmentColumns.marketing[0].tasks,
-                        ...departmentColumns.content[0].tasks,
+                        ...departmentColumns.development?.[0]?.tasks || [],
+                        ...departmentColumns.marketing?.[0]?.tasks || [],
+                        ...departmentColumns.content?.[0]?.tasks || [],
                       ],
                     },
                     {
@@ -288,9 +317,9 @@ const Tasks = () => {
                       title: "In Progress",
                       tasks: [
                         ...departmentColumns.design[1].tasks,
-                        ...departmentColumns.development[1].tasks,
-                        ...departmentColumns.marketing[1].tasks,
-                        ...departmentColumns.content[1].tasks,
+                        ...departmentColumns.development?.[1]?.tasks || [],
+                        ...departmentColumns.marketing?.[1]?.tasks || [],
+                        ...departmentColumns.content?.[1]?.tasks || [],
                       ],
                     },
                     {
@@ -298,9 +327,9 @@ const Tasks = () => {
                       title: "Completed",
                       tasks: [
                         ...departmentColumns.design[2].tasks,
-                        ...departmentColumns.development[2].tasks,
-                        ...departmentColumns.marketing[2].tasks,
-                        ...departmentColumns.content[2].tasks,
+                        ...departmentColumns.development?.[2]?.tasks || [],
+                        ...departmentColumns.marketing?.[2]?.tasks || [],
+                        ...departmentColumns.content?.[2]?.tasks || [],
                       ],
                     },
                   ]}
@@ -326,7 +355,7 @@ const Tasks = () => {
                 <CardTitle>Development Department Tasks</CardTitle>
               </CardHeader>
               <CardContent>
-                <ProjectKanban initialColumns={departmentColumns.development} />
+                <ProjectKanban initialColumns={departmentColumns.development || []} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -337,7 +366,7 @@ const Tasks = () => {
                 <CardTitle>Marketing Department Tasks</CardTitle>
               </CardHeader>
               <CardContent>
-                <ProjectKanban initialColumns={departmentColumns.marketing} />
+                <ProjectKanban initialColumns={departmentColumns.marketing || []} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -348,12 +377,19 @@ const Tasks = () => {
                 <CardTitle>Content Department Tasks</CardTitle>
               </CardHeader>
               <CardContent>
-                <ProjectKanban initialColumns={departmentColumns.content} />
+                <ProjectKanban initialColumns={departmentColumns.content || []} />
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </div>
+
+      <NewTaskDialog
+        open={isNewTaskDialogOpen}
+        onOpenChange={setIsNewTaskDialogOpen}
+        onTaskCreated={handleTaskCreated}
+        departments={["design", "development", "marketing", "content"]}
+      />
     </MainLayout>
   );
 };
