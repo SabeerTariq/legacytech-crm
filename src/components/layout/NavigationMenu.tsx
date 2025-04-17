@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
@@ -31,13 +30,13 @@ const NavigationMenu = () => {
   const mainNavItems = [
     { icon: BarChart3, label: "Dashboard", path: "/" },
     { icon: Users, label: "Leads", path: "/leads" },
+    { icon: ClipboardList, label: "Sales Form", path: "/sales-form" }, // Moved here
     { icon: Briefcase, label: "Projects", path: "/projects" },
     { icon: KanbanSquare, label: "Tasks", path: "/tasks" },
     { icon: MessageSquare, label: "Messages", path: "/messages" },
     { icon: Zap, label: "Automation", path: "/automation" },
     { icon: Calendar, label: "Calendar", path: "/calendar" },
     { icon: FileText, label: "Documents", path: "/documents" },
-    { icon: ClipboardList, label: "Sales Form", path: "/sales-form" }, // New navigation item
   ];
   
   const departmentsNavItems = [
