@@ -58,7 +58,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 <img 
                   src={logoSrc} 
                   alt="LogicWorks CRM Logo" 
-                  className="h-5 w-5"
+                  className="h-10 w-10" // Increased from h-5 w-5 to h-10 w-10
                 />
               </div>
               <div className="font-bold text-xl">LogicWorks CRM</div>
