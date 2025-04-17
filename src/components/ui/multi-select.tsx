@@ -34,8 +34,11 @@ export function MultiSelect({
   // Ensure options is always a valid array
   const safeOptions = Array.isArray(options) ? options : [];
 
+  // Ensure value is always a valid array
+  const safeValue = Array.isArray(value) ? value : [];
+
   // Filter selected options safely
-  const selectedOptions = safeOptions.filter((option) => value.includes(option.value));
+  const selectedOptions = safeOptions.filter((option) => safeValue.includes(option.value));
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -59,7 +62,7 @@ export function MultiSelect({
                     className="h-3 w-3 cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onChange(value.filter((v) => v !== option.value));
+                      onChange(safeValue.filter((v) => v !== option.value));
                     }}
                   />
                 </Badge>
@@ -76,22 +79,22 @@ export function MultiSelect({
         sideOffset={isMobile ? 5 : 0}
         alignOffset={isMobile ? 0 : 0}
       >
-        <Command>
-          <CommandInput placeholder="Search..." />
-          <CommandEmpty>No results found.</CommandEmpty>
-          <ScrollArea className={cn("max-h-60", isMobile && "max-h-[40vh]")}>
-            <CommandGroup>
-              {safeOptions.length > 0 ? (
-                safeOptions.map((option) => {
-                  const isSelected = value.includes(option.value);
+        {safeOptions.length > 0 ? (
+          <Command>
+            <CommandInput placeholder="Search..." />
+            <CommandEmpty>No results found.</CommandEmpty>
+            <ScrollArea className={cn("max-h-60", isMobile && "max-h-[40vh]")}>
+              <CommandGroup>
+                {safeOptions.map((option) => {
+                  const isSelected = safeValue.includes(option.value);
                   return (
                     <CommandItem
                       key={option.value}
                       onSelect={() => {
                         onChange(
                           isSelected
-                            ? value.filter((v) => v !== option.value)
-                            : [...value, option.value]
+                            ? safeValue.filter((v) => v !== option.value)
+                            : [...safeValue, option.value]
                         );
                       }}
                       className={isMobile ? "py-3" : ""}
@@ -107,13 +110,13 @@ export function MultiSelect({
                       {option.label}
                     </CommandItem>
                   );
-                })
-              ) : (
-                <div className="py-6 text-center text-sm">No options available</div>
-              )}
-            </CommandGroup>
-          </ScrollArea>
-        </Command>
+                })}
+              </CommandGroup>
+            </ScrollArea>
+          </Command>
+        ) : (
+          <div className="py-6 text-center text-sm">No options available</div>
+        )}
       </PopoverContent>
     </Popover>
   );
