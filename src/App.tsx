@@ -12,6 +12,9 @@ import Messages from "./pages/Messages";
 import SalesForm from "./pages/SalesForm";
 import MarketingAutomation from "./pages/MarketingAutomation";
 import NotFound from "./pages/NotFound";
+import Calendar from "./pages/Calendar";
+import Documents from "./pages/Documents";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +32,9 @@ const App = () => (
           <Route path="/messages" element={<Messages />} />
           <Route path="/sales-form" element={<SalesForm />} />
           <Route path="/automation" element={<MarketingAutomation />} />
+          <Route path="/calendar" element={<Calendar />} />
+          <Route path="/documents" element={<Documents />} />
+          <Route path="/settings" element={<Settings />} />
           {/* Department routes */}
           <Route path="/departments/design" element={<Tasks />} />
           <Route path="/departments/development" element={<Tasks />} />

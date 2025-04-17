@@ -1,0 +1,154 @@
+
+import React, { useState } from 'react';
+import MainLayout from "@/components/layout/MainLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { FileIcon, FolderIcon, SearchIcon, UploadIcon, PlusIcon } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const DocumentsPage = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  // Sample documents data
+  const documents = [
+    { id: 1, name: "Marketing Plan 2025.pdf", type: "pdf", size: "3.2 MB", updated: "2025-04-10", category: "marketing" },
+    { id: 2, name: "Client Proposal.docx", type: "word", size: "1.8 MB", updated: "2025-04-12", category: "sales" },
+    { id: 3, name: "Financial Report Q1.xlsx", type: "excel", size: "2.4 MB", updated: "2025-04-15", category: "finance" },
+    { id: 4, name: "Brand Guidelines.pdf", type: "pdf", size: "5.7 MB", updated: "2025-04-16", category: "design" },
+    { id: 5, name: "Project Timeline.pptx", type: "powerpoint", size: "4.1 MB", updated: "2025-04-17", category: "project" },
+  ];
+
+  // Sample folders
+  const folders = [
+    { id: 1, name: "Marketing", count: 12 },
+    { id: 2, name: "Client Projects", count: 25 },
+    { id: 3, name: "Templates", count: 8 },
+    { id: 4, name: "Contracts", count: 15 }
+  ];
+
+  // Filter documents based on search
+  const filteredDocuments = documents.filter(doc => 
+    doc.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const getFileIcon = (type: string) => {
+    return <FileIcon className="h-4 w-4" />;
+  };
+
+  const getFileBadge = (category: string) => {
+    const variants: Record<string, any> = {
+      "marketing": { variant: "default", text: "Marketing" },
+      "sales": { variant: "secondary", text: "Sales" },
+      "finance": { variant: "outline", text: "Finance" },
+      "design": { variant: "destructive", text: "Design" },
+      "project": { variant: "default", text: "Project" }
+    };
+    
+    const info = variants[category] || { variant: "default", text: category };
+    
+    return <Badge variant={info.variant}>{info.text}</Badge>;
+  };
+
+  return (
+    <MainLayout>
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Documents</h1>
+          <div className="flex space-x-2">
+            <Button>
+              <PlusIcon className="h-4 w-4 mr-2" />
+              New Folder
+            </Button>
+            <Button>
+              <UploadIcon className="h-4 w-4 mr-2" />
+              Upload
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex items-center">
+          <div className="relative flex-1">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search documents..." 
+              className="pl-10" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <Tabs defaultValue="all" className="w-full">
+          <TabsList>
+            <TabsTrigger value="all">All Files</TabsTrigger>
+            <TabsTrigger value="recent">Recent</TabsTrigger>
+            <TabsTrigger value="shared">Shared</TabsTrigger>
+          </TabsList>
+          <TabsContent value="all" className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              {folders.map((folder) => (
+                <Card key={folder.id} className="hover:bg-accent cursor-pointer transition-colors">
+                  <CardContent className="p-4 flex flex-col items-center text-center">
+                    <FolderIcon className="h-10 w-10 text-blue-500 mb-2" />
+                    <h3 className="font-medium">{folder.name}</h3>
+                    <p className="text-xs text-muted-foreground">{folder.count} files</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Files</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[300px]">Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Size</TableHead>
+                      <TableHead className="text-right">Last Modified</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredDocuments.map((doc) => (
+                      <TableRow key={doc.id}>
+                        <TableCell className="font-medium flex items-center">
+                          {getFileIcon(doc.type)}
+                          <span className="ml-2">{doc.name}</span>
+                        </TableCell>
+                        <TableCell>{getFileBadge(doc.category)}</TableCell>
+                        <TableCell>{doc.size}</TableCell>
+                        <TableCell className="text-right">{doc.updated}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="recent">
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-muted-foreground">Recent documents will appear here</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="shared">
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-muted-foreground">Shared documents will appear here</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </MainLayout>
+  );
+};
+
+export default DocumentsPage;

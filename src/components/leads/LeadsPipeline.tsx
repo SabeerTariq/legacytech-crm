@@ -34,7 +34,7 @@ const LeadsPipeline: React.FC<LeadsPipelineProps> = ({ leads }) => {
   const stageValues = stages.map(stage => {
     const stageLeads = groupedLeads[stage.value] || [];
     const count = stageLeads.length;
-    const totalValue = stageLeads.reduce((sum, lead) => sum + (lead.value || 0), 0);
+    const totalValue = stageLeads.reduce((sum, lead) => sum + (lead.value ? Number(lead.value) : 0), 0);
     return {
       ...stage,
       count,
