@@ -3,18 +3,36 @@ import React from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import DispositionForm from "@/components/projects/DispositionForm";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const SalesForm = () => {
   const { toast } = useToast();
   
-  const handleFormSubmit = (data: any) => {
-    console.log("Form data:", data);
-    
-    // In a real app, you would save the form data and create a project
-    toast({
-      title: "Project created",
-      description: "The project has been created and assigned to the project manager.",
-    });
+  const handleFormSubmit = async (data: any) => {
+    try {
+      const { error } = await supabase
+        .from('sales_dispositions')
+        .insert([
+          {
+            ...data,
+            user_id: (await supabase.auth.getUser()).data.user?.id
+          }
+        ]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Sales disposition has been created successfully.",
+      });
+    } catch (error) {
+      console.error('Error creating sales disposition:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create sales disposition. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
   
   return (

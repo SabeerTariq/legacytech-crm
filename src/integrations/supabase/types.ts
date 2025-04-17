@@ -268,6 +268,123 @@ export type Database = {
         }
         Relationships: []
       }
+      sales_dispositions: {
+        Row: {
+          account_manager: string
+          agreement_url: string | null
+          assigned_by: string
+          assigned_to: string
+          business_name: string | null
+          cash_in: number
+          company: Database["public"]["Enums"]["company"]
+          created_at: string
+          customer_name: string
+          email: string
+          front_brand: string | null
+          gross_value: number
+          id: string
+          lead_source: Database["public"]["Enums"]["lead_source"]
+          payment_mode: Database["public"]["Enums"]["payment_mode"]
+          phone_number: string
+          project_manager: string
+          remaining: number
+          sale_date: string
+          sale_type: Database["public"]["Enums"]["sale_type"]
+          sales_source: Database["public"]["Enums"]["sales_source"]
+          seller: string
+          service_details: string | null
+          service_sold: string
+          service_tenure: string
+          services_included: string[]
+          tax_deduction: number | null
+          turnaround_time: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_manager: string
+          agreement_url?: string | null
+          assigned_by: string
+          assigned_to: string
+          business_name?: string | null
+          cash_in: number
+          company: Database["public"]["Enums"]["company"]
+          created_at?: string
+          customer_name: string
+          email: string
+          front_brand?: string | null
+          gross_value: number
+          id?: string
+          lead_source: Database["public"]["Enums"]["lead_source"]
+          payment_mode: Database["public"]["Enums"]["payment_mode"]
+          phone_number: string
+          project_manager: string
+          remaining: number
+          sale_date: string
+          sale_type: Database["public"]["Enums"]["sale_type"]
+          sales_source: Database["public"]["Enums"]["sales_source"]
+          seller: string
+          service_details?: string | null
+          service_sold: string
+          service_tenure: string
+          services_included: string[]
+          tax_deduction?: number | null
+          turnaround_time: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_manager?: string
+          agreement_url?: string | null
+          assigned_by?: string
+          assigned_to?: string
+          business_name?: string | null
+          cash_in?: number
+          company?: Database["public"]["Enums"]["company"]
+          created_at?: string
+          customer_name?: string
+          email?: string
+          front_brand?: string | null
+          gross_value?: number
+          id?: string
+          lead_source?: Database["public"]["Enums"]["lead_source"]
+          payment_mode?: Database["public"]["Enums"]["payment_mode"]
+          phone_number?: string
+          project_manager?: string
+          remaining?: number
+          sale_date?: string
+          sale_type?: Database["public"]["Enums"]["sale_type"]
+          sales_source?: Database["public"]["Enums"]["sales_source"]
+          seller?: string
+          service_details?: string | null
+          service_sold?: string
+          service_tenure?: string
+          services_included?: string[]
+          tax_deduction?: number | null
+          turnaround_time?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      services: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -276,7 +393,28 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      company: "American Digital Agency" | "Skyline" | "AZ TECH" | "OSCS"
+      lead_source: "PAID_MARKETING" | "ORGANIC" | "SCRAPPED"
+      payment_mode:
+        | "WIRE"
+        | "PayPal OSCS"
+        | "Authorize.net OSCS"
+        | "Authorize.net ADA"
+        | "SWIPE SIMPLE ADA"
+        | "SQUARE SKYLINE"
+        | "PAY BRIGHT AZ TECH"
+        | "ZELLE ADA"
+        | "ZELLE AZ TECH"
+        | "ZELLE AZ SKYLINE"
+        | "CASH APP ADA"
+      sale_type:
+        | "FRONT"
+        | "UPSELL"
+        | "FRONT_REMAINING"
+        | "UPSELL_REMAINING"
+        | "RENEWAL"
+        | "AD_SPENT"
+      sales_source: "BARK" | "FACEBOOK" | "LINKDIN" | "PPC" | "REFFERAL"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -391,6 +529,31 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      company: ["American Digital Agency", "Skyline", "AZ TECH", "OSCS"],
+      lead_source: ["PAID_MARKETING", "ORGANIC", "SCRAPPED"],
+      payment_mode: [
+        "WIRE",
+        "PayPal OSCS",
+        "Authorize.net OSCS",
+        "Authorize.net ADA",
+        "SWIPE SIMPLE ADA",
+        "SQUARE SKYLINE",
+        "PAY BRIGHT AZ TECH",
+        "ZELLE ADA",
+        "ZELLE AZ TECH",
+        "ZELLE AZ SKYLINE",
+        "CASH APP ADA",
+      ],
+      sale_type: [
+        "FRONT",
+        "UPSELL",
+        "FRONT_REMAINING",
+        "UPSELL_REMAINING",
+        "RENEWAL",
+        "AD_SPENT",
+      ],
+      sales_source: ["BARK", "FACEBOOK", "LINKDIN", "PPC", "REFFERAL"],
+    },
   },
 } as const
