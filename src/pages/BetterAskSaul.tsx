@@ -6,29 +6,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Bot, AlertCircle, Key, Info, ExternalLink } from "lucide-react";
+import { Bot, AlertCircle, Info } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { 
-  Dialog, 
-  DialogTrigger, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription,
-  DialogFooter
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Spinner } from "@/components/ui/spinner";
 
 interface Message {
   role: 'assistant' | 'user' | 'system';
@@ -39,9 +21,6 @@ const BetterAskSaul = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
-  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -55,8 +34,6 @@ const BetterAskSaul = () => {
     setIsLoading(true);
 
     try {
-      console.log("Sending request to Supabase function");
-      
       const { data, error } = await supabase.functions.invoke('better-ask-saul', {
         body: { 
           messages: [...messages, userMessage],
@@ -65,58 +42,38 @@ const BetterAskSaul = () => {
       });
 
       if (error) {
-        console.error('Supabase function error:', error);
-        throw new Error(`Failed to call Supabase function: ${error.message}`);
-      }
-
-      console.log("Response from Supabase function:", data);
-
-      if (!data) {
-        throw new Error('No response received from Saul');
+        throw new Error(`Function error: ${error.message}`);
       }
 
       if (data.error) {
-        console.error('Saul returned an error:', data.error);
-        
-        // Check if it's an API key related error
-        if (data.error.includes('API key')) {
-          setErrorMessage(data.error);
-          setApiKeyDialogOpen(true);
-          throw new Error(data.error);
-        }
-        
         throw new Error(data.error);
-      }
-
-      if (!data.response) {
-        throw new Error('Invalid response from Saul');
       }
 
       setMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
     } catch (error: any) {
       console.error('Error:', error);
       
-      // Add an error message to the conversation
       setMessages(prev => [...prev, { 
         role: 'system', 
-        content: `Error: ${error.message || 'Failed to get response from Saul'}`
+        content: `Error: ${error.message || 'Failed to get response'}`
       }]);
       
-      // Show detailed error in a dialog for significant errors
-      if (error.message.includes('API key')) {
-        setErrorMessage(error.message);
-        setErrorDialogOpen(true);
-      } else {
-        toast({
-          title: "Error",
-          description: `Failed to get response from Saul: ${error.message || 'Unknown error'}`,
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Error",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Simple loading spinner component
+  const LoadingSpinner = () => (
+    <div className="flex justify-center my-4">
+      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+    </div>
+  );
 
   return (
     <MainLayout>
@@ -135,8 +92,8 @@ const BetterAskSaul = () => {
                   <Info className="h-4 w-4" />
                   <AlertTitle>Saul's CRM Assistant</AlertTitle>
                   <AlertDescription>
-                    Hi, I'm Saul! I can help you with your CRM-related questions and tasks.
-                    I have access to your leads and projects data.
+                    Hi, I'm Saul! I can help with your CRM questions and tasks.
+                    Ask me anything about your leads and projects.
                   </AlertDescription>
                 </Alert>
               </div>
@@ -164,6 +121,8 @@ const BetterAskSaul = () => {
                   <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                 </div>
               ))}
+              
+              {isLoading && <LoadingSpinner />}
             </ScrollArea>
             
             <form onSubmit={handleSubmit} className="flex gap-2">
@@ -179,62 +138,6 @@ const BetterAskSaul = () => {
             </form>
           </CardContent>
         </Card>
-
-        {/* API Key Error Dialog */}
-        <Dialog open={apiKeyDialogOpen} onOpenChange={setApiKeyDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Key className="h-5 w-5" /> OpenAI API Key Required
-              </DialogTitle>
-              <DialogDescription>
-                The Better Ask Saul feature requires a valid OpenAI API key to be configured in your Supabase secrets.
-                Please contact your administrator to set up the API key.
-              </DialogDescription>
-            </DialogHeader>
-            <Alert className="bg-amber-50 border-amber-200">
-              <AlertCircle className="h-4 w-4 text-amber-500" />
-              <AlertTitle className="text-amber-700">Important</AlertTitle>
-              <AlertDescription className="text-amber-600">
-                The OpenAI API key in your Supabase secrets appears to be invalid or missing.
-                This is a backend configuration issue that needs to be addressed by your system administrator.
-              </AlertDescription>
-            </Alert>
-            <DialogFooter className="mt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setApiKeyDialogOpen(false)} 
-                className="w-full sm:w-auto"
-              >
-                Close
-              </Button>
-              <Button 
-                className="w-full sm:w-auto flex items-center gap-1" 
-                onClick={() => window.open('https://supabase.com/dashboard/project/yipyteszzyycbqgzpfrf/settings/functions', '_blank')}
-              >
-                Go to Supabase Settings <ExternalLink className="h-4 w-4" />
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* General Error Dialog */}
-        <AlertDialog open={errorDialogOpen} onOpenChange={setErrorDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Error</AlertDialogTitle>
-              <AlertDialogDescription>
-                {errorMessage || "An error occurred while communicating with Saul."}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Close</AlertDialogCancel>
-              <AlertDialogAction onClick={() => window.open('https://supabase.com/dashboard/project/yipyteszzyycbqgzpfrf/settings/functions', '_blank')}>
-                Go to Supabase Settings
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
     </MainLayout>
   );

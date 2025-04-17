@@ -17,15 +17,13 @@ serve(async (req) => {
   try {
     const { messages, userId } = await req.json();
     
-    // Validate the OpenAI API key first
+    // Get OpenAI API key from environment variables
     const openAIKey = Deno.env.get('OPENAI_API_KEY');
     
-    if (!openAIKey || openAIKey.trim() === '') {
+    if (!openAIKey) {
       console.error('Missing OpenAI API key in environment variables');
       return new Response(
-        JSON.stringify({ 
-          error: 'OpenAI API key is not configured in Supabase secrets. Please add your OpenAI API key to the project secrets.' 
-        }),
+        JSON.stringify({ error: 'OpenAI API key is not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -35,16 +33,16 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!supabaseUrl || !supabaseKey) {
-      console.error('Missing Supabase credentials in environment variables');
+      console.error('Missing Supabase credentials');
       return new Response(
-        JSON.stringify({ error: 'Supabase credentials are not configured correctly.' }),
+        JSON.stringify({ error: 'Supabase credentials are not configured correctly' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch relevant CRM data
+    // Fetch relevant data
     const { data: leads, error: leadsError } = await supabase
       .from('leads')
       .select('*')
@@ -63,21 +61,16 @@ serve(async (req) => {
       console.error('Error fetching projects:', projectsError);
     }
 
-    // Create context from CRM data
-    const crmContext = `
+    // Create context from data
+    const contextData = `
       You have access to the following CRM data:
       - ${leads?.length || 0} leads 
       - ${projects?.length || 0} projects
       
-      You are Saul, an AI assistant specialized in CRM management and business development.
-      Be concise, professional, and helpful. If asked about specific data, use the actual numbers from the CRM.
+      You are Saul, an AI assistant for CRM management and business development.
+      Give concise, professional responses to help the user with their business needs.
     `;
     
-    // Log to help debug
-    console.log("Sending request to OpenAI API");
-    console.log("OpenAI API key length:", openAIKey.length);
-    console.log("First few characters of API key:", openAIKey.substring(0, 3) + "...");
-
     try {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -88,47 +81,24 @@ serve(async (req) => {
         body: JSON.stringify({
           model: 'gpt-4o-mini',
           messages: [
-            { role: 'system', content: crmContext },
+            { role: 'system', content: contextData },
             ...messages.slice(-10) // Keep last 10 messages for context
           ],
         }),
       });
 
-      // Check if the response is OK
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('OpenAI API error:', JSON.stringify(errorData, null, 2));
-        
-        // Check specifically for API key issues
-        if (errorData.error?.type === 'invalid_request_error' && 
-            (errorData.error?.message?.includes('API key provided') || errorData.error?.code === 'invalid_api_key')) {
-          return new Response(
-            JSON.stringify({ 
-              error: 'Your OpenAI API key is invalid or has expired. Please update it in your Supabase secrets.' 
-            }),
-            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+        console.error('OpenAI API error:', JSON.stringify(errorData));
         
         return new Response(
           JSON.stringify({ error: `OpenAI API error: ${errorData.error?.message || 'Unknown error'}` }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       const data = await response.json();
-      
-      // Check if response has the expected structure
-      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-        console.error('Unexpected OpenAI response format:', JSON.stringify(data, null, 2));
-        return new Response(
-          JSON.stringify({ error: 'Unexpected response format from OpenAI' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
       const aiResponse = data.choices[0].message.content;
-      console.log("Received response from OpenAI");
 
       return new Response(JSON.stringify({ response: aiResponse }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -143,9 +113,9 @@ serve(async (req) => {
     }
     
   } catch (error) {
-    console.error('Error in better-ask-saul function:', error);
+    console.error('Error in function:', error);
     return new Response(
-      JSON.stringify({ error: `Internal server error: ${error.message}` }),
+      JSON.stringify({ error: `Server error: ${error.message}` }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
