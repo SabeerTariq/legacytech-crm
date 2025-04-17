@@ -1,11 +1,16 @@
-
-import React from "react";
+import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Mail, MessageSquare, Calendar, Zap, PlayCircle, PauseCircle, Copy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 
 const automations = [
   {
@@ -71,12 +76,47 @@ const templates = [
 ];
 
 const MarketingAutomation = () => {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newAutomation, setNewAutomation] = useState({
+    name: "",
+    description: "",
+    type: "email",
+    trigger: "",
+  });
+  const { toast } = useToast();
+
+  const handleCreateAutomation = () => {
+    if (!newAutomation.name || !newAutomation.description || !newAutomation.trigger) {
+      toast({
+        title: "Missing fields",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Here you would typically save to a database
+    // For now we just show a success message
+    toast({
+      title: "Automation created",
+      description: `${newAutomation.name} has been created successfully`,
+    });
+    
+    setIsDialogOpen(false);
+    setNewAutomation({
+      name: "",
+      description: "",
+      type: "email",
+      trigger: "",
+    });
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h1 className="text-3xl font-bold">Marketing Automation</h1>
-          <Button>
+          <Button onClick={() => setIsDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Create Automation
           </Button>
@@ -175,7 +215,7 @@ const MarketingAutomation = () => {
                 <p className="text-sm text-muted-foreground text-center mb-4">
                   Set up email or SMS workflows to nurture your leads
                 </p>
-                <Button variant="outline">
+                <Button variant="outline" onClick={() => setIsDialogOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   New Automation
                 </Button>
@@ -231,6 +271,72 @@ const MarketingAutomation = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Create Automation Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Create New Automation</DialogTitle>
+            <DialogDescription>
+              Set up an automated workflow to engage with your leads and customers.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Automation Name</Label>
+              <Input 
+                id="name" 
+                value={newAutomation.name}
+                onChange={(e) => setNewAutomation({...newAutomation, name: e.target.value})}
+                placeholder="e.g., Welcome Series"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="type">Type</Label>
+              <Select 
+                value={newAutomation.type} 
+                onValueChange={(value) => setNewAutomation({...newAutomation, type: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="email">Email</SelectItem>
+                  <SelectItem value="sms">SMS</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="trigger">Trigger</Label>
+              <Input 
+                id="trigger" 
+                value={newAutomation.trigger}
+                onChange={(e) => setNewAutomation({...newAutomation, trigger: e.target.value})}
+                placeholder="e.g., New Lead Created"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea 
+                id="description" 
+                value={newAutomation.description}
+                onChange={(e) => setNewAutomation({...newAutomation, description: e.target.value})}
+                placeholder="Describe what this automation does"
+                rows={3}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateAutomation}>Create Automation</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };
