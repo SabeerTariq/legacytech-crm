@@ -135,7 +135,7 @@ const DispositionForm: React.FC<DispositionFormProps> = ({ onSubmit }) => {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      services_included: [],
+      services_included: [], // Initialize with empty array
     }
   });
 
@@ -150,6 +150,11 @@ const DispositionForm: React.FC<DispositionFormProps> = ({ onSubmit }) => {
         
         if (error) {
           console.error('Error fetching services:', error);
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to fetch services. Please try again.",
+          });
           return;
         }
         
@@ -166,11 +171,16 @@ const DispositionForm: React.FC<DispositionFormProps> = ({ onSubmit }) => {
       } catch (error) {
         console.error('Exception fetching services:', error);
         setServices([]);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to fetch services. Please try again.",
+        });
       }
     };
 
     fetchServices();
-  }, []);
+  }, [toast]);
 
   const handleSubmit = async (data: FormData) => {
     try {
@@ -368,8 +378,8 @@ const DispositionForm: React.FC<DispositionFormProps> = ({ onSubmit }) => {
                       <FormLabel>Services Included</FormLabel>
                       <FormControl>
                         <MultiSelect
-                          options={services}
-                          value={field.value || []}
+                          options={services || []} // Ensure options is never undefined
+                          value={field.value || []} // Ensure value is never undefined
                           onChange={field.onChange}
                           placeholder="Select services..."
                         />
