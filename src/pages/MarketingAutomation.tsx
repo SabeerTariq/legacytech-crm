@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,12 +77,19 @@ const templates = [
 ];
 
 const MarketingAutomation = () => {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAutomationDialogOpen, setIsAutomationDialogOpen] = useState(false);
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<null | { id: string, name: string, type: string, content?: string }>(null);
   const [newAutomation, setNewAutomation] = useState({
     name: "",
     description: "",
     type: "email",
     trigger: "",
+  });
+  const [newTemplate, setNewTemplate] = useState({
+    name: "",
+    type: "email",
+    content: "",
   });
   const { toast } = useToast();
 
@@ -102,7 +110,7 @@ const MarketingAutomation = () => {
       description: `${newAutomation.name} has been created successfully`,
     });
     
-    setIsDialogOpen(false);
+    setIsAutomationDialogOpen(false);
     setNewAutomation({
       name: "",
       description: "",
@@ -111,12 +119,70 @@ const MarketingAutomation = () => {
     });
   };
 
+  const handleEditTemplate = (template: { id: string, name: string, type: string }) => {
+    setEditingTemplate({...template, content: template.type === "email" ? 
+      "<p>Dear [Name],</p><p>Thank you for...</p>" : 
+      "Hi [Name], thank you for..."
+    });
+    setNewTemplate({
+      name: template.name,
+      type: template.type,
+      content: template.type === "email" ? 
+        "<p>Dear [Name],</p><p>Thank you for...</p>" : 
+        "Hi [Name], thank you for...",
+    });
+    setIsTemplateDialogOpen(true);
+  };
+
+  const handleCreateOrUpdateTemplate = () => {
+    if (!newTemplate.name || !newTemplate.content) {
+      toast({
+        title: "Missing fields",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (editingTemplate) {
+      // Update existing template (mock implementation)
+      toast({
+        title: "Template updated",
+        description: `${newTemplate.name} has been updated successfully`,
+      });
+    } else {
+      // Create new template (mock implementation)
+      toast({
+        title: "Template created",
+        description: `${newTemplate.name} has been created successfully`,
+      });
+    }
+    
+    setIsTemplateDialogOpen(false);
+    setEditingTemplate(null);
+    setNewTemplate({
+      name: "",
+      type: "email",
+      content: "",
+    });
+  };
+
+  const resetTemplateForm = () => {
+    setEditingTemplate(null);
+    setNewTemplate({
+      name: "",
+      type: "email",
+      content: "",
+    });
+    setIsTemplateDialogOpen(true);
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h1 className="text-3xl font-bold">Marketing Automation</h1>
-          <Button onClick={() => setIsDialogOpen(true)}>
+          <Button onClick={() => setIsAutomationDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Create Automation
           </Button>
@@ -215,7 +281,7 @@ const MarketingAutomation = () => {
                 <p className="text-sm text-muted-foreground text-center mb-4">
                   Set up email or SMS workflows to nurture your leads
                 </p>
-                <Button variant="outline" onClick={() => setIsDialogOpen(true)}>
+                <Button variant="outline" onClick={() => setIsAutomationDialogOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   New Automation
                 </Button>
@@ -233,7 +299,7 @@ const MarketingAutomation = () => {
                   </CardHeader>
                   <CardFooter className="pt-0 flex justify-between">
                     <Badge variant="outline">{template.type === "email" ? "Email" : "SMS"}</Badge>
-                    <Button variant="ghost" size="sm">Edit</Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleEditTemplate(template)}>Edit</Button>
                   </CardFooter>
                 </Card>
               ))}
@@ -246,7 +312,7 @@ const MarketingAutomation = () => {
                 <p className="text-sm text-muted-foreground text-center mb-4">
                   Design email or SMS templates for your campaigns
                 </p>
-                <Button variant="outline">
+                <Button variant="outline" onClick={resetTemplateForm}>
                   <Plus className="mr-2 h-4 w-4" />
                   New Template
                 </Button>
@@ -273,7 +339,7 @@ const MarketingAutomation = () => {
       </div>
 
       {/* Create Automation Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isAutomationDialogOpen} onOpenChange={setIsAutomationDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Create New Automation</DialogTitle>
@@ -284,9 +350,9 @@ const MarketingAutomation = () => {
           
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Automation Name</Label>
+              <Label htmlFor="automation-name">Automation Name</Label>
               <Input 
-                id="name" 
+                id="automation-name" 
                 value={newAutomation.name}
                 onChange={(e) => setNewAutomation({...newAutomation, name: e.target.value})}
                 placeholder="e.g., Welcome Series"
@@ -294,12 +360,12 @@ const MarketingAutomation = () => {
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="type">Type</Label>
+              <Label htmlFor="automation-type">Type</Label>
               <Select 
                 value={newAutomation.type} 
                 onValueChange={(value) => setNewAutomation({...newAutomation, type: value})}
               >
-                <SelectTrigger>
+                <SelectTrigger id="automation-type">
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -310,9 +376,9 @@ const MarketingAutomation = () => {
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="trigger">Trigger</Label>
+              <Label htmlFor="automation-trigger">Trigger</Label>
               <Input 
-                id="trigger" 
+                id="automation-trigger" 
                 value={newAutomation.trigger}
                 onChange={(e) => setNewAutomation({...newAutomation, trigger: e.target.value})}
                 placeholder="e.g., New Lead Created"
@@ -320,9 +386,9 @@ const MarketingAutomation = () => {
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="automation-description">Description</Label>
               <Textarea 
-                id="description" 
+                id="automation-description" 
                 value={newAutomation.description}
                 onChange={(e) => setNewAutomation({...newAutomation, description: e.target.value})}
                 placeholder="Describe what this automation does"
@@ -332,8 +398,73 @@ const MarketingAutomation = () => {
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setIsAutomationDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleCreateAutomation}>Create Automation</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create/Edit Template Dialog */}
+      <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>{editingTemplate ? "Edit Template" : "Create New Template"}</DialogTitle>
+            <DialogDescription>
+              {editingTemplate ? "Update your template design and content." : "Design a new email or SMS template for your marketing campaigns."}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="template-name">Template Name</Label>
+              <Input 
+                id="template-name" 
+                value={newTemplate.name}
+                onChange={(e) => setNewTemplate({...newTemplate, name: e.target.value})}
+                placeholder="e.g., Welcome Email"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="template-type">Type</Label>
+              <Select 
+                value={newTemplate.type} 
+                onValueChange={(value) => setNewTemplate({...newTemplate, type: value})}
+              >
+                <SelectTrigger id="template-type">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="email">Email</SelectItem>
+                  <SelectItem value="sms">SMS</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="template-content">Content</Label>
+              <Textarea 
+                id="template-content" 
+                value={newTemplate.content}
+                onChange={(e) => setNewTemplate({...newTemplate, content: e.target.value})}
+                placeholder={newTemplate.type === "email" ? 
+                  "<p>Dear [Name],</p><p>Your email content here...</p>" : 
+                  "Hi [Name], your SMS content here..."}
+                rows={6}
+              />
+              <p className="text-xs text-muted-foreground">
+                {newTemplate.type === "email" ? 
+                  "You can use HTML for formatting. Use [Name] to dynamically insert recipient name." :
+                  "Use [Name] to dynamically insert recipient name."}
+              </p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsTemplateDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateOrUpdateTemplate}>
+              {editingTemplate ? "Update Template" : "Create Template"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
