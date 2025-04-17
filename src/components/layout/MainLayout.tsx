@@ -59,7 +59,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
                 </svg>
               </div>
-              <div className="font-bold text-xl">AgencyFlow</div>
+              <div className="font-bold text-xl">LogicWorks CRM</div>
             </div>
           </SidebarHeader>
           <SidebarContent>
@@ -136,3 +136,4 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 };
 
 export default MainLayout;
+
