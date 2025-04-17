@@ -89,6 +89,42 @@ export type Database = {
         }
         Relationships: []
       }
+      employees: {
+        Row: {
+          created_at: string
+          department: string
+          email: string
+          id: string
+          join_date: string
+          name: string
+          performance: Json
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department: string
+          email: string
+          id?: string
+          join_date: string
+          name: string
+          performance?: Json
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department?: string
+          email?: string
+          id?: string
+          join_date?: string
+          name?: string
+          performance?: Json
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           additional_info: string | null
