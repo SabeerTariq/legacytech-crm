@@ -2,7 +2,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Users, CheckCircle, AlertTriangle } from "lucide-react";
-import { SalesAssistant } from "@/components/dashboard/SalesAssistant";
 import MainLayout from "@/components/layout/MainLayout";
 
 interface StatCardProps {
@@ -59,7 +58,6 @@ const Dashboard = () => {
               description="Critical alerts"
             />
           </div>
-          <SalesAssistant />
         </div>
       </div>
     </MainLayout>
