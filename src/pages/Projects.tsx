@@ -83,7 +83,7 @@ const Projects: React.FC = () => {
     <MainLayout>
       <div className="h-[calc(100vh-8rem)] flex flex-col">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">LogicWorks CRM Projects</h1>
+          <h1 className="text-3xl font-bold">Projects</h1>
           <Button onClick={() => setIsNewProjectDialogOpen(true)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Project
