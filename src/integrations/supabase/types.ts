@@ -89,6 +89,38 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_performance_history: {
+        Row: {
+          created_at: string | null
+          employee_id: string | null
+          id: string
+          month: string
+          performance: Json
+        }
+        Insert: {
+          created_at?: string | null
+          employee_id?: string | null
+          id?: string
+          month: string
+          performance?: Json
+        }
+        Update: {
+          created_at?: string | null
+          employee_id?: string | null
+          id?: string
+          month?: string
+          performance?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_performance_history_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           created_at: string

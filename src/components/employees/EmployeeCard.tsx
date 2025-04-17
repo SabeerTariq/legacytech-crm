@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import EmployeeHistory from "./EmployeeHistory";
 
 interface EmployeeCardProps {
   employee: EmployeeProfile;
@@ -73,23 +74,26 @@ const EmployeeCard = ({ employee, onEdit }: EmployeeCardProps) => {
             </div>
           </div>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onEdit}>
-              <Edit2 className="h-4 w-4 mr-2" />
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-2">
+          <EmployeeHistory employeeId={employee.id} name={employee.name} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onEdit}>
+                <Edit2 className="h-4 w-4 mr-2" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className={cn("space-y-2 rounded-lg p-3", getPerformanceColor(progressValue))}>
@@ -100,7 +104,7 @@ const EmployeeCard = ({ employee, onEdit }: EmployeeCardProps) => {
             </div>
             <span className="text-sm font-medium">${employee.performance.salesTarget.toLocaleString()}</span>
           </div>
-          <Progress 
+          <Progress
             value={progressValue}
             className="h-2"
           />
@@ -111,7 +115,7 @@ const EmployeeCard = ({ employee, onEdit }: EmployeeCardProps) => {
             </Badge>
           </div>
         </div>
-        
+
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
