@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { BarChart, Mail, Target, MoreVertical, Edit2, Trash2 } from "lucide-react";
-import { EmployeeProfile } from "@/types/employee";
+import { EmployeeProfile, SalesPerformance, ProductionPerformance } from "@/types/employee";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,8 +26,8 @@ interface EmployeeCardProps {
 const EmployeeCard = ({ employee, onEdit }: EmployeeCardProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const progressValue = (employee.performance.salesAchieved / employee.performance.salesTarget) * 100;
   const initials = employee.name.split(' ').map(n => n[0]).join('').toUpperCase();
+  const isProductionDepartment = ['Design', 'Development', 'Marketing', 'Content'].includes(employee.department);
 
   const getPerformanceColor = (value: number) => {
     return value >= 70 ? "bg-green-500/10 text-green-700" : "bg-red-500/10 text-red-700";
@@ -75,7 +75,11 @@ const EmployeeCard = ({ employee, onEdit }: EmployeeCardProps) => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <EmployeeHistory employeeId={employee.id} name={employee.name} />
+          <EmployeeHistory 
+            employeeId={employee.id} 
+            name={employee.name} 
+            department={employee.department}
+          />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
@@ -96,41 +100,94 @@ const EmployeeCard = ({ employee, onEdit }: EmployeeCardProps) => {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className={cn("space-y-2 rounded-lg p-3", getPerformanceColor(progressValue))}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Target className="h-4 w-4" />
-              <span className="text-sm font-medium">Sales Target</span>
-            </div>
-            <span className="text-sm font-medium">${employee.performance.salesTarget.toLocaleString()}</span>
-          </div>
-          <Progress
-            value={progressValue}
-            className="h-2"
-          />
-          <div className="flex justify-between text-xs">
-            <span>Progress: ${employee.performance.salesAchieved.toLocaleString()}</span>
-            <Badge variant={progressValue >= 70 ? "default" : "destructive"}>
-              {progressValue.toFixed(1)}%
-            </Badge>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <BarChart className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">Projects</span>
-            </div>
-            <p className="text-2xl font-bold">{employee.performance.projectsCompleted}</p>
-          </div>
-          <div className="space-y-1">
-            <span className="text-sm">Tasks Completed</span>
-            <p className="text-2xl font-bold">{employee.performance.tasksCompleted}</p>
-          </div>
-        </div>
+        {isProductionDepartment ? (
+          <ProductionPerformanceView performance={employee.performance as ProductionPerformance} />
+        ) : (
+          <SalesPerformanceView performance={employee.performance as SalesPerformance} />
+        )}
       </CardContent>
     </Card>
+  );
+};
+
+const ProductionPerformanceView = ({ performance }: { performance: ProductionPerformance }) => {
+  const completionRate = (performance.tasks_completed_ontime / performance.total_tasks_assigned) * 100;
+  
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <span className="text-sm text-muted-foreground">Tasks Assigned</span>
+          <p className="text-2xl font-bold">{performance.total_tasks_assigned}</p>
+        </div>
+        <div className="space-y-1">
+          <span className="text-sm text-muted-foreground">Completed On Time</span>
+          <p className="text-2xl font-bold">{performance.tasks_completed_ontime}</p>
+        </div>
+      </div>
+      <div className={cn(
+        "space-y-2 rounded-lg p-3",
+        completionRate >= 80 ? "bg-green-500/10 text-green-700" : "bg-red-500/10 text-red-700"
+      )}>
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium">Task Completion Rate</span>
+          <Badge variant={completionRate >= 80 ? "default" : "destructive"}>
+            {completionRate.toFixed(1)}%
+          </Badge>
+        </div>
+        {performance.strikes > 0 && (
+          <div className="mt-2 text-red-500 font-medium">
+            ⚠️ Strikes: {performance.strikes}
+          </div>
+        )}
+      </div>
+    </>
+  );
+};
+
+const SalesPerformanceView = ({ performance }: { performance: SalesPerformance }) => {
+  const progressValue = (performance.salesAchieved / performance.salesTarget) * 100;
+
+  const getPerformanceColor = (value: number) => {
+    return value >= 70 ? "bg-green-500/10 text-green-700" : "bg-red-500/10 text-red-700";
+  };
+
+  return (
+    <>
+      <div className={cn("space-y-2 rounded-lg p-3", getPerformanceColor(progressValue))}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Target className="h-4 w-4" />
+            <span className="text-sm font-medium">Sales Target</span>
+          </div>
+          <span className="text-sm font-medium">${performance.salesTarget.toLocaleString()}</span>
+        </div>
+        <Progress
+          value={progressValue}
+          className="h-2"
+        />
+        <div className="flex justify-between text-xs">
+          <span>Progress: ${performance.salesAchieved.toLocaleString()}</span>
+          <Badge variant={progressValue >= 70 ? "default" : "destructive"}>
+            {progressValue.toFixed(1)}%
+          </Badge>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <BarChart className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm">Projects</span>
+          </div>
+          <p className="text-2xl font-bold">{performance.projectsCompleted}</p>
+        </div>
+        <div className="space-y-1">
+          <span className="text-sm">Tasks Completed</span>
+          <p className="text-2xl font-bold">{performance.tasksCompleted}</p>
+        </div>
+      </div>
+    </>
   );
 };
 

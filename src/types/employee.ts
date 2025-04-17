@@ -1,5 +1,13 @@
 
-export interface EmployeePerformance {
+export interface ProductionPerformance {
+  total_tasks_assigned: number;
+  tasks_completed_ontime: number;
+  tasks_completed_late: number;
+  strikes: number;
+  avg_completion_time: number;
+}
+
+export interface SalesPerformance {
   salesTarget: number;
   salesAchieved: number;
   projectsCompleted: number;
@@ -7,6 +15,8 @@ export interface EmployeePerformance {
   avgTaskCompletionTime: number;
   customerSatisfaction: number;
 }
+
+export type EmployeePerformance = SalesPerformance | ProductionPerformance;
 
 export interface EmployeeProfile {
   id: string;
