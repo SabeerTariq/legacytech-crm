@@ -35,9 +35,10 @@ export interface Lead {
 interface LeadsListProps {
   leads: Lead[];
   onAddLeadClick?: (() => void) | null;
+  onLeadClick?: (lead: Lead) => void;
 }
 
-const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick }) => {
+const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClick }) => {
   const statusColors: { [key: string]: string } = {
     new: "bg-blue-100 text-blue-800",
     contacted: "bg-gray-100 text-gray-800",
@@ -76,7 +77,11 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick }) => {
           </TableHeader>
           <TableBody>
             {filteredLeads.map((lead) => (
-              <TableRow key={lead.id}>
+              <TableRow 
+                key={lead.id} 
+                onClick={() => onLeadClick && onLeadClick(lead)} 
+                className={onLeadClick ? "cursor-pointer hover:bg-muted/80" : ""}
+              >
                 <TableCell className="font-medium">{lead.name}</TableCell>
                 <TableCell>{lead.company}</TableCell>
                 <TableCell>{lead.email}</TableCell>

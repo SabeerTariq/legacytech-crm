@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Upload, UserPlus } from "lucide-react";
 import LeadUploadModal from "@/components/leads/LeadUploadModal";
 import LeadAddModal from "@/components/leads/LeadAddModal";
+import LeadEditModal from "@/components/leads/LeadEditModal";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,6 +16,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 const Leads = () => {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
   const { user } = useAuth();
@@ -130,13 +133,65 @@ const Leads = () => {
     },
   });
 
+  // Update lead mutation
+  const updateLeadMutation = useMutation({
+    mutationFn: async ({ id, leadData }: { id: string, leadData: Omit<Lead, 'id' | 'assignedTo' | 'date'> }) => {
+      const { data, error } = await supabase
+        .from('leads')
+        .update({
+          name: leadData.name,
+          company: leadData.company,
+          email: leadData.email,
+          phone: leadData.phone,
+          status: leadData.status,
+          source: leadData.source,
+          value: leadData.value || 0,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select();
+
+      if (error) throw error;
+      return data[0];
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast({
+        title: "Lead updated successfully",
+        description: "Your lead has been updated in the database.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error updating lead",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleAddLead = (newLead: Omit<Lead, 'id' | 'assignedTo' | 'date'>) => {
     addLeadMutation.mutate(newLead);
+  };
+
+  const handleUpdateLead = (updatedLead: Omit<Lead, 'id' | 'assignedTo' | 'date'>) => {
+    if (selectedLead) {
+      updateLeadMutation.mutate({
+        id: selectedLead.id,
+        leadData: updatedLead
+      });
+    }
   };
 
   // Handle bulk upload
   const handleUploadComplete = () => {
     queryClient.invalidateQueries({ queryKey: ['leads'] });
+  };
+
+  // Handle lead click for editing
+  const handleLeadClick = (lead: Lead) => {
+    setSelectedLead(lead);
+    setEditModalOpen(true);
   };
 
   return (
@@ -179,7 +234,8 @@ const Leads = () => {
         ) : (
           <LeadsList 
             leads={leads}
-            onAddLeadClick={null} // Remove the second button in LeadsList
+            onAddLeadClick={null}
+            onLeadClick={handleLeadClick}
           />
         )}
         
@@ -193,6 +249,13 @@ const Leads = () => {
           open={addModalOpen}
           onOpenChange={setAddModalOpen}
           onLeadAdded={handleAddLead}
+        />
+
+        <LeadEditModal
+          open={editModalOpen}
+          onOpenChange={setEditModalOpen}
+          lead={selectedLead}
+          onLeadUpdated={handleUpdateLead}
         />
       </div>
     </MainLayout>
