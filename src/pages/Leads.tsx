@@ -153,7 +153,6 @@ const Leads = () => {
   // Update lead mutation
   const updateLeadMutation = useMutation({
     mutationFn: async ({ id, leadData }: { id: string, leadData: Omit<Lead, 'id' | 'assignedTo' | 'date'> }) => {
-      console.log("Updating lead:", id, leadData);
       const { data, error } = await supabase
         .from('leads')
         .update({
@@ -162,6 +161,7 @@ const Leads = () => {
           email_address: leadData.email_address,
           contact_number: leadData.contact_number,
           source: leadData.source,
+          status: leadData.status,
           value: leadData.value || 0,
           city_state: leadData.city_state,
           services_required: leadData.services_required,
