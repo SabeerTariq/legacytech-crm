@@ -6,11 +6,29 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Bot, AlertCircle, Key, Info } from "lucide-react";
+import { Bot, AlertCircle, Key, Info, ExternalLink } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { 
+  Dialog, 
+  DialogTrigger, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Message {
   role: 'assistant' | 'user' | 'system';
@@ -22,6 +40,8 @@ const BetterAskSaul = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -56,11 +76,15 @@ const BetterAskSaul = () => {
       }
 
       if (data.error) {
+        console.error('Saul returned an error:', data.error);
+        
         // Check if it's an API key related error
         if (data.error.includes('API key')) {
+          setErrorMessage(data.error);
           setApiKeyDialogOpen(true);
           throw new Error(data.error);
         }
+        
         throw new Error(data.error);
       }
 
@@ -78,11 +102,17 @@ const BetterAskSaul = () => {
         content: `Error: ${error.message || 'Failed to get response from Saul'}`
       }]);
       
-      toast({
-        title: "Error",
-        description: `Failed to get response from Saul: ${error.message || 'Unknown error'}`,
-        variant: "destructive",
-      });
+      // Show detailed error in a dialog for significant errors
+      if (error.message.includes('API key')) {
+        setErrorMessage(error.message);
+        setErrorDialogOpen(true);
+      } else {
+        toast({
+          title: "Error",
+          description: `Failed to get response from Saul: ${error.message || 'Unknown error'}`,
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -150,6 +180,7 @@ const BetterAskSaul = () => {
           </CardContent>
         </Card>
 
+        {/* API Key Error Dialog */}
         <Dialog open={apiKeyDialogOpen} onOpenChange={setApiKeyDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -169,9 +200,41 @@ const BetterAskSaul = () => {
                 This is a backend configuration issue that needs to be addressed by your system administrator.
               </AlertDescription>
             </Alert>
-            <Button onClick={() => setApiKeyDialogOpen(false)}>Close</Button>
+            <DialogFooter className="mt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setApiKeyDialogOpen(false)} 
+                className="w-full sm:w-auto"
+              >
+                Close
+              </Button>
+              <Button 
+                className="w-full sm:w-auto flex items-center gap-1" 
+                onClick={() => window.open('https://supabase.com/dashboard/project/yipyteszzyycbqgzpfrf/settings/functions', '_blank')}
+              >
+                Go to Supabase Settings <ExternalLink className="h-4 w-4" />
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* General Error Dialog */}
+        <AlertDialog open={errorDialogOpen} onOpenChange={setErrorDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Error</AlertDialogTitle>
+              <AlertDialogDescription>
+                {errorMessage || "An error occurred while communicating with Saul."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Close</AlertDialogCancel>
+              <AlertDialogAction onClick={() => window.open('https://supabase.com/dashboard/project/yipyteszzyycbqgzpfrf/settings/functions', '_blank')}>
+                Go to Supabase Settings
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </MainLayout>
   );
