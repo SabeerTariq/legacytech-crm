@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +37,7 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
     source: "",
     value: 0,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Update form data when lead changes
   useEffect(() => {
@@ -79,6 +80,7 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     
     if (!formData.name || !formData.email) {
       toast({
@@ -86,11 +88,13 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
         description: "Please fill in all required fields.",
         variant: "destructive",
       });
+      setIsSubmitting(false);
       return;
     }
 
     onLeadUpdated(formData);
-    onOpenChange(false);
+    setIsSubmitting(false);
+    // Note: onOpenChange(false) will be called by the parent component after the update is successful
   };
 
   return (
@@ -98,6 +102,9 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Edit Lead</DialogTitle>
+          <DialogDescription>
+            Update the information for this lead.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
@@ -162,7 +169,9 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
                   <SelectItem value="new">New</SelectItem>
                   <SelectItem value="contacted">Contacted</SelectItem>
                   <SelectItem value="qualified">Qualified</SelectItem>
-                  <SelectItem value="converted">Converted</SelectItem>
+                  <SelectItem value="proposal">Proposal</SelectItem>
+                  <SelectItem value="negotiation">Negotiation</SelectItem>
+                  <SelectItem value="won">Won</SelectItem>
                   <SelectItem value="lost">Lost</SelectItem>
                 </SelectContent>
               </Select>
@@ -178,11 +187,13 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
                   <SelectValue placeholder="Select source" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="website">Website</SelectItem>
-                  <SelectItem value="referral">Referral</SelectItem>
-                  <SelectItem value="social">Social Media</SelectItem>
-                  <SelectItem value="email">Email</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  <SelectItem value="Website Contact Form">Website Contact Form</SelectItem>
+                  <SelectItem value="Referral">Referral</SelectItem>
+                  <SelectItem value="LinkedIn">LinkedIn</SelectItem>
+                  <SelectItem value="Google Search">Google Search</SelectItem>
+                  <SelectItem value="Trade Show">Trade Show</SelectItem>
+                  <SelectItem value="Email Campaign">Email Campaign</SelectItem>
+                  <SelectItem value="Cold Call">Cold Call</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -205,7 +216,9 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit">Save Changes</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : "Save Changes"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import LeadsList, { Lead } from "@/components/leads/LeadsList";
@@ -136,6 +135,7 @@ const Leads = () => {
   // Update lead mutation
   const updateLeadMutation = useMutation({
     mutationFn: async ({ id, leadData }: { id: string, leadData: Omit<Lead, 'id' | 'assignedTo' | 'date'> }) => {
+      console.log("Updating lead:", id, leadData);
       const { data, error } = await supabase
         .from('leads')
         .update({
@@ -155,6 +155,7 @@ const Leads = () => {
       return data[0];
     },
     onSuccess: () => {
+      setEditModalOpen(false);
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       toast({
         title: "Lead updated successfully",
@@ -176,6 +177,7 @@ const Leads = () => {
 
   const handleUpdateLead = (updatedLead: Omit<Lead, 'id' | 'assignedTo' | 'date'>) => {
     if (selectedLead) {
+      console.log("Handling update for lead:", selectedLead.id);
       updateLeadMutation.mutate({
         id: selectedLead.id,
         leadData: updatedLead
@@ -233,7 +235,12 @@ const Leads = () => {
           </div>
         ) : (
           <LeadsList 
-            leads={leads}
+            leads={leads.filter(lead => searchQuery ? 
+              lead.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+              lead.company.toLowerCase().includes(searchQuery.toLowerCase()) || 
+              lead.email.toLowerCase().includes(searchQuery.toLowerCase())
+              : true
+            )}
             onAddLeadClick={null}
             onLeadClick={handleLeadClick}
           />
