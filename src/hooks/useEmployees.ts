@@ -20,12 +20,12 @@ export const useEmployees = (department: string) => {
         ...employee,
         joinDate: employee.join_date,
         performance: {
-          salesTarget: Number(employee.performance?.salesTarget ?? 0),
-          salesAchieved: Number(employee.performance?.salesAchieved ?? 0),
-          projectsCompleted: Number(employee.performance?.projectsCompleted ?? 0),
-          tasksCompleted: Number(employee.performance?.tasksCompleted ?? 0),
-          customerSatisfaction: Number(employee.performance?.customerSatisfaction ?? 0),
-          avgTaskCompletionTime: Number(employee.performance?.avgTaskCompletionTime ?? 0)
+          salesTarget: Number(employee.performance?.sales_target ?? 0),
+          salesAchieved: Number(employee.performance?.sales_achieved ?? 0),
+          projectsCompleted: Number(employee.performance?.projects_completed ?? 0),
+          tasksCompleted: Number(employee.performance?.tasks_completed ?? 0),
+          customerSatisfaction: Number(employee.performance?.customer_satisfaction ?? 0),
+          avgTaskCompletionTime: Number(employee.performance?.avg_task_completion_time ?? 0)
         }
       }));
     }

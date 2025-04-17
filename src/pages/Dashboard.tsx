@@ -1,10 +1,10 @@
+
 import React from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import StatCard from "@/components/dashboard/StatCard";
 import RecentActivity from "@/components/dashboard/RecentActivity";
 import ProjectsOverview from "@/components/dashboard/ProjectsOverview";
 import { AreaChart, BarChart, Calendar, DollarSign, Users, Zap, Mail, MessageSquare, TrendingUp } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import MarketingMetrics from "@/components/dashboard/MarketingMetrics";
 import CampaignPerformance from "@/components/dashboard/CampaignPerformance";
 import { useQuery } from "@tanstack/react-query";
@@ -212,13 +212,13 @@ const Dashboard = () => {
             />
           ))}
         </div>
+
+        <TeamPerformance />
         
         <div className="grid gap-6 md:grid-cols-2">
           <MarketingMetrics />
           <CampaignPerformance />
         </div>
-
-        <TeamPerformance />
 
         <h2 className="text-2xl font-semibold mt-8">Marketing Overview</h2>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">

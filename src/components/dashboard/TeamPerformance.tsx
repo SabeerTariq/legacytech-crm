@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Target, BarChart } from "lucide-react";
 import { useEmployees } from "@/hooks/useEmployees";
@@ -64,8 +63,7 @@ const TeamPerformanceCard = ({ department }: { department: string }) => {
             <Progress 
               value={avgSalesProgress} 
               className={cn(
-                "h-2",
-                avgSalesProgress >= 70 ? "bg-green-500" : "bg-red-500"
+                avgSalesProgress >= 70 ? "text-green-500" : "text-red-500"
               )}
             />
             <div className="flex justify-between text-xs">
