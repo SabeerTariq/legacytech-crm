@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { PaperclipIcon, Send, SmilePlus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface Message {
   id: string;
@@ -33,6 +34,7 @@ const MessageChat: React.FC<MessageChatProps> = ({
 }) => {
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -70,18 +72,24 @@ const MessageChat: React.FC<MessageChatProps> = ({
                 key={message.id}
                 className={cn("flex", message.isCurrentUser ? "justify-end" : "justify-start")}
               >
-                <div className="flex gap-2 max-w-[80%]">
-                  {!message.isCurrentUser && (
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={message.sender.avatar} />
-                      <AvatarFallback>{message.sender.initials}</AvatarFallback>
-                    </Avatar>
-                  )}
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      {!message.isCurrentUser && (
-                        <span className="text-sm font-medium">{message.sender.name}</span>
-                      )}
+                <div className={cn(
+                  "flex gap-2",
+                  isMobile ? "max-w-[90%]" : "max-w-[80%]",
+                  message.isCurrentUser ? "flex-row-reverse" : "flex-row"
+                )}>
+                  <Avatar className="h-8 w-8 flex-shrink-0">
+                    <AvatarImage src={message.sender.avatar} />
+                    <AvatarFallback>{message.sender.initials}</AvatarFallback>
+                  </Avatar>
+                  <div className={cn(
+                    message.isCurrentUser ? "items-end" : "items-start",
+                    "flex flex-col"
+                  )}>
+                    <div className={cn(
+                      "flex items-center gap-2 mb-1",
+                      message.isCurrentUser ? "flex-row-reverse" : "flex-row"
+                    )}>
+                      <span className="text-sm font-medium">{message.sender.name}</span>
                       <span className="text-xs text-muted-foreground">{message.timestamp}</span>
                     </div>
                     <div
@@ -95,12 +103,6 @@ const MessageChat: React.FC<MessageChatProps> = ({
                       {message.content}
                     </div>
                   </div>
-                  {message.isCurrentUser && (
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={message.sender.avatar} />
-                      <AvatarFallback>{message.sender.initials}</AvatarFallback>
-                    </Avatar>
-                  )}
                 </div>
               </div>
             ))
@@ -115,12 +117,16 @@ const MessageChat: React.FC<MessageChatProps> = ({
 
       <div className="p-3 border-t">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon">
-            <PaperclipIcon className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon">
-            <SmilePlus className="h-4 w-4" />
-          </Button>
+          {!isMobile && (
+            <>
+              <Button variant="ghost" size="icon">
+                <PaperclipIcon className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon">
+                <SmilePlus className="h-4 w-4" />
+              </Button>
+            </>
+          )}
           <Input
             placeholder="Type your message..."
             value={newMessage}

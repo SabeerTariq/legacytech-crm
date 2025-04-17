@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import MessageChat from "@/components/communication/MessageChat";
 import { Input } from "@/components/ui/input";
-import { Search, UserPlus } from "lucide-react";
+import { Search, UserPlus, ArrowLeft } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -14,10 +14,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { MultiSelect, MultiSelectOption } from "@/components/ui/multi-select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Messages: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const { 
     conversations, 
     messages, 
@@ -33,12 +35,25 @@ const Messages: React.FC = () => {
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
   const [users, setUsers] = useState<MultiSelectOption[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [showConversationList, setShowConversationList] = useState(true);
 
   useEffect(() => {
     if (selectedConversation) {
       fetchMessagesForConversation(selectedConversation.id);
+
+      // On mobile, hide the conversation list when a conversation is selected
+      if (isMobile) {
+        setShowConversationList(false);
+      }
     }
-  }, [selectedConversation, fetchMessagesForConversation]);
+  }, [selectedConversation, fetchMessagesForConversation, isMobile]);
+
+  useEffect(() => {
+    // Always show conversation list on desktop
+    if (!isMobile) {
+      setShowConversationList(true);
+    }
+  }, [isMobile]);
 
   useEffect(() => {
     // Fetch users for the MultiSelect
@@ -105,6 +120,11 @@ const Messages: React.FC = () => {
             title: "Conversation created",
             description: "Your new conversation is ready",
           });
+          
+          // On mobile, hide the conversation list when a new conversation is created
+          if (isMobile) {
+            setShowConversationList(false);
+          }
         }
       } catch (error) {
         console.error("Error creating conversation:", error);
@@ -117,6 +137,10 @@ const Messages: React.FC = () => {
     }
   };
 
+  const handleBackToList = () => {
+    setShowConversationList(true);
+  };
+
   const filteredConversations = conversations.filter(conv => 
     conv.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -125,17 +149,35 @@ const Messages: React.FC = () => {
     <MainLayout>
       <div className="h-[calc(100vh-8rem)] flex flex-col">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">Messages</h1>
+          {isMobile && selectedConversation && !showConversationList ? (
+            <div className="flex items-center">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleBackToList}
+                className="mr-2"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <h1 className="text-xl font-bold truncate">
+                {selectedConversation.name || 'Unnamed conversation'}
+              </h1>
+            </div>
+          ) : (
+            <h1 className="text-3xl font-bold">Messages</h1>
+          )}
+          
           <Dialog 
             open={isNewConversationDialogOpen} 
             onOpenChange={setIsNewConversationDialogOpen}
           >
             <DialogTrigger asChild>
               <Button variant="outline">
-                <UserPlus className="mr-2 h-4 w-4" /> New Conversation
+                <UserPlus className="mr-2 h-4 w-4" /> 
+                {isMobile ? "" : "New Conversation"}
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className={isMobile ? "w-[90%] max-w-md" : ""}>
               <DialogHeader>
                 <DialogTitle>Create New Conversation</DialogTitle>
               </DialogHeader>
@@ -157,91 +199,98 @@ const Messages: React.FC = () => {
         </div>
         
         <div className="flex h-full gap-4 overflow-hidden">
-          {/* Conversations list */}
-          <div className="w-80 flex-shrink-0 border rounded-lg bg-card overflow-hidden">
-            <div className="p-3 border-b">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search conversations..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
-                />
+          {/* Conversations list - hidden on mobile when a conversation is selected */}
+          {(!isMobile || showConversationList) && (
+            <div className={cn(
+              "border rounded-lg bg-card overflow-hidden",
+              isMobile ? "w-full" : "w-80 flex-shrink-0"
+            )}>
+              <div className="p-3 border-b">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search conversations..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
               </div>
-            </div>
-            
-            <ScrollArea className="h-[calc(100%-60px)]">
-              <div className="p-1">
-                {filteredConversations.length > 0 ? (
-                  filteredConversations.map((conversation) => (
-                    <div
-                      key={conversation.id}
-                      className={cn(
-                        "flex items-center gap-3 p-3 rounded-md cursor-pointer",
-                        selectedConversation?.id === conversation.id
-                          ? "bg-muted"
-                          : "hover:bg-muted/50"
-                      )}
-                      onClick={() => setSelectedConversation(conversation)}
-                    >
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback>
-                          {conversation.name?.slice(0, 2).toUpperCase() || 'CN'}
-                        </AvatarFallback>
-                      </Avatar>
-                      
-                      <div className="flex-1 overflow-hidden">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{conversation.name || 'Unnamed conversation'}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {/* TODO: Add timestamp */}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground truncate">
-                            {conversation.last_message_text || "No messages yet"}
-                          </span>
+              
+              <ScrollArea className="h-[calc(100%-60px)]">
+                <div className="p-1">
+                  {filteredConversations.length > 0 ? (
+                    filteredConversations.map((conversation) => (
+                      <div
+                        key={conversation.id}
+                        className={cn(
+                          "flex items-center gap-3 p-3 rounded-md cursor-pointer",
+                          selectedConversation?.id === conversation.id
+                            ? "bg-muted"
+                            : "hover:bg-muted/50"
+                        )}
+                        onClick={() => setSelectedConversation(conversation)}
+                      >
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback>
+                            {conversation.name?.slice(0, 2).toUpperCase() || 'CN'}
+                          </AvatarFallback>
+                        </Avatar>
+                        
+                        <div className="flex-1 overflow-hidden">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">{conversation.name || 'Unnamed conversation'}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {/* TODO: Add timestamp */}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground truncate">
+                              {conversation.last_message_text || "No messages yet"}
+                            </span>
+                          </div>
                         </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-muted-foreground">
+                      No conversations found
                     </div>
-                  ))
-                ) : (
-                  <div className="p-4 text-center text-muted-foreground">
-                    No conversations found
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
           
-          {/* Message chat */}
-          <div className="flex-1 min-w-0">
-            {selectedConversation ? (
-              <MessageChat
-                messages={messages.map(msg => ({
-                  id: msg.id,
-                  content: msg.content,
-                  timestamp: new Date(msg.created_at).toLocaleTimeString(),
-                  sender: {
-                    id: msg.sender_id,
-                    name: msg.sender?.full_name || 'Unknown',
-                    initials: msg.sender?.full_name?.slice(0, 2) || 'UN',
-                    avatar: msg.sender?.avatar_url
-                  },
-                  isCurrentUser: msg.sender_id === user?.id
-                }))}
-                currentUserId={user?.id || ''}
-                onSendMessage={(message) => {
-                  sendMessage(selectedConversation.id, message);
-                }}
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                Select a conversation to start chatting
-              </div>
-            )}
-          </div>
+          {/* Message chat - shown on mobile only when a conversation is selected */}
+          {(!isMobile || !showConversationList) && (
+            <div className="flex-1 min-w-0">
+              {selectedConversation ? (
+                <MessageChat
+                  messages={messages.map(msg => ({
+                    id: msg.id,
+                    content: msg.content,
+                    timestamp: new Date(msg.created_at).toLocaleTimeString(),
+                    sender: {
+                      id: msg.sender_id,
+                      name: msg.sender?.full_name || 'Unknown',
+                      initials: msg.sender?.full_name?.slice(0, 2) || 'UN',
+                      avatar: msg.sender?.avatar_url
+                    },
+                    isCurrentUser: msg.sender_id === user?.id
+                  }))}
+                  currentUserId={user?.id || ''}
+                  onSendMessage={(message) => {
+                    sendMessage(selectedConversation.id, message);
+                  }}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  {isMobile ? "Select a conversation to start chatting" : "Select a conversation to start chatting"}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </MainLayout>

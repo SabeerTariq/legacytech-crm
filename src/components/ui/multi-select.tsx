@@ -6,6 +6,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "./scroll-area";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface MultiSelectOption {
   value: string;
@@ -28,6 +29,7 @@ export function MultiSelect({
   className,
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
+  const isMobile = useIsMobile();
 
   // Ensure options is always an array, even if it's undefined
   const safeOptions = Array.isArray(options) ? options : [];
@@ -68,11 +70,16 @@ export function MultiSelect({
           </div>
         </div>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent 
+        className="w-[--radix-popover-trigger-width] p-0" 
+        align="start"
+        sideOffset={isMobile ? 5 : 0}
+        alignOffset={isMobile ? 0 : 0}
+      >
         <Command>
           <CommandInput placeholder="Search..." />
           <CommandEmpty>No results found.</CommandEmpty>
-          <ScrollArea className="max-h-60">
+          <ScrollArea className={cn("max-h-60", isMobile && "max-h-[40vh]")}>
             <CommandGroup>
               {safeOptions.length > 0 ? (
                 safeOptions.map((option) => {
@@ -88,6 +95,7 @@ export function MultiSelect({
                         );
                         // Don't close the popover when selecting an item in multi-select
                       }}
+                      className={isMobile ? "py-3" : ""}
                     >
                       <div
                         className={cn(
