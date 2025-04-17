@@ -12,7 +12,8 @@ import {
   FolderKanban,
   FileSpreadsheet,
   Zap,
-  ClipboardList  // Added for Sales Disposition form
+  ClipboardList,
+  DollarSign  // Added for Payment page link
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
@@ -30,7 +31,8 @@ const NavigationMenu = () => {
   const mainNavItems = [
     { icon: BarChart3, label: "Dashboard", path: "/" },
     { icon: Users, label: "Leads", path: "/leads" },
-    { icon: ClipboardList, label: "Sales Form", path: "/sales-form" }, // Moved here
+    { icon: ClipboardList, label: "Sales Form", path: "/sales-form" },
+    { icon: DollarSign, label: "Payments", path: "/payments" }, // New payment page link
     { icon: Briefcase, label: "Projects", path: "/projects" },
     { icon: KanbanSquare, label: "Tasks", path: "/tasks" },
     { icon: MessageSquare, label: "Messages", path: "/messages" },
