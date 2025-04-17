@@ -24,7 +24,8 @@ const Leads = () => {
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ['leads'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First, fetch leads
+      const { data: leadsData, error: leadsError } = await supabase
         .from('leads')
         .select(`
           id, 
@@ -36,39 +37,57 @@ const Leads = () => {
           source, 
           value,
           created_at,
-          assigned_to_id,
-          profiles(full_name, avatar_url)
+          assigned_to_id
         `)
         .order('created_at', { ascending: false });
 
-      if (error) {
+      if (leadsError) {
         toast({
           title: "Error fetching leads",
-          description: error.message,
+          description: leadsError.message,
           variant: "destructive",
         });
         return [];
       }
 
-      // Format data for the LeadsList component
-      return data.map(lead => ({
-        id: lead.id,
-        name: lead.name,
-        company: lead.company || '',
-        email: lead.email,
-        phone: lead.phone || '',
-        status: lead.status as Lead['status'] || 'new',
-        source: lead.source || '',
-        value: lead.value || 0,
-        assignedTo: {
-          name: lead.profiles ? (lead.profiles.full_name || 'Unassigned') : 'Unassigned',
-          initials: lead.profiles && lead.profiles.full_name 
-            ? lead.profiles.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase() 
-            : 'UN',
-          avatar: lead.profiles ? lead.profiles.avatar_url : undefined,
-        },
-        date: new Date(lead.created_at).toLocaleDateString(),
+      // Process leads and fetch profile data for each assigned user
+      const processedLeads = await Promise.all(leadsData.map(async (lead) => {
+        // Only fetch profile if there's an assigned user
+        let profileData = null;
+        
+        if (lead.assigned_to_id) {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .eq('id', lead.assigned_to_id)
+            .single();
+          
+          if (!profileError) {
+            profileData = profile;
+          }
+        }
+
+        return {
+          id: lead.id,
+          name: lead.name,
+          company: lead.company || '',
+          email: lead.email,
+          phone: lead.phone || '',
+          status: lead.status as Lead['status'] || 'new',
+          source: lead.source || '',
+          value: lead.value || 0,
+          assignedTo: {
+            name: profileData?.full_name || 'Unassigned',
+            initials: profileData?.full_name 
+              ? profileData.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase() 
+              : 'UN',
+            avatar: profileData?.avatar_url,
+          },
+          date: new Date(lead.created_at).toLocaleDateString(),
+        };
       }));
+
+      return processedLeads;
     },
     enabled: !!user,
   });
