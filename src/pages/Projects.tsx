@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import ProjectKanban from "@/components/projects/ProjectKanban";
@@ -136,7 +135,13 @@ const Projects = () => {
           };
         }
         
-        const profile = task.profiles || {};
+        // Fix TypeScript errors by properly handling the profiles field
+        const profile = task.profiles || null;
+        const profileName = profile?.full_name || 'Unassigned';
+        const profileInitials = profile?.full_name 
+          ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase() 
+          : 'UN';
+        const profileAvatar = profile?.avatar_url;
         
         columns[statusKey].tasks.push({
           id: task.id,
@@ -145,11 +150,9 @@ const Projects = () => {
           priority: task.priority as "high" | "medium" | "low",
           dueDate: task.due_date ? new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : '',
           assignee: {
-            name: profile.full_name || 'Unassigned',
-            initials: profile.full_name ? 
-              profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 
-              'UN',
-            avatar: profile.avatar_url,
+            name: profileName,
+            initials: profileInitials,
+            avatar: profileAvatar,
           },
         });
       });

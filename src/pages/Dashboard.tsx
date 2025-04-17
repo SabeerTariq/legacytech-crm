@@ -1,4 +1,3 @@
-
 import React from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import StatCard from "@/components/dashboard/StatCard";
@@ -8,36 +7,113 @@ import { AreaChart, BarChart, Calendar, DollarSign, Users, Zap, Mail, MessageSqu
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import MarketingMetrics from "@/components/dashboard/MarketingMetrics";
 import CampaignPerformance from "@/components/dashboard/CampaignPerformance";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
-  // Mock data for dashboard components
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  // Fetch projects data
+  const { data: projects = [] } = useQuery({
+    queryKey: ['dashboard-projects'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', user?.id);
+      
+      if (error) {
+        toast({
+          title: "Error fetching projects",
+          description: error.message,
+          variant: "destructive",
+        });
+        return [];
+      }
+      
+      return data.map(project => ({
+        id: project.id,
+        name: project.name,
+        client: project.client,
+        description: project.description || '',
+        dueDate: new Date(project.due_date).toLocaleDateString(),
+        status: project.status,
+        progress: project.progress || 0,
+      }));
+    },
+    enabled: !!user,
+  });
+
+  // Fetch leads data
+  const { data: leads = [] } = useQuery({
+    queryKey: ['dashboard-leads'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('user_id', user?.id);
+      
+      if (error) {
+        toast({
+          title: "Error fetching leads",
+          description: error.message,
+          variant: "destructive",
+        });
+        return [];
+      }
+      
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  // Calculate dashboard metrics
+  const totalProjects = projects.length;
+  const activeProjects = projects.filter(p => p.status !== 'completed').length;
+  
+  const activeLeads = leads.filter(lead => 
+    lead.status === 'new' || lead.status === 'contacted' || lead.status === 'qualified'
+  ).length;
+  
+  const totalRevenue = leads
+    .filter(lead => lead.status === 'converted' || lead.status === 'won')
+    .reduce((sum, lead) => sum + (lead.value || 0), 0);
+  
+  const conversionRate = leads.length > 0 
+    ? ((leads.filter(lead => lead.status === 'converted' || lead.status === 'won').length / leads.length) * 100).toFixed(1)
+    : "0.0";
+
   const stats = [
     {
       title: "Total Projects",
-      value: "24",
+      value: totalProjects.toString(),
       icon: <BarChart />,
-      trend: { value: 12, positive: true },
+      trend: { value: activeProjects > 0 ? Math.round((activeProjects/totalProjects) * 100) : 0, positive: true },
     },
     {
       title: "Active Leads",
-      value: "42",
+      value: activeLeads.toString(),
       icon: <Users />,
-      trend: { value: 8, positive: true },
+      trend: { value: leads.length > 0 ? Math.round((activeLeads/leads.length) * 100) : 0, positive: true },
     },
     {
       title: "Revenue",
-      value: "$48,500",
+      value: `$${totalRevenue.toLocaleString()}`,
       icon: <DollarSign />,
       trend: { value: 5, positive: true },
     },
     {
       title: "Conversion Rate",
-      value: "8.4%",
+      value: `${conversionRate}%`,
       icon: <TrendingUp />,
       trend: { value: 1.2, positive: true },
     },
   ];
 
+  // We'll keep the marketing stats fixed for now
   const marketingStats = [
     {
       title: "Email Opens",
@@ -65,6 +141,7 @@ const Dashboard = () => {
     },
   ];
 
+  // Fetch activities data (for now we'll use the mock data)
   const activities = [
     {
       id: "1",
@@ -103,40 +180,18 @@ const Dashboard = () => {
     },
   ];
 
-  const projects = [
-    {
-      id: "1",
-      name: "Agency Website Redesign",
-      client: "ABC Company",
-      progress: 75,
-      status: "in-progress" as const,
-      dueDate: "Next week",
-    },
-    {
-      id: "2",
-      name: "E-commerce Platform",
-      client: "XYZ Store",
-      progress: 40,
-      status: "in-progress" as const,
-      dueDate: "In 3 weeks",
-    },
-    {
-      id: "3",
-      name: "SEO Optimization",
-      client: "Local Business",
-      progress: 90,
-      status: "review" as const,
-      dueDate: "Tomorrow",
-    },
-    {
-      id: "4",
-      name: "Social Media Campaign",
-      client: "Tech Startup",
-      progress: 100,
-      status: "completed" as const,
-      dueDate: "Completed",
-    },
-  ];
+  // Prepare projects for display in ProjectsOverview
+  const projectsForDisplay = projects
+    .filter(p => p.status !== 'completed')
+    .slice(0, 4)
+    .map(p => ({
+      id: p.id,
+      name: p.name,
+      client: p.client,
+      progress: p.progress || 0,
+      status: p.status as "new" | "in-progress" | "review" | "approved" | "completed" | "on-hold",
+      dueDate: p.dueDate,
+    }));
 
   return (
     <MainLayout>
@@ -175,7 +230,7 @@ const Dashboard = () => {
         
         <div className="grid gap-6 md:grid-cols-2">
           <RecentActivity activities={activities} />
-          <ProjectsOverview projects={projects} />
+          <ProjectsOverview projects={projectsForDisplay} />
         </div>
       </div>
     </MainLayout>

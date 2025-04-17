@@ -69,6 +69,11 @@ const NewProjectDialog: React.FC<NewProjectDialogProps> = ({
 
   const onSubmit = (values: ProjectFormValues) => {
     onProjectCreated(values);
+    form.reset();
+    toast({
+      title: "Project created",
+      description: "Your project has been created successfully.",
+    });
   };
 
   return (
