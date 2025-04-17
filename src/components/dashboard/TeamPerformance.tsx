@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Target, BarChart } from "lucide-react";
 import { useEmployees } from "@/hooks/useEmployees";
@@ -5,34 +6,37 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import EmployeeCard from "@/components/employees/EmployeeCard";
 import { cn } from "@/lib/utils";
+import { EmployeeProfile, ProductionPerformance } from "@/types/employee";
 
 interface TeamStats {
   totalEmployees: number;
-  averageSalesProgress: number;
-  totalProjectsCompleted: number;
-  totalTasksCompleted: number;
+  averageTaskCompletionRate: number;
+  totalTasksAssigned: number;
+  tasksCompletedOnTime: number;
 }
 
 const TeamPerformanceCard = ({ department }: { department: string }) => {
   const { data: employees = [] } = useEmployees(department);
 
   const stats: TeamStats = employees.reduce((acc, employee) => {
-    const salesProgress = (employee.performance.salesAchieved / employee.performance.salesTarget) * 100;
+    const performance = employee.performance as ProductionPerformance;
+    const completionRate = performance.tasks_completed_ontime / performance.total_tasks_assigned * 100;
+    
     return {
       totalEmployees: acc.totalEmployees + 1,
-      averageSalesProgress: acc.averageSalesProgress + salesProgress,
-      totalProjectsCompleted: acc.totalProjectsCompleted + employee.performance.projectsCompleted,
-      totalTasksCompleted: acc.totalTasksCompleted + employee.performance.tasksCompleted,
+      averageTaskCompletionRate: acc.averageTaskCompletionRate + completionRate,
+      totalTasksAssigned: acc.totalTasksAssigned + performance.total_tasks_assigned,
+      tasksCompletedOnTime: acc.tasksCompletedOnTime + performance.tasks_completed_ontime,
     };
   }, {
     totalEmployees: 0,
-    averageSalesProgress: 0,
-    totalProjectsCompleted: 0,
-    totalTasksCompleted: 0,
+    averageTaskCompletionRate: 0,
+    totalTasksAssigned: 0,
+    tasksCompletedOnTime: 0,
   });
 
-  const avgSalesProgress = stats.totalEmployees > 0 
-    ? stats.averageSalesProgress / stats.totalEmployees 
+  const avgCompletionRate = stats.totalEmployees > 0 
+    ? stats.averageTaskCompletionRate / stats.totalEmployees 
     : 0;
 
   return (
@@ -52,24 +56,24 @@ const TeamPerformanceCard = ({ department }: { department: string }) => {
 
           <div className={cn(
             "space-y-2 rounded-lg p-3",
-            avgSalesProgress >= 70 ? "bg-green-500/10" : "bg-red-500/10"
+            avgCompletionRate >= 70 ? "bg-green-500/10" : "bg-red-500/10"
           )}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Target className="h-4 w-4" />
-                <span className="text-sm">Average Sales Progress</span>
+                <span className="text-sm">Task Completion Rate</span>
               </div>
             </div>
             <Progress 
-              value={avgSalesProgress} 
+              value={avgCompletionRate} 
               className={cn(
-                avgSalesProgress >= 70 ? "text-green-500" : "text-red-500"
+                avgCompletionRate >= 70 ? "text-green-500" : "text-red-500"
               )}
             />
             <div className="flex justify-between text-xs">
               <span>Team Average</span>
-              <Badge variant={avgSalesProgress >= 70 ? "default" : "destructive"}>
-                {avgSalesProgress.toFixed(1)}%
+              <Badge variant={avgCompletionRate >= 70 ? "default" : "destructive"}>
+                {avgCompletionRate.toFixed(1)}%
               </Badge>
             </div>
           </div>
@@ -78,13 +82,13 @@ const TeamPerformanceCard = ({ department }: { department: string }) => {
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <BarChart className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Projects</span>
+                <span className="text-sm">Total Tasks</span>
               </div>
-              <p className="text-2xl font-bold">{stats.totalProjectsCompleted}</p>
+              <p className="text-2xl font-bold">{stats.totalTasksAssigned}</p>
             </div>
             <div className="space-y-1">
-              <span className="text-sm">Tasks</span>
-              <p className="text-2xl font-bold">{stats.totalTasksCompleted}</p>
+              <span className="text-sm">Tasks Completed On Time</span>
+              <p className="text-2xl font-bold">{stats.tasksCompletedOnTime}</p>
             </div>
           </div>
         </CardContent>
@@ -106,8 +110,10 @@ const TeamPerformanceCard = ({ department }: { department: string }) => {
 const TeamPerformance = () => {
   return (
     <div className="grid gap-6">
-      <TeamPerformanceCard department="Business Development" />
-      <TeamPerformanceCard department="Project Management" />
+      <TeamPerformanceCard department="Design" />
+      <TeamPerformanceCard department="Development" />
+      <TeamPerformanceCard department="Marketing" />
+      <TeamPerformanceCard department="Content" />
     </div>
   );
 };
