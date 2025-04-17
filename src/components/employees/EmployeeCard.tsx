@@ -1,3 +1,4 @@
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
@@ -100,11 +101,8 @@ const EmployeeCard = ({ employee, onEdit }: EmployeeCardProps) => {
             <span className="text-sm font-medium">${employee.performance.salesTarget.toLocaleString()}</span>
           </div>
           <Progress 
-            value={progressValue} 
+            value={progressValue}
             className="h-2"
-            indicatorClassName={cn(
-              progressValue >= 70 ? "bg-green-500" : "bg-red-500"
-            )}
           />
           <div className="flex justify-between text-xs">
             <span>Progress: ${employee.performance.salesAchieved.toLocaleString()}</span>
