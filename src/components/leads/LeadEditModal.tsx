@@ -13,12 +13,15 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Lead } from "./LeadsList";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Trash2 } from "lucide-react";
 
 interface LeadEditModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   lead: Lead | null;
   onLeadUpdated: (updatedLead: Omit<Lead, 'id' | 'assignedTo' | 'date'>) => void;
+  onLeadDeleted?: (leadId: string) => void;
 }
 
 const LeadEditModal: React.FC<LeadEditModalProps> = ({
@@ -26,6 +29,7 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
   onOpenChange,
   lead,
   onLeadUpdated,
+  onLeadDeleted,
 }) => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
@@ -38,6 +42,7 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
     value: 0,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Update form data when lead changes
   useEffect(() => {
@@ -95,6 +100,13 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
     console.log("Submitting updated lead:", formData);
     onLeadUpdated(formData);
     // We'll wait for the parent component to close the modal after successful update
+  };
+
+  const handleDelete = () => {
+    if (lead && onLeadDeleted) {
+      onLeadDeleted(lead.id);
+      setIsDeleteDialogOpen(false);
+    }
   };
 
   return (
@@ -212,13 +224,36 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
             />
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Save Changes"}
-            </Button>
+          <DialogFooter className="flex items-center justify-between pt-4">
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button type="button" variant="destructive" className="mr-auto">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Lead
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete this lead and remove it from our database.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            
+            <div>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="mr-2">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>

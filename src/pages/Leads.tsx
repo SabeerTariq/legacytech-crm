@@ -172,6 +172,34 @@ const Leads = () => {
     },
   });
 
+  // Delete lead mutation
+  const deleteLeadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('leads')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: () => {
+      setEditModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast({
+        title: "Lead deleted",
+        description: "The lead has been removed from the database.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error deleting lead",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleAddLead = (newLead: Omit<Lead, 'id' | 'assignedTo' | 'date'>) => {
     addLeadMutation.mutate(newLead);
   };
@@ -184,6 +212,10 @@ const Leads = () => {
         leadData: updatedLead
       });
     }
+  };
+
+  const handleDeleteLead = (id: string) => {
+    deleteLeadMutation.mutate(id);
   };
 
   // Handle bulk upload
@@ -264,6 +296,7 @@ const Leads = () => {
           onOpenChange={setEditModalOpen}
           lead={selectedLead}
           onLeadUpdated={handleUpdateLead}
+          onLeadDeleted={handleDeleteLead}
         />
       </div>
     </MainLayout>
