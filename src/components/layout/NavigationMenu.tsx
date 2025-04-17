@@ -14,7 +14,7 @@ import {
   Zap,
   ClipboardList,
   DollarSign,
-  Robot
+  Bot
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
@@ -34,7 +34,7 @@ const NavigationMenu = () => {
     { icon: Users, label: "Leads", path: "/leads" },
     { icon: ClipboardList, label: "Sales Form", path: "/sales-form" },
     { icon: DollarSign, label: "Payments", path: "/payments" },
-    { icon: Robot, label: "Better Ask Saul", path: "/better-ask-saul" }, // New AI Assistant page link
+    { icon: Bot, label: "Better Ask Saul", path: "/better-ask-saul" }, // Updated icon
     { icon: Briefcase, label: "Projects", path: "/projects" },
     { icon: KanbanSquare, label: "Tasks", path: "/tasks" },
     { icon: MessageSquare, label: "Messages", path: "/messages" },
