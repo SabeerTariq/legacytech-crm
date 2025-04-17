@@ -30,11 +30,11 @@ export const useEmployees = (department: string) => {
             ...employee,
             joinDate: employee.join_date,
             performance: {
-              total_tasks_assigned: Number(performance?.total_tasks_assigned || 0),
-              tasks_completed_ontime: Number(performance?.tasks_completed_ontime || 0),
-              tasks_completed_late: Number(performance?.tasks_completed_late || 0),
-              strikes: Number(performance?.strikes || 0),
-              avg_completion_time: Number(performance?.avg_completion_time || 0)
+              total_tasks_assigned: Number(performance.total_tasks_assigned || 0),
+              tasks_completed_ontime: Number(performance.tasks_completed_ontime || 0),
+              tasks_completed_late: Number(performance.tasks_completed_late || 0),
+              strikes: Number(performance.strikes || 0),
+              avg_completion_time: Number(performance.avg_completion_time || 0)
             }
           };
         } else {
@@ -42,12 +42,12 @@ export const useEmployees = (department: string) => {
             ...employee,
             joinDate: employee.join_date,
             performance: {
-              salesTarget: Number(performance?.salesTarget || 0),
-              salesAchieved: Number(performance?.salesAchieved || 0),
-              projectsCompleted: Number(performance?.projectsCompleted || 0),
-              tasksCompleted: Number(performance?.tasksCompleted || 0),
-              customerSatisfaction: Number(performance?.customerSatisfaction || 0),
-              avgTaskCompletionTime: Number(performance?.avgTaskCompletionTime || 0)
+              salesTarget: Number(performance.salesTarget || 0),
+              salesAchieved: Number(performance.salesAchieved || 0),
+              projectsCompleted: Number(performance.projectsCompleted || 0),
+              tasksCompleted: Number(performance.tasksCompleted || 0),
+              customerSatisfaction: Number(performance.customerSatisfaction || 0),
+              avgTaskCompletionTime: Number(performance.avgTaskCompletionTime || 0)
             }
           };
         }
