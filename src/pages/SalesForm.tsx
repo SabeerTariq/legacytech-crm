@@ -10,12 +10,19 @@ const SalesForm = () => {
   
   const handleFormSubmit = async (data: any) => {
     try {
+      // Check if user is authenticated
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !userData.user) {
+        throw new Error('User not authenticated');
+      }
+
       const { error } = await supabase
         .from('sales_dispositions')
         .insert([
           {
             ...data,
-            user_id: (await supabase.auth.getUser()).data.user?.id
+            user_id: userData.user.id
           }
         ]);
 
@@ -40,7 +47,7 @@ const SalesForm = () => {
       <div className="space-y-6">
         <h1 className="text-3xl font-bold">Sales Disposition</h1>
         <p className="text-muted-foreground">
-          Complete the form below to create a new project and assign it to a project manager.
+          Complete the form below to create a new sales disposition record.
         </p>
         
         <DispositionForm onSubmit={handleFormSubmit} />

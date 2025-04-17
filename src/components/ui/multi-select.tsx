@@ -31,7 +31,7 @@ export function MultiSelect({
   const [open, setOpen] = React.useState(false);
   const isMobile = useIsMobile();
 
-  // Ensure options is always an array, even if it's undefined
+  // Ensure options is always a valid array
   const safeOptions = Array.isArray(options) ? options : [];
 
   // Filter selected options safely
@@ -93,7 +93,6 @@ export function MultiSelect({
                             ? value.filter((v) => v !== option.value)
                             : [...value, option.value]
                         );
-                        // Don't close the popover when selecting an item in multi-select
                       }}
                       className={isMobile ? "py-3" : ""}
                     >

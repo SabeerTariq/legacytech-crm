@@ -128,6 +128,7 @@ interface DispositionFormProps {
 }
 
 const DispositionForm: React.FC<DispositionFormProps> = ({ onSubmit }) => {
+  // Initialize with an empty array to prevent undefined errors
   const [services, setServices] = React.useState<{ value: string; label: string; }[]>([]);
   const [isUploading, setIsUploading] = React.useState(false);
   const { toast } = useToast();
@@ -141,19 +142,30 @@ const DispositionForm: React.FC<DispositionFormProps> = ({ onSubmit }) => {
 
   React.useEffect(() => {
     const fetchServices = async () => {
-      const { data, error } = await supabase
-        .from('services')
-        .select('name');
-      
-      if (error) {
-        console.error('Error fetching services:', error);
-        return;
+      try {
+        const { data, error } = await supabase
+          .from('services')
+          .select('name');
+        
+        if (error) {
+          console.error('Error fetching services:', error);
+          return;
+        }
+        
+        if (data && Array.isArray(data)) {
+          setServices(data.map(service => ({
+            value: service.name,
+            label: service.name
+          })));
+        } else {
+          console.error('Services data is not an array:', data);
+          // Ensure services is always an array
+          setServices([]);
+        }
+      } catch (error) {
+        console.error('Exception fetching services:', error);
+        setServices([]);
       }
-      
-      setServices(data.map(service => ({
-        value: service.name,
-        label: service.name
-      })));
     };
 
     fetchServices();
