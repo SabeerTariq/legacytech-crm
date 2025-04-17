@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import TeamPerformance from "@/components/dashboard/TeamPerformance";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -216,6 +217,8 @@ const Dashboard = () => {
           <MarketingMetrics />
           <CampaignPerformance />
         </div>
+
+        <TeamPerformance />
 
         <h2 className="text-2xl font-semibold mt-8">Marketing Overview</h2>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">

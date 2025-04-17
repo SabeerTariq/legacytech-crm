@@ -20,12 +20,12 @@ export const useEmployees = (department: string) => {
         ...employee,
         joinDate: employee.join_date,
         performance: {
-          salesTarget: employee.performance.salesTarget || 0,
-          salesAchieved: employee.performance.salesAchieved || 0,
-          projectsCompleted: employee.performance.projectsCompleted || 0,
-          tasksCompleted: employee.performance.tasksCompleted || 0,
-          customerSatisfaction: employee.performance.customerSatisfaction || 0,
-          avgTaskCompletionTime: employee.performance.avgTaskCompletionTime || 0
+          salesTarget: Number(employee.performance?.salesTarget || 0),
+          salesAchieved: Number(employee.performance?.salesAchieved || 0),
+          projectsCompleted: Number(employee.performance?.projectsCompleted || 0),
+          tasksCompleted: Number(employee.performance?.tasksCompleted || 0),
+          customerSatisfaction: Number(employee.performance?.customerSatisfaction || 0),
+          avgTaskCompletionTime: Number(employee.performance?.avgTaskCompletionTime || 0)
         }
       }));
     }
