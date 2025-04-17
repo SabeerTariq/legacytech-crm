@@ -1,4 +1,3 @@
-
 import React from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import StatCard from "@/components/dashboard/StatCard";
@@ -78,12 +77,15 @@ const Dashboard = () => {
     lead.status === 'new' || lead.status === 'contacted' || lead.status === 'qualified'
   ).length;
   
-  const totalRevenue = leads
-    .filter(lead => lead.status === 'converted' || lead.status === 'won')
-    .reduce((sum, lead) => sum + (lead.value || 0), 0);
+  // Calculate total revenue from converted and won leads
+  const convertedLeads = leads.filter(lead => 
+    lead.status === 'converted' || lead.status === 'won'
+  );
+  const totalRevenue = convertedLeads.reduce((sum, lead) => sum + (Number(lead.value) || 0), 0);
   
+  // Calculate conversion rate
   const conversionRate = leads.length > 0 
-    ? ((leads.filter(lead => lead.status === 'converted' || lead.status === 'won').length / leads.length) * 100).toFixed(1)
+    ? ((convertedLeads.length / leads.length) * 100).toFixed(1)
     : "0.0";
 
   const stats = [
