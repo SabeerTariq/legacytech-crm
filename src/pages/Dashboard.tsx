@@ -1,3 +1,4 @@
+
 import React from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import StatCard from "@/components/dashboard/StatCard";
@@ -53,8 +54,7 @@ const Dashboard = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('leads')
-        .select('*')
-        .eq('user_id', user?.id);
+        .select('*');
       
       if (error) {
         toast({
