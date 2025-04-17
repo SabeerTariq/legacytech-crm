@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from "react";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Bell, LogOut, Menu, MessageCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import NavigationMenu from "@/components/layout/NavigationMenu";
 import { useAuth } from "@/contexts/AuthContext";
 import { removeBackgroundFromImage } from "@/utils/imageUtils";
@@ -58,7 +59,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 <img 
                   src={logoSrc} 
                   alt="LogicWorks CRM Logo" 
-                  className="h-10 w-10" // Increased from h-5 w-5 to h-10 w-10
+                  className="h-10 w-10"
                 />
               </div>
               <div className="font-bold text-xl">LogicWorks CRM</div>
@@ -78,16 +79,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   {user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User"}
                 </div>
               </div>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={handleSignOut}>
-                      <LogOut className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Log Out</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={handleSignOut}>
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Log Out</TooltipContent>
+              </Tooltip>
             </div>
           </SidebarFooter>
         </Sidebar>
@@ -100,28 +99,24 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <div className="ml-4 text-lg font-medium">Command Center</div>
             </div>
             <div className="flex items-center space-x-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative">
-                      <MessageCircle className="h-5 w-5" />
-                      <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Messages</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative">
-                      <Bell className="h-5 w-5" />
-                      <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Notifications</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative">
+                    <MessageCircle className="h-5 w-5" />
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Messages</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative">
+                    <Bell className="h-5 w-5" />
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Notifications</TooltipContent>
+              </Tooltip>
               <Avatar className="h-8 w-8">
                 <AvatarImage src={user?.user_metadata?.avatar_url || ""} />
                 <AvatarFallback>{getUserInitials()}</AvatarFallback>
