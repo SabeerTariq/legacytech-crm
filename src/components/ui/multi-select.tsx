@@ -80,40 +80,41 @@ export function MultiSelect({
         alignOffset={isMobile ? 0 : 0}
       >
         <Command>
-          <CommandInput placeholder="Search..." />
-          <CommandEmpty>No results found.</CommandEmpty>
-          <ScrollArea className={cn("max-h-60", isMobile && "max-h-[40vh]")}>
-            <CommandGroup>
-              {safeOptions.length > 0 ? (
-                safeOptions.map((option) => {
-                  const isSelected = safeValue.includes(option.value);
-                  return (
-                    <CommandItem
-                      key={option.value}
-                      onSelect={() => {
-                        onChange(
-                          isSelected
-                            ? safeValue.filter((v) => v !== option.value)
-                            : [...safeValue, option.value]
-                        );
-                      }}
-                      className={isMobile ? "py-3" : ""}
+          <CommandInput placeholder="Search services..." className="h-9" />
+          <CommandEmpty>No services found.</CommandEmpty>
+          <ScrollArea className={cn("max-h-[300px] overflow-y-auto", isMobile && "max-h-[40vh]")}>
+            <CommandGroup className="p-1">
+              {safeOptions.map((option) => {
+                const isSelected = safeValue.includes(option.value);
+                return (
+                  <CommandItem
+                    key={option.value}
+                    onSelect={() => {
+                      onChange(
+                        isSelected
+                          ? safeValue.filter((v) => v !== option.value)
+                          : [...safeValue, option.value]
+                      );
+                    }}
+                    className={cn(
+                      "flex items-center gap-2 px-2 py-1.5",
+                      isMobile && "py-3"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "flex h-4 w-4 items-center justify-center rounded-sm border",
+                        isSelected 
+                          ? "bg-primary text-primary-foreground border-primary" 
+                          : "opacity-50 border-input"
+                      )}
                     >
-                      <div
-                        className={cn(
-                          "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
-                          isSelected ? "bg-primary text-primary-foreground" : "opacity-50"
-                        )}
-                      >
-                        {isSelected && <CheckIcon className="h-3 w-3" />}
-                      </div>
-                      {option.label}
-                    </CommandItem>
-                  );
-                })
-              ) : (
-                <div className="py-6 text-center text-sm">No options available</div>
-              )}
+                      {isSelected && <CheckIcon className="h-3 w-3" />}
+                    </div>
+                    <span>{option.label}</span>
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           </ScrollArea>
         </Command>
