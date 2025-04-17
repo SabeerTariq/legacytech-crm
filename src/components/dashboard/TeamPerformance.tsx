@@ -6,42 +6,52 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import EmployeeCard from "@/components/employees/EmployeeCard";
 import { cn } from "@/lib/utils";
+import { EmployeeProfile, ProductionPerformance } from "@/types/employee";
 
 interface TeamStats {
   totalEmployees: number;
-  averageTaskCompletion: number;
-  totalSales: number;
-  projectsCompleted: number;
+  averageTaskCompletionRate: number;
+  totalTasksAssigned: number;
+  tasksCompletedOnTime: number;
 }
 
 const TeamPerformanceCard = ({ department }: { department: string }) => {
   const { data: employees = [] } = useEmployees(department);
 
   const stats: TeamStats = employees.reduce((acc, employee) => {
-    const performance = employee.performance;
+    const performance = employee.performance as ProductionPerformance;
+    
+    // Check if total_tasks_assigned is 0, if so, default completion rate to 0
+    const completionRate = performance.total_tasks_assigned > 0 
+      ? (performance.tasks_completed_ontime / performance.total_tasks_assigned * 100)
+      : 0;
     
     return {
       totalEmployees: acc.totalEmployees + 1,
-      averageTaskCompletion: acc.averageTaskCompletion + (performance.tasksCompleted || 0),
-      totalSales: acc.totalSales + (performance.salesAchieved || 0),
-      projectsCompleted: acc.projectsCompleted + (performance.projectsCompleted || 0),
+      averageTaskCompletionRate: acc.averageTaskCompletionRate + completionRate,
+      totalTasksAssigned: acc.totalTasksAssigned + (performance.total_tasks_assigned || 0),
+      tasksCompletedOnTime: acc.tasksCompletedOnTime + (performance.tasks_completed_ontime || 0),
     };
   }, {
     totalEmployees: 0,
-    averageTaskCompletion: 0,
-    totalSales: 0,
-    projectsCompleted: 0,
+    averageTaskCompletionRate: 0,
+    totalTasksAssigned: 0,
+    tasksCompletedOnTime: 0,
   });
 
-  const avgTaskCompletion = stats.totalEmployees > 0 
-    ? (stats.averageTaskCompletion / stats.totalEmployees) 
+  // Add a safe check to avoid division by zero
+  const avgCompletionRate = stats.totalEmployees > 0 
+    ? stats.averageTaskCompletionRate / stats.totalEmployees 
     : 0;
+
+  // Ensure we're working with a valid number
+  const safeAvgCompletionRate = isNaN(avgCompletionRate) ? 0 : avgCompletionRate;
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">{department}</CardTitle>
+          <CardTitle className="text-lg">{department} Team</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
@@ -52,18 +62,26 @@ const TeamPerformanceCard = ({ department }: { department: string }) => {
             <span className="text-2xl font-bold">{stats.totalEmployees}</span>
           </div>
 
-          <div className="space-y-2 rounded-lg p-3 bg-green-500/10">
+          <div className={cn(
+            "space-y-2 rounded-lg p-3",
+            safeAvgCompletionRate >= 70 ? "bg-green-500/10" : "bg-red-500/10"
+          )}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Target className="h-4 w-4" />
-                <span className="text-sm">Task Completion</span>
+                <span className="text-sm">Task Completion Rate</span>
               </div>
             </div>
-            <Progress value={avgTaskCompletion} />
+            <Progress 
+              value={safeAvgCompletionRate} 
+              className={cn(
+                safeAvgCompletionRate >= 70 ? "text-green-500" : "text-red-500"
+              )}
+            />
             <div className="flex justify-between text-xs">
-              <span>Average Tasks Completed</span>
-              <Badge variant="default">
-                {avgTaskCompletion.toFixed(1)}
+              <span>Team Average</span>
+              <Badge variant={safeAvgCompletionRate >= 70 ? "default" : "destructive"}>
+                {safeAvgCompletionRate.toFixed(1)}%
               </Badge>
             </div>
           </div>
@@ -72,13 +90,13 @@ const TeamPerformanceCard = ({ department }: { department: string }) => {
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <BarChart className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Total Sales</span>
+                <span className="text-sm">Total Tasks</span>
               </div>
-              <p className="text-2xl font-bold">${stats.totalSales.toLocaleString()}</p>
+              <p className="text-2xl font-bold">{stats.totalTasksAssigned}</p>
             </div>
             <div className="space-y-1">
-              <span className="text-sm">Projects Completed</span>
-              <p className="text-2xl font-bold">{stats.projectsCompleted}</p>
+              <span className="text-sm">Tasks Completed On Time</span>
+              <p className="text-2xl font-bold">{stats.tasksCompletedOnTime}</p>
             </div>
           </div>
         </CardContent>
@@ -100,8 +118,10 @@ const TeamPerformanceCard = ({ department }: { department: string }) => {
 const TeamPerformance = () => {
   return (
     <div className="grid gap-6">
-      <TeamPerformanceCard department="Business Development" />
-      <TeamPerformanceCard department="Project Management" />
+      <TeamPerformanceCard department="Design" />
+      <TeamPerformanceCard department="Development" />
+      <TeamPerformanceCard department="Marketing" />
+      <TeamPerformanceCard department="Content" />
     </div>
   );
 };
