@@ -47,7 +47,9 @@ serve(async (req) => {
     if (!openAIKey) {
       console.error('Missing OpenAI API key in environment variables');
       return new Response(
-        JSON.stringify({ error: 'OpenAI API key is not configured' }),
+        JSON.stringify({ 
+          error: 'OpenAI API key is not configured in Supabase secrets. Please add your OpenAI API key to the project secrets.' 
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -73,6 +75,18 @@ serve(async (req) => {
     if (!response.ok) {
       const errorData = await response.json();
       console.error('OpenAI API error:', errorData);
+      
+      // Check specifically for API key issues
+      if (errorData.error?.type === 'invalid_request_error' && 
+          errorData.error?.message?.includes('API key provided')) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Your OpenAI API key is invalid. Please update it in your Supabase secrets.' 
+          }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return new Response(
         JSON.stringify({ error: `OpenAI API error: ${errorData.error?.message || 'Unknown error'}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
