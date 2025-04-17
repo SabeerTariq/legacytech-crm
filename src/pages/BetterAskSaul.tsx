@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Gavel } from "lucide-react";
+import { Bot } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -60,7 +60,7 @@ const BetterAskSaul = () => {
         <Card className="min-h-[600px] flex flex-col">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Gavel className="h-6 w-6" />
+              <Bot className="h-6 w-6" />
               Better Ask Saul
             </CardTitle>
           </CardHeader>
