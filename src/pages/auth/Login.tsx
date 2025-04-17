@@ -54,6 +54,13 @@ const Login = () => {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <img 
+              src="/lovable-uploads/7384a9eb-2ebd-4c5e-88fc-269cd741a97a.png" 
+              alt="LogicWorks CRM Logo" 
+              className="h-16 w-16 object-contain"
+            />
+          </div>
           <CardTitle className="text-2xl">Welcome Back</CardTitle>
           <CardDescription>Sign in to your AgencyFlow account</CardDescription>
         </CardHeader>
