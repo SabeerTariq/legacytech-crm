@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
 import { MoreHorizontal, Plus } from "lucide-react";
@@ -33,12 +32,27 @@ export interface KanbanColumn {
 }
 
 interface ProjectKanbanProps {
-  initialColumns: KanbanColumn[];
+  initialColumns?: KanbanColumn[];
+  projects?: any[]; // Add projects prop
   onTaskMove?: (result: any) => void;
 }
 
-const ProjectKanban: React.FC<ProjectKanbanProps> = ({ initialColumns, onTaskMove }) => {
+const ProjectKanban: React.FC<ProjectKanbanProps> = ({ initialColumns = [], projects = [], onTaskMove }) => {
   const [columns, setColumns] = useState<KanbanColumn[]>(initialColumns);
+
+  // If projects are provided but no initialColumns, derive columns from projects
+  React.useEffect(() => {
+    if (projects && projects.length > 0 && initialColumns.length === 0) {
+      // Create columns based on projects data
+      const derivedColumns: KanbanColumn[] = [
+        { id: "todo", title: "To Do", tasks: [] },
+        { id: "in-progress", title: "In Progress", tasks: [] },
+        { id: "completed", title: "Completed", tasks: [] }
+      ];
+      
+      setColumns(derivedColumns);
+    }
+  }, [projects, initialColumns]);
 
   const priorityColors = {
     low: "bg-blue-500",
@@ -46,6 +60,7 @@ const ProjectKanban: React.FC<ProjectKanbanProps> = ({ initialColumns, onTaskMov
     high: "bg-red-500",
   };
 
+  // Rest of the component code stays the same
   const handleDragEnd = (result: any) => {
     const { destination, source, draggableId } = result;
 

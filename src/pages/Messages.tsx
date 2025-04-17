@@ -35,29 +35,39 @@ const Messages: React.FC = () => {
     if (selectedConversation) {
       fetchMessagesForConversation(selectedConversation.id);
     }
-  }, [selectedConversation]);
+  }, [selectedConversation, fetchMessagesForConversation]);
 
   useEffect(() => {
     // Fetch users for the MultiSelect
     const fetchUsers = async () => {
       if (!user) return;
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .neq('id', user.id); // Exclude current user
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .neq('id', user.id); // Exclude current user
 
-      if (error) {
-        console.error('Error fetching users:', error);
-        return;
+        if (error) {
+          console.error('Error fetching users:', error);
+          return;
+        }
+
+        if (data) {
+          const formattedUsers = data.map(u => ({
+            value: u.id,
+            label: u.full_name || u.id
+          }));
+          
+          setUsers(formattedUsers);
+        } else {
+          // Initialize with empty array if no data
+          setUsers([]);
+        }
+      } catch (err) {
+        console.error('Exception fetching users:', err);
+        setUsers([]);
       }
-
-      const formattedUsers = data.map(u => ({
-        value: u.id,
-        label: u.full_name || u.id
-      }));
-      
-      setUsers(formattedUsers);
     };
 
     fetchUsers();
@@ -104,12 +114,12 @@ const Messages: React.FC = () => {
                 <DialogTitle>Create New Conversation</DialogTitle>
               </DialogHeader>
               <MultiSelect 
-                options={users} 
+                options={users || []} 
                 value={selectedParticipants}
                 onChange={setSelectedParticipants}
                 placeholder="Select participants"
               />
-              <Button onClick={handleCreateConversation}>
+              <Button onClick={handleCreateConversation} className="mt-4">
                 Create Conversation
               </Button>
             </DialogContent>

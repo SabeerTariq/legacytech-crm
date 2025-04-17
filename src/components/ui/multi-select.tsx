@@ -74,33 +74,37 @@ export function MultiSelect({
           <CommandEmpty>No results found.</CommandEmpty>
           <ScrollArea className="max-h-60">
             <CommandGroup>
-              {safeOptions.map((option) => {
-                const isSelected = value.includes(option.value);
-                return (
-                  <CommandItem
-                    key={option.value}
-                    onSelect={() => {
-                      onChange(
-                        isSelected
-                          ? value.filter((v) => v !== option.value)
-                          : [...value, option.value]
-                      );
-                      // Don't close the popover when selecting an item in multi-select
-                      // setOpen(false);
-                    }}
-                  >
-                    <div
-                      className={cn(
-                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
-                        isSelected ? "bg-primary text-primary-foreground" : "opacity-50"
-                      )}
+              {safeOptions.length > 0 ? (
+                safeOptions.map((option) => {
+                  const isSelected = value.includes(option.value);
+                  return (
+                    <CommandItem
+                      key={option.value}
+                      onSelect={() => {
+                        onChange(
+                          isSelected
+                            ? value.filter((v) => v !== option.value)
+                            : [...value, option.value]
+                        );
+                        // Don't close the popover when selecting an item in multi-select
+                        // setOpen(false);
+                      }}
                     >
-                      {isSelected && <CheckIcon className="h-3 w-3" />}
-                    </div>
-                    {option.label}
-                  </CommandItem>
-                );
-              })}
+                      <div
+                        className={cn(
+                          "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
+                          isSelected ? "bg-primary text-primary-foreground" : "opacity-50"
+                        )}
+                      >
+                        {isSelected && <CheckIcon className="h-3 w-3" />}
+                      </div>
+                      {option.label}
+                    </CommandItem>
+                  );
+                })
+              ) : (
+                <div className="py-6 text-center text-sm">No options available</div>
+              )}
             </CommandGroup>
           </ScrollArea>
         </Command>
