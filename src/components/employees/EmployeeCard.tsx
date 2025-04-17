@@ -14,6 +14,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 interface EmployeeCardProps {
   employee: EmployeeProfile;
@@ -25,6 +27,10 @@ const EmployeeCard = ({ employee, onEdit }: EmployeeCardProps) => {
   const queryClient = useQueryClient();
   const progressValue = (employee.performance.salesAchieved / employee.performance.salesTarget) * 100;
   const initials = employee.name.split(' ').map(n => n[0]).join('').toUpperCase();
+
+  const getPerformanceColor = (value: number) => {
+    return value >= 70 ? "bg-green-500/10 text-green-700" : "bg-red-500/10 text-red-700";
+  };
 
   const handleDelete = async () => {
     try {
@@ -86,18 +92,26 @@ const EmployeeCard = ({ employee, onEdit }: EmployeeCardProps) => {
         </DropdownMenu>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
+        <div className={cn("space-y-2 rounded-lg p-3", getPerformanceColor(progressValue))}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Target className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">Sales Target</span>
+              <Target className="h-4 w-4" />
+              <span className="text-sm font-medium">Sales Target</span>
             </div>
             <span className="text-sm font-medium">${employee.performance.salesTarget.toLocaleString()}</span>
           </div>
-          <Progress value={progressValue} className="h-2" />
-          <div className="flex justify-between text-xs text-muted-foreground">
+          <Progress 
+            value={progressValue} 
+            className="h-2" 
+            indicatorClassName={cn(
+              progressValue >= 70 ? "bg-green-500" : "bg-red-500"
+            )}
+          />
+          <div className="flex justify-between text-xs">
             <span>Progress: ${employee.performance.salesAchieved.toLocaleString()}</span>
-            <span>{progressValue.toFixed(1)}%</span>
+            <Badge variant={progressValue >= 70 ? "default" : "destructive"}>
+              {progressValue.toFixed(1)}%
+            </Badge>
           </div>
         </div>
         
