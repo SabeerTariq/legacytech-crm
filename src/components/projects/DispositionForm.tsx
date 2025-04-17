@@ -142,6 +142,7 @@ const DispositionForm: React.FC<DispositionFormProps> = ({ onSubmit }) => {
   React.useEffect(() => {
     const fetchServices = async () => {
       try {
+        console.log("Fetching services...");
         const { data, error } = await supabase
           .from('services')
           .select('name')
@@ -153,12 +154,14 @@ const DispositionForm: React.FC<DispositionFormProps> = ({ onSubmit }) => {
         }
         
         if (data && Array.isArray(data)) {
+          console.log("Services data received:", data);
           const sortedServiceOptions = data.map(service => ({
             value: service.name,
             label: service.name
-          })).sort((a, b) => a.label.localeCompare(b.label));
+          }));
           
           setServices(sortedServiceOptions);
+          console.log("Services set:", sortedServiceOptions);
         }
       } catch (error) {
         console.error('Exception fetching services:', error);
@@ -366,7 +369,7 @@ const DispositionForm: React.FC<DispositionFormProps> = ({ onSubmit }) => {
                       <FormControl>
                         <MultiSelect
                           options={services}
-                          value={field.value}
+                          value={field.value || []}
                           onChange={field.onChange}
                           placeholder="Select services..."
                         />

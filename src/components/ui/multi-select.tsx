@@ -79,13 +79,13 @@ export function MultiSelect({
         sideOffset={isMobile ? 5 : 0}
         alignOffset={isMobile ? 0 : 0}
       >
-        {safeOptions.length > 0 ? (
-          <Command>
-            <CommandInput placeholder="Search..." />
-            <CommandEmpty>No results found.</CommandEmpty>
-            <ScrollArea className={cn("max-h-60", isMobile && "max-h-[40vh]")}>
-              <CommandGroup>
-                {safeOptions.map((option) => {
+        <Command>
+          <CommandInput placeholder="Search..." />
+          <CommandEmpty>No results found.</CommandEmpty>
+          <ScrollArea className={cn("max-h-60", isMobile && "max-h-[40vh]")}>
+            <CommandGroup>
+              {safeOptions.length > 0 ? (
+                safeOptions.map((option) => {
                   const isSelected = safeValue.includes(option.value);
                   return (
                     <CommandItem
@@ -110,13 +110,13 @@ export function MultiSelect({
                       {option.label}
                     </CommandItem>
                   );
-                })}
-              </CommandGroup>
-            </ScrollArea>
-          </Command>
-        ) : (
-          <div className="py-6 text-center text-sm">No options available</div>
-        )}
+                })
+              ) : (
+                <div className="py-6 text-center text-sm">No options available</div>
+              )}
+            </CommandGroup>
+          </ScrollArea>
+        </Command>
       </PopoverContent>
     </Popover>
   );
