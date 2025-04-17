@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import LeadsList, { Lead } from "@/components/leads/LeadsList";
@@ -154,14 +153,6 @@ const Leads = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Button 
-              variant="outline" 
-              className="sm:flex-1" 
-              onClick={() => setUploadModalOpen(true)}
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              Upload
-            </Button>
             <Button 
               className="sm:flex-1"
               onClick={() => setAddModalOpen(true)}
