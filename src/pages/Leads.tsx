@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import LeadsList, { Lead } from "@/components/leads/LeadsList";
@@ -178,7 +179,7 @@ const Leads = () => {
         ) : (
           <LeadsList 
             leads={leads}
-            onAddLeadClick={() => setAddModalOpen(true)}
+            onAddLeadClick={null} // Remove the second button in LeadsList
           />
         )}
         

@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   Table,
@@ -33,7 +34,7 @@ export interface Lead {
 
 interface LeadsListProps {
   leads: Lead[];
-  onAddLeadClick?: () => void;
+  onAddLeadClick?: (() => void) | null;
 }
 
 const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick }) => {
@@ -58,16 +59,6 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick }) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold tracking-tight">Leads</h2>
-        {onAddLeadClick && (
-          <Button onClick={onAddLeadClick}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Lead
-          </Button>
-        )}
-      </div>
-
       <div className="rounded-md border">
         <Table>
           <TableHeader>
