@@ -144,7 +144,8 @@ const DispositionForm: React.FC<DispositionFormProps> = ({ onSubmit }) => {
       try {
         const { data, error } = await supabase
           .from('services')
-          .select('name');
+          .select('name')
+          .order('name');
         
         if (error) {
           console.error('Error fetching services:', error);
@@ -152,14 +153,12 @@ const DispositionForm: React.FC<DispositionFormProps> = ({ onSubmit }) => {
         }
         
         if (data && Array.isArray(data)) {
-          setServices(data.map(service => ({
+          const sortedServiceOptions = data.map(service => ({
             value: service.name,
             label: service.name
-          })));
-        } else {
-          console.error('Services data is not an array:', data);
-          // Ensure services is always an array
-          setServices([]);
+          })).sort((a, b) => a.label.localeCompare(b.label));
+          
+          setServices(sortedServiceOptions);
         }
       } catch (error) {
         console.error('Exception fetching services:', error);
