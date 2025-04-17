@@ -37,6 +37,7 @@ const Leads = () => {
           email_address, 
           contact_number, 
           source,
+          status,
           value,
           created_at,
           assigned_to_id,
@@ -75,14 +76,13 @@ const Leads = () => {
           }
         }
 
-        // Add a default status since it's not in the database
         return {
           id: lead.id,
           client_name: lead.client_name,
           company: lead.business_description || '',
           email_address: lead.email_address,
           contact_number: lead.contact_number || '',
-          status: 'new' as Lead['status'], // Default status
+          status: (lead.status || 'new') as Lead['status'],
           source: lead.source || '',
           value: lead.value || 0,
           assignedTo: {
