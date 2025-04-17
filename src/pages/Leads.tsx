@@ -27,7 +27,7 @@ const Leads = () => {
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ['leads'],
     queryFn: async () => {
-      // First, fetch leads
+      // First, fetch leads - now including source and status fields
       const { data: leadsData, error: leadsError } = await supabase
         .from('leads')
         .select(`
@@ -36,8 +36,7 @@ const Leads = () => {
           business_description,
           email_address, 
           contact_number, 
-          status, 
-          source, 
+          source,
           value,
           created_at,
           assigned_to_id,
@@ -46,9 +45,9 @@ const Leads = () => {
           budget,
           additional_info,
           agent,
-          date
-        `)
-        .order('created_at', { ascending: false });
+          date,
+          user_id
+        `);
 
       if (leadsError) {
         toast({
@@ -76,13 +75,14 @@ const Leads = () => {
           }
         }
 
+        // Add a default status since it's not in the database
         return {
           id: lead.id,
           client_name: lead.client_name,
           company: lead.business_description || '',
           email_address: lead.email_address,
           contact_number: lead.contact_number || '',
-          status: lead.status as Lead['status'] || 'new',
+          status: 'new' as Lead['status'], // Default status
           source: lead.source || '',
           value: lead.value || 0,
           assignedTo: {
@@ -120,7 +120,6 @@ const Leads = () => {
             business_description: newLead.business_description || newLead.company,
             email_address: newLead.email_address,
             contact_number: newLead.contact_number,
-            status: newLead.status,
             source: newLead.source,
             value: newLead.value || 0,
             city_state: newLead.city_state,
@@ -162,7 +161,6 @@ const Leads = () => {
           business_description: leadData.business_description || leadData.company,
           email_address: leadData.email_address,
           contact_number: leadData.contact_number,
-          status: leadData.status,
           source: leadData.source,
           value: leadData.value || 0,
           city_state: leadData.city_state,
@@ -225,6 +223,7 @@ const Leads = () => {
 
   const handleAddLead = (newLead: Omit<Lead, 'id' | 'assignedTo' | 'date'>) => {
     addLeadMutation.mutate(newLead);
+    setAddModalOpen(false);
   };
 
   const handleUpdateLead = (updatedLead: Omit<Lead, 'id' | 'assignedTo' | 'date'>) => {
