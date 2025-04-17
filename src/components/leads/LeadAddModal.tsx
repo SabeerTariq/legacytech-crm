@@ -23,11 +23,12 @@ import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { Lead } from "./LeadsList";
 
 interface LeadAddModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onLeadAdded?: (lead: any) => void;
+  onLeadAdded?: (lead: Omit<Lead, 'id' | 'assignedTo' | 'date'>) => void;
 }
 
 const leadFormSchema = z.object({
@@ -37,6 +38,7 @@ const leadFormSchema = z.object({
   phone: z.string().min(6, { message: "Phone number is required." }),
   source: z.string().min(1, { message: "Please select a source." }),
   status: z.string().min(1, { message: "Please select a status." }),
+  value: z.number().optional(),
 });
 
 type LeadFormValues = z.infer<typeof leadFormSchema>;
@@ -58,38 +60,28 @@ const LeadAddModal: React.FC<LeadAddModalProps> = ({
       phone: "",
       source: "",
       status: "new",
+      value: 0,
     },
   });
 
   const onSubmit = (values: LeadFormValues) => {
     setIsSubmitting(true);
     
-    // Simulate adding a lead
-    setTimeout(() => {
-      setIsSubmitting(false);
-      
-      const newLead = {
-        id: `lead-${new Date().getTime()}`,
-        ...values,
-        assignedTo: {
-          name: "Unassigned",
-          initials: "UN",
-        },
-        date: "Today"
-      };
-      
-      toast({
-        title: "Lead added",
-        description: `${values.name} from ${values.company} has been added.`,
+    if (onLeadAdded) {
+      onLeadAdded({
+        name: values.name,
+        company: values.company,
+        email: values.email,
+        phone: values.phone,
+        source: values.source,
+        status: values.status as Lead['status'],
+        value: values.value || 0,
       });
-      
-      form.reset();
-      onOpenChange(false);
-      
-      if (onLeadAdded) {
-        onLeadAdded(newLead);
-      }
-    }, 600);
+    }
+    
+    form.reset();
+    onOpenChange(false);
+    setIsSubmitting(false);
   };
 
   return (
@@ -206,8 +198,29 @@ const LeadAddModal: React.FC<LeadAddModalProps> = ({
                         <SelectItem value="qualified">Qualified</SelectItem>
                         <SelectItem value="proposal">Proposal</SelectItem>
                         <SelectItem value="negotiation">Negotiation</SelectItem>
+                        <SelectItem value="won">Won</SelectItem>
+                        <SelectItem value="lost">Lost</SelectItem>
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="value"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Value ($)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        placeholder="0" 
+                        {...field}
+                        onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))} 
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

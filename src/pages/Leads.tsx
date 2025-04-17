@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import LeadsList, { Lead } from "@/components/leads/LeadsList";
 import { Button } from "@/components/ui/button";
@@ -7,110 +7,122 @@ import { Input } from "@/components/ui/input";
 import { Search, Upload, UserPlus } from "lucide-react";
 import LeadUploadModal from "@/components/leads/LeadUploadModal";
 import LeadAddModal from "@/components/leads/LeadAddModal";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const Leads = () => {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [leads, setLeads] = useState<Lead[]>([
-    {
-      id: "1",
-      name: "John Smith",
-      company: "Tech Solutions Inc.",
-      email: "john.smith@techsolutions.com",
-      phone: "(555) 123-4567",
-      status: "new",
-      source: "Website Contact Form",
-      assignedTo: {
-        name: "Alex Johnson",
-        initials: "AJ",
-      },
-      date: "Today",
-      value: 2500,
-    },
-    {
-      id: "2",
-      name: "Emily Davis",
-      company: "Creative Studios",
-      email: "emily@creativestudios.com",
-      phone: "(555) 987-6543",
-      status: "contacted",
-      source: "Referral",
-      assignedTo: {
-        name: "Maria Garcia",
-        initials: "MG",
-      },
-      date: "Yesterday",
-      value: 3800,
-    },
-    {
-      id: "3",
-      name: "Michael Brown",
-      company: "Global Retail",
-      email: "michael@globalretail.com",
-      phone: "(555) 456-7890",
-      status: "qualified",
-      source: "LinkedIn",
-      assignedTo: {
-        name: "James Smith",
-        initials: "JS",
-      },
-      date: "3 days ago",
-      value: 5200,
-    },
-    {
-      id: "4",
-      name: "Sarah Wilson",
-      company: "Health Services",
-      email: "sarah@healthservices.com",
-      phone: "(555) 789-0123",
-      status: "proposal",
-      source: "Google Search",
-      assignedTo: {
-        name: "Sarah Wilson",
-        initials: "SW",
-      },
-      date: "1 week ago",
-      value: 12000,
-    },
-    {
-      id: "5",
-      name: "Robert Johnson",
-      company: "Financial Advisors",
-      email: "robert@financialadvisors.com",
-      phone: "(555) 234-5678",
-      status: "negotiation",
-      source: "Trade Show",
-      assignedTo: {
-        name: "David Lee",
-        initials: "DL",
-      },
-      date: "2 weeks ago",
-      value: 18500,
-    },
-    {
-      id: "6",
-      name: "Jennifer Martinez",
-      company: "Restaurant Chain",
-      email: "jennifer@restaurantchain.com",
-      phone: "(555) 345-6789",
-      status: "won",
-      source: "Email Campaign",
-      assignedTo: {
-        name: "Alex Johnson",
-        initials: "AJ",
-      },
-      date: "1 month ago",
-      value: 8900,
-    },
-  ]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  const handleUploadComplete = () => {
-    // In a real app, we would refresh leads data here
-    console.log("Upload completed");
+  // Fetch leads from the database
+  const { data: leads = [], isLoading } = useQuery({
+    queryKey: ['leads'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leads')
+        .select(`
+          id, 
+          name, 
+          company, 
+          email, 
+          phone, 
+          status, 
+          source, 
+          value,
+          created_at,
+          assigned_to_id,
+          profiles:assigned_to_id (full_name, avatar_url)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        toast({
+          title: "Error fetching leads",
+          description: error.message,
+          variant: "destructive",
+        });
+        return [];
+      }
+
+      // Format data for the LeadsList component
+      return data.map(lead => ({
+        id: lead.id,
+        name: lead.name,
+        company: lead.company || '',
+        email: lead.email,
+        phone: lead.phone || '',
+        status: lead.status as Lead['status'] || 'new',
+        source: lead.source || '',
+        value: lead.value || 0,
+        assignedTo: lead.profiles 
+          ? {
+              name: lead.profiles.full_name || 'Unassigned',
+              initials: lead.profiles.full_name 
+                ? lead.profiles.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase() 
+                : 'UN',
+              avatar: lead.profiles.avatar_url,
+            }
+          : {
+              name: 'Unassigned',
+              initials: 'UN',
+            },
+        date: new Date(lead.created_at).toLocaleDateString(),
+      }));
+    },
+    enabled: !!user,
+  });
+
+  // Add lead mutation
+  const addLeadMutation = useMutation({
+    mutationFn: async (newLead: Omit<Lead, 'id' | 'assignedTo' | 'date'>) => {
+      const { data, error } = await supabase
+        .from('leads')
+        .insert([
+          {
+            user_id: user?.id,
+            name: newLead.name,
+            company: newLead.company,
+            email: newLead.email,
+            phone: newLead.phone,
+            status: newLead.status,
+            source: newLead.source,
+            value: newLead.value || 0,
+          }
+        ])
+        .select();
+
+      if (error) throw error;
+      return data[0];
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast({
+        title: "Lead added successfully",
+        description: "Your new lead has been added to the database.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error adding lead",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAddLead = (newLead: Omit<Lead, 'id' | 'assignedTo' | 'date'>) => {
+    addLeadMutation.mutate(newLead);
   };
 
-  const handleAddLead = (newLead: Lead) => {
-    setLeads(prevLeads => [newLead, ...prevLeads]);
+  // Handle bulk upload
+  const handleUploadComplete = () => {
+    queryClient.invalidateQueries({ queryKey: ['leads'] });
   };
 
   return (
@@ -124,6 +136,8 @@ const Leads = () => {
               <Input
                 placeholder="Search leads..."
                 className="w-full sm:w-[200px] pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             <Button 
@@ -144,10 +158,16 @@ const Leads = () => {
           </div>
         </div>
 
-        <LeadsList 
-          leads={leads}
-          onAddLeadClick={() => setAddModalOpen(true)}
-        />
+        {isLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          </div>
+        ) : (
+          <LeadsList 
+            leads={leads}
+            onAddLeadClick={() => setAddModalOpen(true)}
+          />
+        )}
         
         <LeadUploadModal 
           open={uploadModalOpen} 
