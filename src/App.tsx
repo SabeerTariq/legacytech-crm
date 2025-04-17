@@ -27,6 +27,10 @@ import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 import Payments from './pages/Payments';  // New Payments page import
 
+// Department Pages
+import Design from "./pages/departments/Design";
+import Development from "./pages/departments/Development";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -64,8 +68,8 @@ const App = () => (
             <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
             
             {/* Department routes */}
-            <Route path="/departments/design" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
-            <Route path="/departments/development" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+            <Route path="/departments/design" element={<ProtectedRoute><Design /></ProtectedRoute>} />
+            <Route path="/departments/development" element={<ProtectedRoute><Development /></ProtectedRoute>} />
             <Route path="/departments/marketing" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
             <Route path="/departments/content" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
             <Route path="/departments/business-development" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
