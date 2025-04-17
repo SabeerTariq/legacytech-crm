@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import NavigationMenu from "@/components/layout/NavigationMenu";
 import { useAuth } from "@/contexts/AuthContext";
+import { removeBackgroundFromImage } from "@/utils/imageUtils";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -14,6 +15,18 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const { user, signOut } = useAuth();
+  const [logoSrc, setLogoSrc] = useState("/lovable-uploads/7384a9eb-2ebd-4c5e-88fc-269cd741a97a.png");
+
+  useEffect(() => {
+    const processLogo = async () => {
+      const transparentLogo = await removeBackgroundFromImage(logoSrc);
+      if (transparentLogo) {
+        setLogoSrc(transparentLogo);
+      }
+    };
+
+    processLogo();
+  }, []);
   
   // Get user initials from name or email
   const getUserInitials = () => {
@@ -41,9 +54,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         <Sidebar className="border-r">
           <SidebarHeader className="flex items-center justify-between px-4 py-2">
             <div className="flex items-center space-x-2">
-              <div className="rounded-md bg-primary p-1.5">
+              <div className="rounded-md p-1.5">
                 <img 
-                  src="/lovable-uploads/7384a9eb-2ebd-4c5e-88fc-269cd741a97a.png" 
+                  src={logoSrc} 
                   alt="LogicWorks CRM Logo" 
                   className="h-5 w-5"
                 />
