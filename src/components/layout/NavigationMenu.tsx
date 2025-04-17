@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
@@ -13,7 +14,7 @@ import {
   FileSpreadsheet,
   Zap,
   ClipboardList,
-  DollarSign  // Added for Payment page link
+  DollarSign
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
@@ -46,6 +47,8 @@ const NavigationMenu = () => {
     { icon: FolderKanban, label: "Development", path: "/departments/development" },
     { icon: FolderKanban, label: "Marketing", path: "/departments/marketing" },
     { icon: FolderKanban, label: "Content", path: "/departments/content" },
+    { icon: FolderKanban, label: "Business Development", path: "/departments/business-development" },
+    { icon: FolderKanban, label: "Project Management", path: "/departments/project-management" },
   ];
 
   return (

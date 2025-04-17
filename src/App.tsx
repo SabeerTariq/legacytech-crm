@@ -68,6 +68,8 @@ const App = () => (
             <Route path="/departments/development" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
             <Route path="/departments/marketing" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
             <Route path="/departments/content" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+            <Route path="/departments/business-development" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+            <Route path="/departments/project-management" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
             
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
