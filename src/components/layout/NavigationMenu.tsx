@@ -12,7 +12,8 @@ import {
   KanbanSquare,
   FolderKanban,
   FileSpreadsheet,
-  Zap
+  Zap,
+  ClipboardList  // Added for Sales Disposition form
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
@@ -36,6 +37,7 @@ const NavigationMenu = () => {
     { icon: Zap, label: "Automation", path: "/automation" },
     { icon: Calendar, label: "Calendar", path: "/calendar" },
     { icon: FileText, label: "Documents", path: "/documents" },
+    { icon: ClipboardList, label: "Sales Form", path: "/sales-form" }, // New navigation item
   ];
   
   const departmentsNavItems = [
