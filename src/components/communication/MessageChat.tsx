@@ -27,7 +27,7 @@ interface MessageChatProps {
 }
 
 const MessageChat: React.FC<MessageChatProps> = ({
-  messages,
+  messages = [],
   currentUserId,
   onSendMessage,
 }) => {
@@ -64,45 +64,51 @@ const MessageChat: React.FC<MessageChatProps> = ({
 
       <ScrollArea className="flex-1 p-3">
         <div className="space-y-4">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={cn("flex", message.isCurrentUser ? "justify-end" : "justify-start")}
-            >
-              <div className="flex gap-2 max-w-[80%]">
-                {!message.isCurrentUser && (
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={message.sender.avatar} />
-                    <AvatarFallback>{message.sender.initials}</AvatarFallback>
-                  </Avatar>
-                )}
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    {!message.isCurrentUser && (
-                      <span className="text-sm font-medium">{message.sender.name}</span>
-                    )}
-                    <span className="text-xs text-muted-foreground">{message.timestamp}</span>
+          {messages.length > 0 ? (
+            messages.map((message) => (
+              <div
+                key={message.id}
+                className={cn("flex", message.isCurrentUser ? "justify-end" : "justify-start")}
+              >
+                <div className="flex gap-2 max-w-[80%]">
+                  {!message.isCurrentUser && (
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={message.sender.avatar} />
+                      <AvatarFallback>{message.sender.initials}</AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      {!message.isCurrentUser && (
+                        <span className="text-sm font-medium">{message.sender.name}</span>
+                      )}
+                      <span className="text-xs text-muted-foreground">{message.timestamp}</span>
+                    </div>
+                    <div
+                      className={cn(
+                        "rounded-lg p-2.5",
+                        message.isCurrentUser
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted"
+                      )}
+                    >
+                      {message.content}
+                    </div>
                   </div>
-                  <div
-                    className={cn(
-                      "message-bubble",
-                      message.isCurrentUser
-                        ? "sent"
-                        : "received"
-                    )}
-                  >
-                    {message.content}
-                  </div>
+                  {message.isCurrentUser && (
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={message.sender.avatar} />
+                      <AvatarFallback>{message.sender.initials}</AvatarFallback>
+                    </Avatar>
+                  )}
                 </div>
-                {message.isCurrentUser && (
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={message.sender.avatar} />
-                    <AvatarFallback>{message.sender.initials}</AvatarFallback>
-                  </Avatar>
-                )}
               </div>
+            ))
+          ) : (
+            <div className="text-center text-muted-foreground py-10">
+              No messages yet. Start the conversation!
             </div>
-          ))}
+          )}
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>

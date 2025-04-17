@@ -13,9 +13,11 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { MultiSelect, MultiSelectOption } from "@/components/ui/multi-select";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Messages: React.FC = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const { 
     conversations, 
     messages, 
@@ -30,6 +32,7 @@ const Messages: React.FC = () => {
   const [isNewConversationDialogOpen, setIsNewConversationDialogOpen] = useState(false);
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
   const [users, setUsers] = useState<MultiSelectOption[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
   useEffect(() => {
     if (selectedConversation) {
@@ -42,6 +45,8 @@ const Messages: React.FC = () => {
     const fetchUsers = async () => {
       if (!user) return;
 
+      setIsLoadingUsers(true);
+
       try {
         const { data, error } = await supabase
           .from('profiles')
@@ -50,6 +55,12 @@ const Messages: React.FC = () => {
 
         if (error) {
           console.error('Error fetching users:', error);
+          toast({
+            title: "Error fetching users",
+            description: error.message,
+            variant: "destructive"
+          });
+          setUsers([]);
           return;
         }
 
@@ -67,11 +78,13 @@ const Messages: React.FC = () => {
       } catch (err) {
         console.error('Exception fetching users:', err);
         setUsers([]);
+      } finally {
+        setIsLoadingUsers(false);
       }
     };
 
     fetchUsers();
-  }, [user]);
+  }, [user, toast]);
 
   const handleSendMessage = () => {
     if (selectedConversation && newMessageText.trim()) {
@@ -82,11 +95,24 @@ const Messages: React.FC = () => {
 
   const handleCreateConversation = async () => {
     if (user && selectedParticipants.length > 0) {
-      const newConversation = await createConversation([...selectedParticipants, user.id]);
-      if (newConversation) {
-        setSelectedConversation(newConversation);
-        setIsNewConversationDialogOpen(false);
-        setSelectedParticipants([]);
+      try {
+        const newConversation = await createConversation([...selectedParticipants, user.id]);
+        if (newConversation) {
+          setSelectedConversation(newConversation);
+          setIsNewConversationDialogOpen(false);
+          setSelectedParticipants([]);
+          toast({
+            title: "Conversation created",
+            description: "Your new conversation is ready",
+          });
+        }
+      } catch (error) {
+        console.error("Error creating conversation:", error);
+        toast({
+          title: "Error creating conversation",
+          description: "Please try again later",
+          variant: "destructive",
+        });
       }
     }
   };
@@ -114,12 +140,16 @@ const Messages: React.FC = () => {
                 <DialogTitle>Create New Conversation</DialogTitle>
               </DialogHeader>
               <MultiSelect 
-                options={users || []} 
+                options={users} 
                 value={selectedParticipants}
                 onChange={setSelectedParticipants}
-                placeholder="Select participants"
+                placeholder={isLoadingUsers ? "Loading users..." : "Select participants"}
               />
-              <Button onClick={handleCreateConversation} className="mt-4">
+              <Button 
+                onClick={handleCreateConversation} 
+                className="mt-4"
+                disabled={selectedParticipants.length === 0 || isLoadingUsers}
+              >
                 Create Conversation
               </Button>
             </DialogContent>
@@ -143,38 +173,44 @@ const Messages: React.FC = () => {
             
             <ScrollArea className="h-[calc(100%-60px)]">
               <div className="p-1">
-                {filteredConversations.map((conversation) => (
-                  <div
-                    key={conversation.id}
-                    className={cn(
-                      "flex items-center gap-3 p-3 rounded-md cursor-pointer",
-                      selectedConversation?.id === conversation.id
-                        ? "bg-muted"
-                        : "hover:bg-muted/50"
-                    )}
-                    onClick={() => setSelectedConversation(conversation)}
-                  >
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback>
-                        {conversation.name.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1 overflow-hidden">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{conversation.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {/* TODO: Add timestamp */}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground truncate">
-                          {conversation.last_message_text || "No messages yet"}
-                        </span>
+                {filteredConversations.length > 0 ? (
+                  filteredConversations.map((conversation) => (
+                    <div
+                      key={conversation.id}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-md cursor-pointer",
+                        selectedConversation?.id === conversation.id
+                          ? "bg-muted"
+                          : "hover:bg-muted/50"
+                      )}
+                      onClick={() => setSelectedConversation(conversation)}
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback>
+                          {conversation.name?.slice(0, 2).toUpperCase() || 'CN'}
+                        </AvatarFallback>
+                      </Avatar>
+                      
+                      <div className="flex-1 overflow-hidden">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">{conversation.name || 'Unnamed conversation'}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {/* TODO: Add timestamp */}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground truncate">
+                            {conversation.last_message_text || "No messages yet"}
+                          </span>
+                        </div>
                       </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-muted-foreground">
+                    No conversations found
                   </div>
-                ))}
+                )}
               </div>
             </ScrollArea>
           </div>

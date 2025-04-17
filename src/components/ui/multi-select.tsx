@@ -40,7 +40,7 @@ export function MultiSelect({
       <PopoverTrigger asChild>
         <div
           className={cn(
-            "flex min-h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
+            "flex min-h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background cursor-pointer",
             className
           )}
         >
@@ -87,7 +87,6 @@ export function MultiSelect({
                             : [...value, option.value]
                         );
                         // Don't close the popover when selecting an item in multi-select
-                        // setOpen(false);
                       }}
                     >
                       <div
