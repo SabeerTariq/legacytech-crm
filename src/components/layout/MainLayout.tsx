@@ -7,12 +7,35 @@ import { Bell, LogOut, Menu, MessageCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import NavigationMenu from "@/components/layout/NavigationMenu";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MainLayoutProps {
   children: React.ReactNode;
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
+  const { user, signOut } = useAuth();
+  
+  // Get user initials from name or email
+  const getUserInitials = () => {
+    if (!user) return "US";
+    
+    if (user.user_metadata?.full_name) {
+      return user.user_metadata.full_name
+        .split(" ")
+        .map((name: string) => name[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    
+    return user.email?.substring(0, 2).toUpperCase() || "US";
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
@@ -46,15 +69,17 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Avatar>
-                  <AvatarImage src="" />
-                  <AvatarFallback>AD</AvatarFallback>
+                  <AvatarImage src={user?.user_metadata?.avatar_url || ""} />
+                  <AvatarFallback>{getUserInitials()}</AvatarFallback>
                 </Avatar>
-                <div className="text-sm font-medium">Agency Director</div>
+                <div className="text-sm font-medium">
+                  {user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User"}
+                </div>
               </div>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" onClick={handleSignOut}>
                       <LogOut className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
@@ -67,7 +92,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         <div className="flex flex-col flex-1 overflow-hidden">
           <header className="h-14 border-b flex items-center justify-between px-6">
             <div className="flex items-center">
-              {/* Fix: Remove asChild from SidebarTrigger or ensure it has a single child */}
               <SidebarTrigger>
                 <Menu className="h-5 w-5" />
               </SidebarTrigger>
@@ -97,8 +121,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 </Tooltip>
               </TooltipProvider>
               <Avatar className="h-8 w-8">
-                <AvatarImage src="" />
-                <AvatarFallback>AD</AvatarFallback>
+                <AvatarImage src={user?.user_metadata?.avatar_url || ""} />
+                <AvatarFallback>{getUserInitials()}</AvatarFallback>
               </Avatar>
             </div>
           </header>
