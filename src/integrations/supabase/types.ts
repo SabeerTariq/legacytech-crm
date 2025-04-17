@@ -91,46 +91,55 @@ export type Database = {
       }
       leads: {
         Row: {
+          additional_info: string | null
+          agent: string | null
           assigned_to_id: string | null
-          company: string | null
+          budget: string | null
+          business_description: string | null
+          city_state: string | null
+          client_name: string
+          contact_number: string | null
           created_at: string | null
-          email: string
+          date: string | null
+          email_address: string
           id: string
-          name: string
-          phone: string | null
-          source: string | null
-          status: string | null
+          services_required: string | null
           updated_at: string | null
           user_id: string | null
-          value: number | null
         }
         Insert: {
+          additional_info?: string | null
+          agent?: string | null
           assigned_to_id?: string | null
-          company?: string | null
+          budget?: string | null
+          business_description?: string | null
+          city_state?: string | null
+          client_name: string
+          contact_number?: string | null
           created_at?: string | null
-          email: string
+          date?: string | null
+          email_address: string
           id?: string
-          name: string
-          phone?: string | null
-          source?: string | null
-          status?: string | null
+          services_required?: string | null
           updated_at?: string | null
           user_id?: string | null
-          value?: number | null
         }
         Update: {
+          additional_info?: string | null
+          agent?: string | null
           assigned_to_id?: string | null
-          company?: string | null
+          budget?: string | null
+          business_description?: string | null
+          city_state?: string | null
+          client_name?: string
+          contact_number?: string | null
           created_at?: string | null
-          email?: string
+          date?: string | null
+          email_address?: string
           id?: string
-          name?: string
-          phone?: string | null
-          source?: string | null
-          status?: string | null
+          services_required?: string | null
           updated_at?: string | null
           user_id?: string | null
-          value?: number | null
         }
         Relationships: []
       }

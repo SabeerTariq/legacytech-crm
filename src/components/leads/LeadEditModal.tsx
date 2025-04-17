@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -33,13 +34,18 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
 }) => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
-    name: "",
-    company: "",
-    email: "",
-    phone: "",
+    client_name: "",
+    business_description: "",
+    email_address: "",
+    contact_number: "",
     status: "new" as Lead["status"],
     source: "",
     value: 0,
+    city_state: "",
+    services_required: "",
+    budget: "",
+    additional_info: "",
+    agent: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -48,19 +54,24 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
   useEffect(() => {
     if (lead) {
       setFormData({
-        name: lead.name,
-        company: lead.company || "",
-        email: lead.email,
-        phone: lead.phone || "",
+        client_name: lead.client_name,
+        business_description: lead.business_description || lead.company || "",
+        email_address: lead.email_address,
+        contact_number: lead.contact_number || "",
         status: lead.status,
         source: lead.source || "",
         value: lead.value || 0,
+        city_state: lead.city_state || "",
+        services_required: lead.services_required || "",
+        budget: lead.budget || "",
+        additional_info: lead.additional_info || "",
+        agent: lead.agent || "",
       });
     }
   }, [lead]);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -87,7 +98,7 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
     e.preventDefault();
     setIsSubmitting(true);
     
-    if (!formData.name || !formData.email) {
+    if (!formData.client_name || !formData.email_address) {
       toast({
         title: "Missing required fields",
         description: "Please fill in all required fields.",
@@ -98,7 +109,10 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
     }
 
     console.log("Submitting updated lead:", formData);
-    onLeadUpdated(formData);
+    onLeadUpdated({
+      ...formData,
+      company: formData.business_description
+    });
     // We'll wait for the parent component to close the modal after successful update
   };
 
@@ -111,7 +125,7 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Lead</DialogTitle>
           <DialogDescription>
@@ -122,22 +136,22 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="client_name">Name *</Label>
               <Input
-                id="name"
-                name="name"
-                value={formData.name}
+                id="client_name"
+                name="client_name"
+                value={formData.client_name}
                 onChange={handleChange}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="company">Company</Label>
+              <Label htmlFor="business_description">Business/Company</Label>
               <Input
-                id="company"
-                name="company"
-                value={formData.company}
+                id="business_description"
+                name="business_description"
+                value={formData.business_description}
                 onChange={handleChange}
               />
             </div>
@@ -145,23 +159,23 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
+              <Label htmlFor="email_address">Email *</Label>
               <Input
-                id="email"
-                name="email"
+                id="email_address"
+                name="email_address"
                 type="email"
-                value={formData.email}
+                value={formData.email_address}
                 onChange={handleChange}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
+              <Label htmlFor="contact_number">Phone</Label>
               <Input
-                id="phone"
-                name="phone"
-                value={formData.phone}
+                id="contact_number"
+                name="contact_number"
+                value={formData.contact_number}
                 onChange={handleChange}
               />
             </div>
@@ -211,16 +225,72 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="value">Value ($)</Label>
+              <Input
+                id="value"
+                name="value"
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.value}
+                onChange={handleChange}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="city_state">City/State</Label>
+              <Input
+                id="city_state"
+                name="city_state"
+                value={formData.city_state}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+          
           <div className="space-y-2">
-            <Label htmlFor="value">Value ($)</Label>
-            <Input
-              id="value"
-              name="value"
-              type="number"
-              min="0"
-              step="0.01"
-              value={formData.value}
+            <Label htmlFor="services_required">Services Required</Label>
+            <Textarea
+              id="services_required"
+              name="services_required"
+              value={formData.services_required}
               onChange={handleChange}
+              className="resize-none"
+            />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="budget">Budget</Label>
+              <Input
+                id="budget"
+                name="budget"
+                value={formData.budget}
+                onChange={handleChange}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="agent">Agent</Label>
+              <Input
+                id="agent"
+                name="agent"
+                value={formData.agent}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="additional_info">Additional Information</Label>
+            <Textarea
+              id="additional_info"
+              name="additional_info"
+              value={formData.additional_info}
+              onChange={handleChange}
+              className="resize-none"
             />
           </div>
 

@@ -17,19 +17,25 @@ import { PlusCircle } from "lucide-react";
 
 export interface Lead {
   id: string;
-  name: string;
-  company: string;
-  email: string;
-  phone: string;
+  client_name: string;
+  company?: string;
+  email_address: string;
+  contact_number?: string;
   status: "new" | "contacted" | "qualified" | "proposal" | "negotiation" | "won" | "lost";
-  source: string;
-  value: number;
+  source?: string;
+  value?: number;
   assignedTo: {
     name: string;
     initials: string;
     avatar?: string;
   };
-  date: string;
+  date?: string;
+  city_state?: string;
+  business_description?: string;
+  services_required?: string;
+  budget?: string;
+  additional_info?: string;
+  agent?: string;
 }
 
 interface LeadsListProps {
@@ -54,9 +60,9 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
   const filteredLeads = leads.filter((lead) => {
     const searchTerm = filter.toLowerCase();
     return (
-      lead.name.toLowerCase().includes(searchTerm) ||
-      lead.company.toLowerCase().includes(searchTerm) ||
-      lead.email.toLowerCase().includes(searchTerm)
+      lead.client_name.toLowerCase().includes(searchTerm) ||
+      (lead.company && lead.company.toLowerCase().includes(searchTerm)) ||
+      lead.email_address.toLowerCase().includes(searchTerm)
     );
   });
 
@@ -84,18 +90,18 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
                 onClick={() => onLeadClick && onLeadClick(lead)} 
                 className={onLeadClick ? "cursor-pointer hover:bg-muted/80" : ""}
               >
-                <TableCell className="font-medium">{lead.name}</TableCell>
-                <TableCell>{lead.company}</TableCell>
-                <TableCell>{lead.email}</TableCell>
-                <TableCell>{lead.phone}</TableCell>
+                <TableCell className="font-medium">{lead.client_name}</TableCell>
+                <TableCell>{lead.company || lead.business_description || "-"}</TableCell>
+                <TableCell>{lead.email_address}</TableCell>
+                <TableCell>{lead.contact_number || "-"}</TableCell>
                 <TableCell>
                   <Badge className={statusColors[lead.status] || "bg-gray-100 text-gray-800"}>
                     {lead.status}
                   </Badge>
                 </TableCell>
-                <TableCell>{lead.source}</TableCell>
+                <TableCell>{lead.source || "-"}</TableCell>
                 <TableCell className="text-right">
-                  ${lead.value.toLocaleString()}
+                  ${lead.value ? lead.value.toLocaleString() : "0"}
                 </TableCell>
                 <TableCell>
                   <Avatar>
@@ -106,7 +112,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
                     )}
                   </Avatar>
                 </TableCell>
-                <TableCell>{lead.date}</TableCell>
+                <TableCell>{lead.date || "-"}</TableCell>
               </TableRow>
             ))}
           </TableBody>

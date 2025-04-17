@@ -32,15 +32,21 @@ const Leads = () => {
         .from('leads')
         .select(`
           id, 
-          name, 
-          company, 
-          email, 
-          phone, 
+          client_name, 
+          business_description,
+          email_address, 
+          contact_number, 
           status, 
           source, 
           value,
           created_at,
-          assigned_to_id
+          assigned_to_id,
+          city_state,
+          services_required,
+          budget,
+          additional_info,
+          agent,
+          date
         `)
         .order('created_at', { ascending: false });
 
@@ -72,10 +78,10 @@ const Leads = () => {
 
         return {
           id: lead.id,
-          name: lead.name,
-          company: lead.company || '',
-          email: lead.email,
-          phone: lead.phone || '',
+          client_name: lead.client_name,
+          company: lead.business_description || '',
+          email_address: lead.email_address,
+          contact_number: lead.contact_number || '',
           status: lead.status as Lead['status'] || 'new',
           source: lead.source || '',
           value: lead.value || 0,
@@ -86,7 +92,14 @@ const Leads = () => {
               : 'UN',
             avatar: profileData?.avatar_url,
           },
-          date: new Date(lead.created_at).toLocaleDateString(),
+          date: lead.date ? new Date(lead.date).toLocaleDateString() : 
+                 lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '',
+          city_state: lead.city_state,
+          business_description: lead.business_description,
+          services_required: lead.services_required,
+          budget: lead.budget,
+          additional_info: lead.additional_info,
+          agent: lead.agent
         };
       }));
 
@@ -103,13 +116,18 @@ const Leads = () => {
         .insert([
           {
             user_id: user?.id,
-            name: newLead.name,
-            company: newLead.company,
-            email: newLead.email,
-            phone: newLead.phone,
+            client_name: newLead.client_name,
+            business_description: newLead.business_description || newLead.company,
+            email_address: newLead.email_address,
+            contact_number: newLead.contact_number,
             status: newLead.status,
             source: newLead.source,
             value: newLead.value || 0,
+            city_state: newLead.city_state,
+            services_required: newLead.services_required,
+            budget: newLead.budget,
+            additional_info: newLead.additional_info,
+            agent: newLead.agent
           }
         ])
         .select();
@@ -140,13 +158,18 @@ const Leads = () => {
       const { data, error } = await supabase
         .from('leads')
         .update({
-          name: leadData.name,
-          company: leadData.company,
-          email: leadData.email,
-          phone: leadData.phone,
+          client_name: leadData.client_name,
+          business_description: leadData.business_description || leadData.company,
+          email_address: leadData.email_address,
+          contact_number: leadData.contact_number,
           status: leadData.status,
           source: leadData.source,
           value: leadData.value || 0,
+          city_state: leadData.city_state,
+          services_required: leadData.services_required,
+          budget: leadData.budget,
+          additional_info: leadData.additional_info,
+          agent: leadData.agent,
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)
@@ -269,9 +292,9 @@ const Leads = () => {
         ) : (
           <LeadsList 
             leads={leads.filter(lead => searchQuery ? 
-              lead.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-              lead.company.toLowerCase().includes(searchQuery.toLowerCase()) || 
-              lead.email.toLowerCase().includes(searchQuery.toLowerCase())
+              lead.client_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+              (lead.company && lead.company.toLowerCase().includes(searchQuery.toLowerCase())) || 
+              lead.email_address.toLowerCase().includes(searchQuery.toLowerCase())
               : true
             )}
             onAddLeadClick={null}
