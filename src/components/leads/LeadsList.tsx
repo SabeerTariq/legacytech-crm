@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Plus, BarChart3, List, Funnel } from "lucide-react";
+import { MoreHorizontal, Plus, BarChart3, List, Filter } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -79,7 +79,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick }) => {
               className="px-2 h-8"
               onClick={() => setViewMode("pipeline")}
             >
-              <Funnel className="h-4 w-4" />
+              <Filter className="h-4 w-4" />
             </Button>
             <Button
               variant={viewMode === "kanban" ? "default" : "ghost"}

@@ -38,7 +38,7 @@ const LeadsPipeline: React.FC<LeadsPipelineProps> = ({ leads }) => {
     return {
       ...stage,
       count,
-      value: totalValue || 0,
+      value: totalValue,
     };
   });
 
