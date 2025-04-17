@@ -15,7 +15,7 @@ import {
   Zap,
   ClipboardList,
   DollarSign,
-  Gavel
+  Bot  // Replace Gavel with Bot
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
@@ -41,7 +41,7 @@ const NavigationMenu = () => {
     { icon: Zap, label: "Automation", path: "/automation" },
     { icon: Calendar, label: "Calendar", path: "/calendar" },
     { icon: FileText, label: "Documents", path: "/documents" },
-    { icon: Gavel, label: "Better Ask Saul", path: "/better-ask-saul" },
+    { icon: Bot, label: "Better Ask Saul", path: "/better-ask-saul" },  // Updated icon
   ];
   
   const departmentsNavItems = [
@@ -128,3 +128,4 @@ const NavigationMenu = () => {
 };
 
 export default NavigationMenu;
+
