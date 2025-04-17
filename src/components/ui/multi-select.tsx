@@ -29,7 +29,11 @@ export function MultiSelect({
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
 
-  const selectedOptions = options.filter((option) => value.includes(option.value));
+  // Ensure options is always an array, even if it's undefined
+  const safeOptions = Array.isArray(options) ? options : [];
+
+  // Filter selected options safely
+  const selectedOptions = safeOptions.filter((option) => value.includes(option.value));
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -70,7 +74,7 @@ export function MultiSelect({
           <CommandEmpty>No results found.</CommandEmpty>
           <ScrollArea className="max-h-60">
             <CommandGroup>
-              {options.map((option) => {
+              {safeOptions.map((option) => {
                 const isSelected = value.includes(option.value);
                 return (
                   <CommandItem
@@ -81,6 +85,8 @@ export function MultiSelect({
                           ? value.filter((v) => v !== option.value)
                           : [...value, option.value]
                       );
+                      // Don't close the popover when selecting an item in multi-select
+                      // setOpen(false);
                     }}
                   >
                     <div
