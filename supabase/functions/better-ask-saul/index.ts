@@ -9,6 +9,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -41,10 +42,23 @@ serve(async (req) => {
       Be concise, professional, and helpful. If asked about specific data, use the actual numbers from the CRM.
     `;
 
+    const openAIKey = Deno.env.get('OPENAI_API_KEY');
+    
+    if (!openAIKey) {
+      console.error('Missing OpenAI API key in environment variables');
+      return new Response(
+        JSON.stringify({ error: 'OpenAI API key is not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Log to help debug
+    console.log("Sending request to OpenAI API");
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Authorization': `Bearer ${openAIKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -59,7 +73,10 @@ serve(async (req) => {
     if (!response.ok) {
       const errorData = await response.json();
       console.error('OpenAI API error:', errorData);
-      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+      return new Response(
+        JSON.stringify({ error: `OpenAI API error: ${errorData.error?.message || 'Unknown error'}` }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const data = await response.json();
@@ -67,10 +84,14 @@ serve(async (req) => {
     // Check if response has the expected structure
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
       console.error('Unexpected OpenAI response format:', data);
-      throw new Error('Unexpected response format from OpenAI');
+      return new Response(
+        JSON.stringify({ error: 'Unexpected response format from OpenAI' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
     const aiResponse = data.choices[0].message.content;
+    console.log("Received response from OpenAI");
 
     return new Response(JSON.stringify({ response: aiResponse }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

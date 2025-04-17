@@ -6,12 +6,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Bot } from "lucide-react";
+import { Bot, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
-  role: 'assistant' | 'user';
+  role: 'assistant' | 'user' | 'system';
   content: string;
 }
 
@@ -32,6 +32,8 @@ const BetterAskSaul = () => {
     setIsLoading(true);
 
     try {
+      console.log("Sending request to Supabase function");
+      
       const { data, error } = await supabase.functions.invoke('better-ask-saul', {
         body: { 
           messages: [...messages, userMessage],
@@ -44,17 +46,30 @@ const BetterAskSaul = () => {
         throw new Error(`Failed to call Supabase function: ${error.message}`);
       }
 
+      console.log("Response from Supabase function:", data);
+
       if (!data || !data.response) {
-        console.error('Invalid response from Supabase function:', data);
-        throw new Error('Invalid response from Saul');
+        if (data && data.error) {
+          throw new Error(data.error);
+        } else {
+          console.error('Invalid response from Supabase function:', data);
+          throw new Error('Invalid response from Saul');
+        }
       }
 
       setMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error:', error);
+      
+      // Add an error message to the conversation
+      setMessages(prev => [...prev, { 
+        role: 'system', 
+        content: `Error: ${error.message || 'Failed to get response from Saul'}`
+      }]);
+      
       toast({
         title: "Error",
-        description: `Failed to get response from Saul: ${error.message}`,
+        description: `Failed to get response from Saul: ${error.message || 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
@@ -85,11 +100,17 @@ const BetterAskSaul = () => {
                     className={`mb-4 p-3 rounded-lg ${
                       msg.role === 'assistant'
                         ? 'bg-muted'
+                        : msg.role === 'system'
+                        ? 'bg-destructive/10 border border-destructive/20'
                         : 'bg-primary/10'
                     }`}
                   >
-                    <p className="text-sm font-medium mb-1">
-                      {msg.role === 'assistant' ? 'Saul' : 'You'}
+                    <p className="text-sm font-medium mb-1 flex items-center gap-2">
+                      {msg.role === 'assistant' 
+                        ? 'Saul' 
+                        : msg.role === 'system' 
+                        ? <><AlertCircle size={16} /> System</>
+                        : 'You'}
                     </p>
                     <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                   </div>
