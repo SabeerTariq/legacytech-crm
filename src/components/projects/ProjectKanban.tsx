@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
 import { MoreHorizontal, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,21 +34,44 @@ export interface KanbanColumn {
 
 interface ProjectKanbanProps {
   initialColumns?: KanbanColumn[];
-  projects?: any[]; // Add projects prop
+  projects?: any[]; // Projects from Supabase
   onTaskMove?: (result: any) => void;
 }
 
 const ProjectKanban: React.FC<ProjectKanbanProps> = ({ initialColumns = [], projects = [], onTaskMove }) => {
   const [columns, setColumns] = useState<KanbanColumn[]>(initialColumns);
 
-  // If projects are provided but no initialColumns, derive columns from projects
-  React.useEffect(() => {
+  // Generate mock tasks from projects for demonstration
+  useEffect(() => {
     if (projects && projects.length > 0 && initialColumns.length === 0) {
-      // Create columns based on projects data
+      const todoTasks: KanbanTask[] = [];
+      const inProgressTasks: KanbanTask[] = [];
+      const completedTasks: KanbanTask[] = [];
+      
+      // Convert projects to Kanban tasks for visualization
+      projects.forEach(project => {
+        const task: KanbanTask = {
+          id: project.id,
+          title: project.name,
+          description: project.description || `Client: ${project.client}`,
+          priority: project.status === "completed" ? "low" : project.status === "approved" ? "medium" : "high",
+          dueDate: project.due_date ? new Date(project.due_date).toLocaleDateString() : undefined,
+        };
+        
+        // Sort tasks based on project status
+        if (["completed", "approved"].includes(project.status)) {
+          completedTasks.push(task);
+        } else if (["in-progress", "review"].includes(project.status)) {
+          inProgressTasks.push(task);
+        } else {
+          todoTasks.push(task);
+        }
+      });
+      
       const derivedColumns: KanbanColumn[] = [
-        { id: "todo", title: "To Do", tasks: [] },
-        { id: "in-progress", title: "In Progress", tasks: [] },
-        { id: "completed", title: "Completed", tasks: [] }
+        { id: "todo", title: "To Do", tasks: todoTasks },
+        { id: "in-progress", title: "In Progress", tasks: inProgressTasks },
+        { id: "completed", title: "Completed", tasks: completedTasks }
       ];
       
       setColumns(derivedColumns);
@@ -60,7 +84,6 @@ const ProjectKanban: React.FC<ProjectKanbanProps> = ({ initialColumns = [], proj
     high: "bg-red-500",
   };
 
-  // Rest of the component code stays the same
   const handleDragEnd = (result: any) => {
     const { destination, source, draggableId } = result;
 
@@ -120,9 +143,9 @@ const ProjectKanban: React.FC<ProjectKanbanProps> = ({ initialColumns = [], proj
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex gap-4 overflow-x-auto pb-4 h-full">
         {columns.map((column) => (
-          <div key={column.id} className="kanban-column">
+          <div key={column.id} className="kanban-column min-w-[300px] w-1/3">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-medium text-sm">{column.title} ({column.tasks.length})</h3>
               <Button variant="ghost" size="icon" className="h-7 w-7">
@@ -134,16 +157,16 @@ const ProjectKanban: React.FC<ProjectKanbanProps> = ({ initialColumns = [], proj
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className="min-h-[200px]"
+                  className="min-h-[200px] bg-gray-50 p-2 rounded-md h-[calc(100vh-15rem)] overflow-auto"
                 >
                   {column.tasks.map((task, index) => (
                     <Draggable key={task.id} draggableId={task.id} index={index}>
                       {(provided) => (
-                        <div
+                        <Card
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
-                          className="task-card"
+                          className="task-card mb-2 p-3"
                         >
                           <div className="flex justify-between items-start mb-2">
                             <h4 className="font-medium text-sm">{task.title}</h4>
@@ -187,7 +210,7 @@ const ProjectKanban: React.FC<ProjectKanbanProps> = ({ initialColumns = [], proj
                               {task.priority}
                             </Badge>
                           </div>
-                        </div>
+                        </Card>
                       )}
                     </Draggable>
                   ))}
