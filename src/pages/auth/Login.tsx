@@ -62,7 +62,7 @@ const Login = () => {
             />
           </div>
           <CardTitle className="text-2xl">Welcome Back</CardTitle>
-          <CardDescription>Sign in to your AgencyFlow account</CardDescription>
+          <CardDescription>Sign in to your LogicWorks account</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
