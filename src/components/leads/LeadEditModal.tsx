@@ -92,9 +92,9 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
       return;
     }
 
+    console.log("Submitting updated lead:", formData);
     onLeadUpdated(formData);
-    setIsSubmitting(false);
-    // Note: onOpenChange(false) will be called by the parent component after the update is successful
+    // Note: we're not closing the modal here, as it will be closed by the parent component after the update is successful
   };
 
   return (

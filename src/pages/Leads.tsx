@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import LeadsList, { Lead } from "@/components/leads/LeadsList";
@@ -177,7 +178,7 @@ const Leads = () => {
 
   const handleUpdateLead = (updatedLead: Omit<Lead, 'id' | 'assignedTo' | 'date'>) => {
     if (selectedLead) {
-      console.log("Handling update for lead:", selectedLead.id);
+      console.log("Handling update for lead:", selectedLead.id, updatedLead);
       updateLeadMutation.mutate({
         id: selectedLead.id,
         leadData: updatedLead
