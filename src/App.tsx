@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -33,7 +34,7 @@ import Development from "./pages/departments/Development";
 import Marketing from "./pages/departments/Marketing";
 import Content from "./pages/departments/Content";
 import BusinessDevelopment from "./pages/departments/BusinessDevelopment";
-import ProjectManagement from "./pages/ProjectManagement";
+import ProjectManagement from "./pages/departments/ProjectManagement";
 import BetterAskSaul from "./pages/BetterAskSaul";
 
 const queryClient = new QueryClient({
