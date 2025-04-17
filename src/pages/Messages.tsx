@@ -11,7 +11,8 @@ import { useChat, Conversation } from "@/hooks/useChat";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { MultiSelect } from "@/components/ui/multi-select";
+import { MultiSelect, MultiSelectOption } from "@/components/ui/multi-select";
+import { supabase } from "@/integrations/supabase/client";
 
 const Messages: React.FC = () => {
   const { user } = useAuth();
@@ -28,12 +29,39 @@ const Messages: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isNewConversationDialogOpen, setIsNewConversationDialogOpen] = useState(false);
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
+  const [users, setUsers] = useState<MultiSelectOption[]>([]);
 
   useEffect(() => {
     if (selectedConversation) {
       fetchMessagesForConversation(selectedConversation.id);
     }
   }, [selectedConversation]);
+
+  useEffect(() => {
+    // Fetch users for the MultiSelect
+    const fetchUsers = async () => {
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .neq('id', user.id); // Exclude current user
+
+      if (error) {
+        console.error('Error fetching users:', error);
+        return;
+      }
+
+      const formattedUsers = data.map(u => ({
+        value: u.id,
+        label: u.full_name || u.id
+      }));
+      
+      setUsers(formattedUsers);
+    };
+
+    fetchUsers();
+  }, [user]);
 
   const handleSendMessage = () => {
     if (selectedConversation && newMessageText.trim()) {
@@ -76,7 +104,7 @@ const Messages: React.FC = () => {
                 <DialogTitle>Create New Conversation</DialogTitle>
               </DialogHeader>
               <MultiSelect 
-                options={[]} 
+                options={users} 
                 value={selectedParticipants}
                 onChange={setSelectedParticipants}
                 placeholder="Select participants"
@@ -175,4 +203,3 @@ const Messages: React.FC = () => {
 };
 
 export default Messages;
-

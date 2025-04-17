@@ -57,8 +57,11 @@ export const useChat = () => {
     const { data, error } = await supabase
       .from('chat_messages')
       .select(`
-        *,
-        profiles (full_name, avatar_url)
+        id,
+        content,
+        sender_id,
+        conversation_id,
+        created_at
       `)
       .eq('conversation_id', conversationId)
       .order('created_at', { ascending: true });
@@ -68,12 +71,23 @@ export const useChat = () => {
       return;
     }
 
-    const formattedMessages = data?.map(msg => ({
-      ...msg,
-      sender: msg.profiles
-    })) || [];
+    // Separate query to get sender details for each message
+    const messagesWithSenders = await Promise.all(
+      data?.map(async (msg) => {
+        const { data: senderData } = await supabase
+          .from('profiles')
+          .select('full_name, avatar_url')
+          .eq('id', msg.sender_id)
+          .single();
+        
+        return {
+          ...msg,
+          sender: senderData || undefined
+        };
+      }) || []
+    );
 
-    setMessages(formattedMessages);
+    setMessages(messagesWithSenders);
   };
 
   const sendMessage = async (conversationId: string, content: string) => {
@@ -123,6 +137,7 @@ export const useChat = () => {
   useEffect(() => {
     if (user) {
       fetchConversations();
+      setLoading(false);
     }
   }, [user]);
 
@@ -136,8 +151,20 @@ export const useChat = () => {
           schema: 'public', 
           table: 'chat_messages' 
         },
-        (payload) => {
-          setMessages(prev => [...prev, payload.new as ChatMessage]);
+        async (payload) => {
+          const newMessage = payload.new as ChatMessage;
+          
+          // Get sender details
+          const { data: senderData } = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .eq('id', newMessage.sender_id)
+            .single();
+          
+          setMessages(prev => [
+            ...prev, 
+            { ...newMessage, sender: senderData || undefined }
+          ]);
         }
       )
       .subscribe();
@@ -156,4 +183,3 @@ export const useChat = () => {
     createConversation
   };
 };
-

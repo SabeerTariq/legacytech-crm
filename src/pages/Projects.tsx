@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,8 @@ const Projects: React.FC = () => {
   const { 
     data: projects, 
     isLoading: isProjectsLoading, 
-    error: projectsError 
+    error: projectsError,
+    refetch
   } = useQuery({
     queryKey: ['projects'],
     queryFn: async () => {
@@ -32,6 +34,10 @@ const Projects: React.FC = () => {
     }
   });
 
+  const handleProjectCreated = () => {
+    refetch();
+  };
+
   if (isProjectsLoading) {
     return (
       <MainLayout>
@@ -46,7 +52,7 @@ const Projects: React.FC = () => {
     return (
       <MainLayout>
         <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
-          <p className="text-red-500">Error: {projectsError.message}</p>
+          <p className="text-red-500">Error: {(projectsError as Error).message}</p>
         </div>
       </MainLayout>
     );
@@ -70,6 +76,7 @@ const Projects: React.FC = () => {
         <NewProjectDialog 
           open={isNewProjectDialogOpen}
           onOpenChange={setIsNewProjectDialogOpen}
+          onProjectCreated={handleProjectCreated}
         />
       </div>
     </MainLayout>
