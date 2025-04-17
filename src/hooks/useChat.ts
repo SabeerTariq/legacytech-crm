@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 export interface Conversation {
   id: string;
@@ -25,113 +26,183 @@ export interface ChatMessage {
 
 export const useChat = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [creatingConversation, setCreatingConversation] = useState(false);
 
   const fetchConversations = async () => {
     if (!user) return;
 
-    const { data, error } = await supabase
-      .from('conversation_participants')
-      .select(`
-        conversations (
-          id,
-          name,
-          is_group,
-          last_message_text
-        )
-      `)
-      .eq('user_id', user.id);
+    try {
+      const { data, error } = await supabase
+        .from('conversation_participants')
+        .select(`
+          conversations (
+            id,
+            name,
+            is_group,
+            last_message_text
+          )
+        `)
+        .eq('user_id', user.id);
 
-    if (error) {
-      console.error('Error fetching conversations:', error);
-      return;
+      if (error) {
+        console.error('Error fetching conversations:', error);
+        return;
+      }
+
+      const extractedConversations = data?.map(item => item.conversations) || [];
+      setConversations(extractedConversations);
+    } catch (err) {
+      console.error('Exception fetching conversations:', err);
     }
-
-    const extractedConversations = data?.map(item => item.conversations) || [];
-    setConversations(extractedConversations);
   };
 
   const fetchMessagesForConversation = async (conversationId: string) => {
-    const { data, error } = await supabase
-      .from('chat_messages')
-      .select(`
-        id,
-        content,
-        sender_id,
-        conversation_id,
-        created_at
-      `)
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select(`
+          id,
+          content,
+          sender_id,
+          conversation_id,
+          created_at
+        `)
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
 
-    if (error) {
-      console.error('Error fetching messages:', error);
-      return;
+      if (error) {
+        console.error('Error fetching messages:', error);
+        return;
+      }
+
+      // Separate query to get sender details for each message
+      const messagesWithSenders = await Promise.all(
+        data?.map(async (msg) => {
+          const { data: senderData } = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .eq('id', msg.sender_id)
+            .single();
+          
+          return {
+            ...msg,
+            sender: senderData || undefined
+          };
+        }) || []
+      );
+
+      setMessages(messagesWithSenders);
+    } catch (err) {
+      console.error('Exception fetching messages:', err);
     }
-
-    // Separate query to get sender details for each message
-    const messagesWithSenders = await Promise.all(
-      data?.map(async (msg) => {
-        const { data: senderData } = await supabase
-          .from('profiles')
-          .select('full_name, avatar_url')
-          .eq('id', msg.sender_id)
-          .single();
-        
-        return {
-          ...msg,
-          sender: senderData || undefined
-        };
-      }) || []
-    );
-
-    setMessages(messagesWithSenders);
   };
 
   const sendMessage = async (conversationId: string, content: string) => {
     if (!user) return;
 
-    const { error } = await supabase
-      .from('chat_messages')
-      .insert({
-        content,
-        sender_id: user.id,
-        conversation_id: conversationId
-      });
+    try {
+      const { error } = await supabase
+        .from('chat_messages')
+        .insert({
+          content,
+          sender_id: user.id,
+          conversation_id: conversationId
+        });
 
-    if (error) {
-      console.error('Error sending message:', error);
+      if (error) {
+        console.error('Error sending message:', error);
+        toast({
+          title: "Failed to send message",
+          description: error.message,
+          variant: "destructive"
+        });
+      }
+    } catch (err) {
+      console.error('Exception sending message:', err);
     }
   };
 
   const createConversation = async (participantIds: string[], name?: string) => {
     if (!user) return null;
-
-    const { data, error } = await supabase
-      .from('conversations')
-      .insert({ 
-        name: name || 'New Conversation', 
-        is_group: participantIds.length > 1 
-      })
-      .select()
-      .single();
-
-    if (error || !data) {
-      console.error('Error creating conversation:', error);
+    
+    if (participantIds.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one participant",
+        variant: "destructive"
+      });
       return null;
     }
+    
+    setCreatingConversation(true);
+    
+    try {
+      // Step 1: Create the conversation
+      const { data: conversationData, error: conversationError } = await supabase
+        .from('conversations')
+        .insert({ 
+          name: name || 'New Conversation', 
+          is_group: participantIds.length > 1 
+        })
+        .select()
+        .single();
 
-    // Add participants
-    const participantData = participantIds.map(id => ({
-      conversation_id: data.id,
-      user_id: id
-    }));
+      if (conversationError || !conversationData) {
+        console.error('Error creating conversation:', conversationError);
+        toast({
+          title: "Failed to create conversation",
+          description: conversationError?.message || "Unknown error",
+          variant: "destructive"
+        });
+        setCreatingConversation(false);
+        return null;
+      }
 
-    await supabase.from('conversation_participants').insert(participantData);
+      // Step 2: Add current user as participant
+      const allParticipantIds = [...participantIds];
+      if (!allParticipantIds.includes(user.id)) {
+        allParticipantIds.push(user.id);
+      }
 
-    return data;
+      // Step 3: Add participants one by one to avoid RLS issues
+      for (const participantId of allParticipantIds) {
+        const { error: participantError } = await supabase
+          .from('conversation_participants')
+          .insert({
+            conversation_id: conversationData.id,
+            user_id: participantId
+          });
+
+        if (participantError) {
+          console.error(`Error adding participant ${participantId}:`, participantError);
+          // Continue with other participants
+        }
+      }
+
+      // Step 4: Refresh conversations list
+      await fetchConversations();
+      
+      toast({
+        title: "Conversation created",
+        description: "Your new conversation has been created successfully",
+      });
+
+      setCreatingConversation(false);
+      return conversationData;
+    } catch (err) {
+      console.error('Exception creating conversation:', err);
+      toast({
+        title: "Error",
+        description: "Failed to create conversation. Please try again.",
+        variant: "destructive"
+      });
+      setCreatingConversation(false);
+      return null;
+    }
   };
 
   useEffect(() => {
@@ -178,6 +249,7 @@ export const useChat = () => {
     conversations,
     messages,
     loading,
+    creatingConversation,
     fetchMessagesForConversation,
     sendMessage,
     createConversation

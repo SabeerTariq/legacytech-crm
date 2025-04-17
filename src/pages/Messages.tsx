@@ -3,14 +3,14 @@ import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import MessageChat from "@/components/communication/MessageChat";
 import { Input } from "@/components/ui/input";
-import { Search, UserPlus, ArrowLeft } from "lucide-react";
+import { Search, UserPlus, ArrowLeft, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useChat, Conversation } from "@/hooks/useChat";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { MultiSelect, MultiSelectOption } from "@/components/ui/multi-select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -25,7 +25,8 @@ const Messages: React.FC = () => {
     messages, 
     fetchMessagesForConversation, 
     sendMessage,
-    createConversation 
+    createConversation,
+    creatingConversation 
   } = useChat();
   
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
@@ -111,15 +112,11 @@ const Messages: React.FC = () => {
   const handleCreateConversation = async () => {
     if (user && selectedParticipants.length > 0) {
       try {
-        const newConversation = await createConversation([...selectedParticipants, user.id]);
+        const newConversation = await createConversation([...selectedParticipants]);
         if (newConversation) {
           setSelectedConversation(newConversation);
           setIsNewConversationDialogOpen(false);
           setSelectedParticipants([]);
-          toast({
-            title: "Conversation created",
-            description: "Your new conversation is ready",
-          });
           
           // On mobile, hide the conversation list when a new conversation is created
           if (isMobile) {
@@ -128,12 +125,13 @@ const Messages: React.FC = () => {
         }
       } catch (error) {
         console.error("Error creating conversation:", error);
-        toast({
-          title: "Error creating conversation",
-          description: "Please try again later",
-          variant: "destructive",
-        });
       }
+    } else {
+      toast({
+        title: "Error",
+        description: "Please select at least one participant",
+        variant: "destructive"
+      });
     }
   };
 
@@ -180,6 +178,9 @@ const Messages: React.FC = () => {
             <DialogContent className={isMobile ? "w-[90%] max-w-md" : ""}>
               <DialogHeader>
                 <DialogTitle>Create New Conversation</DialogTitle>
+                <DialogDescription>
+                  Select users to start a conversation with.
+                </DialogDescription>
               </DialogHeader>
               <MultiSelect 
                 options={users} 
@@ -190,9 +191,16 @@ const Messages: React.FC = () => {
               <Button 
                 onClick={handleCreateConversation} 
                 className="mt-4"
-                disabled={selectedParticipants.length === 0 || isLoadingUsers}
+                disabled={selectedParticipants.length === 0 || isLoadingUsers || creatingConversation}
               >
-                Create Conversation
+                {creatingConversation ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Conversation"
+                )}
               </Button>
             </DialogContent>
           </Dialog>
@@ -286,7 +294,7 @@ const Messages: React.FC = () => {
                 />
               ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
-                  {isMobile ? "Select a conversation to start chatting" : "Select a conversation to start chatting"}
+                  Select a conversation to start chatting
                 </div>
               )}
             </div>
