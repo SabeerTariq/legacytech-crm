@@ -20,13 +20,17 @@ const TeamPerformanceCard = ({ department }: { department: string }) => {
 
   const stats: TeamStats = employees.reduce((acc, employee) => {
     const performance = employee.performance as ProductionPerformance;
-    const completionRate = performance.tasks_completed_ontime / performance.total_tasks_assigned * 100;
+    
+    // Check if total_tasks_assigned is 0, if so, default completion rate to 0
+    const completionRate = performance.total_tasks_assigned > 0 
+      ? (performance.tasks_completed_ontime / performance.total_tasks_assigned * 100)
+      : 0;
     
     return {
       totalEmployees: acc.totalEmployees + 1,
       averageTaskCompletionRate: acc.averageTaskCompletionRate + completionRate,
-      totalTasksAssigned: acc.totalTasksAssigned + performance.total_tasks_assigned,
-      tasksCompletedOnTime: acc.tasksCompletedOnTime + performance.tasks_completed_ontime,
+      totalTasksAssigned: acc.totalTasksAssigned + (performance.total_tasks_assigned || 0),
+      tasksCompletedOnTime: acc.tasksCompletedOnTime + (performance.tasks_completed_ontime || 0),
     };
   }, {
     totalEmployees: 0,
@@ -35,9 +39,13 @@ const TeamPerformanceCard = ({ department }: { department: string }) => {
     tasksCompletedOnTime: 0,
   });
 
+  // Add a safe check to avoid division by zero
   const avgCompletionRate = stats.totalEmployees > 0 
     ? stats.averageTaskCompletionRate / stats.totalEmployees 
     : 0;
+
+  // Ensure we're working with a valid number
+  const safeAvgCompletionRate = isNaN(avgCompletionRate) ? 0 : avgCompletionRate;
 
   return (
     <div className="space-y-6">
@@ -56,7 +64,7 @@ const TeamPerformanceCard = ({ department }: { department: string }) => {
 
           <div className={cn(
             "space-y-2 rounded-lg p-3",
-            avgCompletionRate >= 70 ? "bg-green-500/10" : "bg-red-500/10"
+            safeAvgCompletionRate >= 70 ? "bg-green-500/10" : "bg-red-500/10"
           )}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -65,15 +73,15 @@ const TeamPerformanceCard = ({ department }: { department: string }) => {
               </div>
             </div>
             <Progress 
-              value={avgCompletionRate} 
+              value={safeAvgCompletionRate} 
               className={cn(
-                avgCompletionRate >= 70 ? "text-green-500" : "text-red-500"
+                safeAvgCompletionRate >= 70 ? "text-green-500" : "text-red-500"
               )}
             />
             <div className="flex justify-between text-xs">
               <span>Team Average</span>
-              <Badge variant={avgCompletionRate >= 70 ? "default" : "destructive"}>
-                {avgCompletionRate.toFixed(1)}%
+              <Badge variant={safeAvgCompletionRate >= 70 ? "default" : "destructive"}>
+                {safeAvgCompletionRate.toFixed(1)}%
               </Badge>
             </div>
           </div>

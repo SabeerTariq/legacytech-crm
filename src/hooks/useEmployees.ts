@@ -17,19 +17,37 @@ export const useEmployees = (department: string) => {
       }
 
       return data.map(employee => {
-        const performance = employee.performance as Record<string, number>;
-        return {
-          ...employee,
-          joinDate: employee.join_date,
-          performance: {
-            salesTarget: Number(performance.sales_target ?? 0),
-            salesAchieved: Number(performance.sales_achieved ?? 0),
-            projectsCompleted: Number(performance.projects_completed ?? 0),
-            tasksCompleted: Number(performance.tasks_completed ?? 0),
-            customerSatisfaction: Number(performance.customer_satisfaction ?? 0),
-            avgTaskCompletionTime: Number(performance.avg_task_completion_time ?? 0)
-          }
-        };
+        const performance = employee.performance || {};
+        
+        // Determine which type of performance data we're working with
+        const isProductionDept = ['Design', 'Development', 'Marketing', 'Content'].includes(employee.department);
+        
+        if (isProductionDept) {
+          return {
+            ...employee,
+            joinDate: employee.join_date,
+            performance: {
+              total_tasks_assigned: Number(performance.total_tasks_assigned ?? 0),
+              tasks_completed_ontime: Number(performance.tasks_completed_ontime ?? 0),
+              tasks_completed_late: Number(performance.tasks_completed_late ?? 0),
+              strikes: Number(performance.strikes ?? 0),
+              avg_completion_time: Number(performance.avg_completion_time ?? 0)
+            }
+          };
+        } else {
+          return {
+            ...employee,
+            joinDate: employee.join_date,
+            performance: {
+              salesTarget: Number(performance.salesTarget ?? 0),
+              salesAchieved: Number(performance.salesAchieved ?? 0),
+              projectsCompleted: Number(performance.projectsCompleted ?? 0),
+              tasksCompleted: Number(performance.tasksCompleted ?? 0),
+              customerSatisfaction: Number(performance.customerSatisfaction ?? 0),
+              avgTaskCompletionTime: Number(performance.avgTaskCompletionTime ?? 0)
+            }
+          };
+        }
       });
     }
   });
