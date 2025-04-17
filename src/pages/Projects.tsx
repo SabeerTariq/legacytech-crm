@@ -1,13 +1,16 @@
 
-import React from "react";
+import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import ProjectKanban from "@/components/projects/ProjectKanban";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PlusCircle } from "lucide-react";
+import NewProjectDialog from "@/components/projects/NewProjectDialog";
 
 const Projects = () => {
+  const [newProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
+  
   // Mock data for kanban board
   const kanbanColumns = [
     {
@@ -129,7 +132,7 @@ const Projects = () => {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h1 className="text-3xl font-bold">Projects</h1>
-          <Button>
+          <Button onClick={() => setNewProjectDialogOpen(true)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             New Project
           </Button>
@@ -169,6 +172,15 @@ const Projects = () => {
           </TabsContent>
         </Tabs>
       </div>
+      
+      <NewProjectDialog 
+        open={newProjectDialogOpen} 
+        onOpenChange={setNewProjectDialogOpen} 
+        onProjectCreated={(project) => {
+          console.log("New project created:", project);
+          setNewProjectDialogOpen(false);
+        }}
+      />
     </MainLayout>
   );
 };
