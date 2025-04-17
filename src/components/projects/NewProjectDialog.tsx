@@ -80,9 +80,9 @@ const NewProjectDialog: React.FC<NewProjectDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
-          <DialogTitle>Create New Project</DialogTitle>
+          <DialogTitle>Create New LogicWorks CRM Project</DialogTitle>
           <DialogDescription>
-            Fill in the details below to create a new project.
+            Fill in the details below to create a new project in LogicWorks CRM.
           </DialogDescription>
         </DialogHeader>
 

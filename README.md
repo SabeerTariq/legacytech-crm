@@ -1,4 +1,5 @@
-# Welcome to your Lovable project
+
+# LogicWorks CRM
 
 ## Project info
 
@@ -64,7 +65,7 @@ This project is built with:
 
 Simply open [Lovable](https://lovable.dev/projects/3d07837b-ce89-4b44-a341-d799bc9162aa) and click on Share -> Publish.
 
-## Can I connect a custom domain to my Lovable project?
+## Can I connect a custom domain to my LogicWorks CRM?
 
 Yes, you can!
 
