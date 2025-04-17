@@ -37,7 +37,7 @@ const Leads = () => {
           value,
           created_at,
           assigned_to_id,
-          profiles:assigned_to_id (full_name, avatar_url)
+          profiles(full_name, avatar_url)
         `)
         .order('created_at', { ascending: false });
 
@@ -60,18 +60,13 @@ const Leads = () => {
         status: lead.status as Lead['status'] || 'new',
         source: lead.source || '',
         value: lead.value || 0,
-        assignedTo: lead.profiles 
-          ? {
-              name: lead.profiles.full_name || 'Unassigned',
-              initials: lead.profiles.full_name 
-                ? lead.profiles.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase() 
-                : 'UN',
-              avatar: lead.profiles.avatar_url,
-            }
-          : {
-              name: 'Unassigned',
-              initials: 'UN',
-            },
+        assignedTo: {
+          name: lead.profiles ? (lead.profiles.full_name || 'Unassigned') : 'Unassigned',
+          initials: lead.profiles && lead.profiles.full_name 
+            ? lead.profiles.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase() 
+            : 'UN',
+          avatar: lead.profiles ? lead.profiles.avatar_url : undefined,
+        },
         date: new Date(lead.created_at).toLocaleDateString(),
       }));
     },
