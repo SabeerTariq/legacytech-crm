@@ -33,7 +33,8 @@ import Development from "./pages/departments/Development";
 import Marketing from "./pages/departments/Marketing";
 import Content from "./pages/departments/Content";
 import BusinessDevelopment from "./pages/departments/BusinessDevelopment";
-import ProjectManagement from "./pages/departments/ProjectManagement";
+import ProjectManagement from "./pages/ProjectManagement";
+import BetterAskSaul from "./pages/BetterAskSaul";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -70,6 +71,7 @@ const App = () => (
             <Route path="/documents" element={<ProtectedRoute><Documents /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
+            <Route path="/better-ask-saul" element={<ProtectedRoute><BetterAskSaul /></ProtectedRoute>} />
             
             {/* Department routes */}
             <Route path="/departments/design" element={<ProtectedRoute><Design /></ProtectedRoute>} />

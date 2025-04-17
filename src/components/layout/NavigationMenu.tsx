@@ -14,7 +14,8 @@ import {
   FileSpreadsheet,
   Zap,
   ClipboardList,
-  DollarSign
+  DollarSign,
+  Gavel
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
@@ -33,13 +34,14 @@ const NavigationMenu = () => {
     { icon: BarChart3, label: "Dashboard", path: "/" },
     { icon: Users, label: "Leads", path: "/leads" },
     { icon: ClipboardList, label: "Sales Form", path: "/sales-form" },
-    { icon: DollarSign, label: "Payments", path: "/payments" }, // New payment page link
+    { icon: DollarSign, label: "Payments", path: "/payments" },
     { icon: Briefcase, label: "Projects", path: "/projects" },
     { icon: KanbanSquare, label: "Tasks", path: "/tasks" },
     { icon: MessageSquare, label: "Messages", path: "/messages" },
     { icon: Zap, label: "Automation", path: "/automation" },
     { icon: Calendar, label: "Calendar", path: "/calendar" },
     { icon: FileText, label: "Documents", path: "/documents" },
+    { icon: Gavel, label: "Better Ask Saul", path: "/better-ask-saul" },
   ];
   
   const departmentsNavItems = [
