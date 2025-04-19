@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -103,7 +102,7 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
     if (!formData.client_name || !formData.email_address) {
       toast({
         title: "Missing required fields",
-        description: "Please fill in all required fields.",
+        description: "Please fill in name and email fields.",
         variant: "destructive",
       });
       setIsSubmitting(false);

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Dialog,
@@ -38,7 +37,7 @@ const leadFormSchema = z.object({
   email_address: z.string().email({ message: "Please enter a valid email address." }),
   contact_number: z.string().optional(),
   source: z.string().optional(),
-  status: z.string().min(1, { message: "Please select a status." }),
+  status: z.string().optional().default("new"),
   value: z.number().optional(),
   city_state: z.string().optional(),
   services_required: z.string().optional(),
@@ -119,7 +118,7 @@ const LeadAddModal: React.FC<LeadAddModalProps> = ({
                 name="client_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel>Name *</FormLabel>
                     <FormControl>
                       <Input placeholder="John Smith" {...field} />
                     </FormControl>
@@ -147,7 +146,7 @@ const LeadAddModal: React.FC<LeadAddModalProps> = ({
                 name="email_address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>Email *</FormLabel>
                     <FormControl>
                       <Input type="email" placeholder="john@company.com" {...field} />
                     </FormControl>
