@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useState } from "react";
 import {
   Table,
   TableBody,
@@ -10,6 +9,14 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatPhoneNumber } from "@/utils/formatPhone";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 export interface Lead {
   id: string;
@@ -36,6 +43,9 @@ interface LeadsListProps {
 }
 
 const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClick }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const leadsPerPage = 50;
+
   const statusColors: { [key: string]: string } = {
     new: "bg-blue-100 text-blue-800",
     contacted: "bg-gray-100 text-gray-800",
@@ -57,6 +67,18 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
     );
   });
 
+  // Sort leads by date and handle pagination
+  const sortedAndFilteredLeads = filteredLeads
+    .sort((a, b) => {
+      const dateA = a.date ? new Date(a.date).getTime() : 0;
+      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      return dateA - dateB;
+    });
+
+  const totalPages = Math.ceil(sortedAndFilteredLeads.length / leadsPerPage);
+  const startIndex = (currentPage - 1) * leadsPerPage;
+  const paginatedLeads = sortedAndFilteredLeads.slice(startIndex, startIndex + leadsPerPage);
+
   return (
     <div className="space-y-4">
       <div className="rounded-md border">
@@ -75,7 +97,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredLeads.map((lead) => (
+            {paginatedLeads.map((lead) => (
               <TableRow 
                 key={lead.id} 
                 onClick={() => onLeadClick && onLeadClick(lead)} 
@@ -101,6 +123,39 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
           </TableBody>
         </Table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-center mt-4">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+              
+              {[...Array(totalPages)].map((_, index) => (
+                <PaginationItem key={index + 1}>
+                  <PaginationLink
+                    onClick={() => setCurrentPage(index + 1)}
+                    isActive={currentPage === index + 1}
+                  >
+                    {index + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              
+              <PaginationItem>
+                <PaginationNext 
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
     </div>
   );
 };
