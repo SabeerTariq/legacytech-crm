@@ -45,7 +45,7 @@ export const useLeads = () => {
         return [];
       }
 
-      const processedLeads = leadsData.map((lead) => ({
+      const processedLeads = (leadsData || []).map((lead) => ({
         id: lead.id,
         client_name: lead.client_name,
         company: lead.business_description || '',

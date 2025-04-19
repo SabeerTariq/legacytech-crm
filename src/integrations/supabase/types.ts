@@ -171,12 +171,12 @@ export type Database = {
           date: string | null
           email_address: string
           id: string
+          price: number | null
           services_required: string | null
           source: string | null
           status: string | null
           updated_at: string | null
           user_id: string | null
-          value: number | null
         }
         Insert: {
           additional_info?: string | null
@@ -191,12 +191,12 @@ export type Database = {
           date?: string | null
           email_address: string
           id?: string
+          price?: number | null
           services_required?: string | null
           source?: string | null
           status?: string | null
           updated_at?: string | null
           user_id?: string | null
-          value?: number | null
         }
         Update: {
           additional_info?: string | null
@@ -211,12 +211,12 @@ export type Database = {
           date?: string | null
           email_address?: string
           id?: string
+          price?: number | null
           services_required?: string | null
           source?: string | null
           status?: string | null
           updated_at?: string | null
           user_id?: string | null
-          value?: number | null
         }
         Relationships: []
       }
