@@ -1,4 +1,3 @@
-
 import React from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import StatCard from "@/components/dashboard/StatCard";
@@ -82,7 +81,7 @@ const Dashboard = () => {
   const convertedLeads = leads.filter(lead => 
     lead.status === 'converted' || lead.status === 'won'
   );
-  const totalRevenue = convertedLeads.reduce((sum, lead) => sum + (Number(lead.value) || 0), 0);
+  const totalRevenue = convertedLeads.reduce((sum, lead) => sum + (Number(lead.price) || 0), 0);
   
   // Calculate conversion rate
   const conversionRate = leads.length > 0 
