@@ -38,7 +38,7 @@ const leadFormSchema = z.object({
   contact_number: z.string().optional(),
   source: z.string().optional(),
   status: z.string().optional().default("new"),
-  value: z.number().optional(),
+  price: z.number().optional(),
   city_state: z.string().optional(),
   services_required: z.string().optional(),
   budget: z.string().optional(),
@@ -65,7 +65,7 @@ const LeadAddModal: React.FC<LeadAddModalProps> = ({
       contact_number: "",
       source: "",
       status: "new",
-      value: 0,
+      price: 0,
       city_state: "",
       services_required: "",
       budget: "",
@@ -85,7 +85,7 @@ const LeadAddModal: React.FC<LeadAddModalProps> = ({
         contact_number: values.contact_number,
         source: values.source,
         status: values.status as Lead['status'],
-        value: values.value || 0,
+        price: values.price || 0,
         business_description: values.business_description,
         city_state: values.city_state,
         services_required: values.services_required,
@@ -225,10 +225,10 @@ const LeadAddModal: React.FC<LeadAddModalProps> = ({
               
               <FormField
                 control={form.control}
-                name="value"
+                name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Value ($)</FormLabel>
+                    <FormLabel>Price ($)</FormLabel>
                     <FormControl>
                       <Input 
                         type="number" 

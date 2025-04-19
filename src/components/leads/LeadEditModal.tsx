@@ -39,7 +39,7 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
     contact_number: "",
     status: "new" as Lead["status"],
     source: "",
-    value: 0,
+    price: 0,
     city_state: "",
     services_required: "",
     budget: "",
@@ -59,7 +59,7 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
         contact_number: lead.contact_number || "",
         status: lead.status,
         source: lead.source || "",
-        value: lead.value || 0,
+        price: lead.price || 0,
         city_state: lead.city_state || "",
         services_required: lead.services_required || "",
         budget: lead.budget || "",
@@ -77,7 +77,7 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "value" ? parseFloat(value) || 0 : value,
+      [name]: name === "price" ? parseFloat(value) || 0 : value,
     }));
   };
 
@@ -235,14 +235,14 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="value">Value ($)</Label>
+              <Label htmlFor="price">Price ($)</Label>
               <Input
-                id="value"
-                name="value"
+                id="price"
+                name="price"
                 type="number"
                 min="0"
                 step="0.01"
-                value={formData.value}
+                value={formData.price}
                 onChange={handleChange}
               />
             </div>

@@ -26,7 +26,7 @@ export interface Lead {
   contact_number?: string;
   status: "new" | "contacted" | "qualified" | "proposal" | "negotiation" | "won" | "lost";
   source?: string;
-  value?: number;
+  price?: number;
   date?: string;
   city_state?: string;
   business_description?: string;
@@ -92,7 +92,8 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
               <TableHead>Email</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Source</TableHead>
-              <TableHead className="text-right">Value</TableHead>
+              {/* Update the TableHead for Value to Price */}
+              <TableHead className="text-right">Price</TableHead>
               <TableHead>Agent</TableHead>
             </TableRow>
           </TableHeader>
@@ -114,8 +115,9 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
                   </Badge>
                 </TableCell>
                 <TableCell>{lead.source || "-"}</TableCell>
+                {/* Update the value display */}
                 <TableCell className="text-right">
-                  ${lead.value ? lead.value.toLocaleString() : "0"}
+                  ${lead.price ? lead.price.toLocaleString() : "0"}
                 </TableCell>
                 <TableCell>{lead.agent || "-"}</TableCell>
               </TableRow>
