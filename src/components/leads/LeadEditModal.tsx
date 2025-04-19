@@ -50,9 +50,9 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  // Update form data when lead changes
+  // Update form data when lead changes or modal opens
   useEffect(() => {
-    if (lead) {
+    if (lead && open) {
       setFormData({
         client_name: lead.client_name,
         business_description: lead.business_description || lead.company || "",
@@ -67,8 +67,10 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
         additional_info: lead.additional_info || "",
         agent: lead.agent || "",
       });
+      // Reset submission state when modal opens
+      setIsSubmitting(false);
     }
-  }, [lead]);
+  }, [lead, open]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -123,8 +125,16 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
     }
   };
 
+  // Reset submission state when modal closes
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setIsSubmitting(false);
+    }
+    onOpenChange(open);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Lead</DialogTitle>
@@ -317,7 +327,7 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
             </AlertDialog>
             
             <div>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="mr-2">
+              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} className="mr-2">
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
