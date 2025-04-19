@@ -8,8 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { formatPhoneNumber } from "@/utils/formatPhone";
 
 export interface Lead {
   id: string;
@@ -66,7 +65,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
               <TableHead>Date</TableHead>
               <TableHead className="w-[100px]">Name</TableHead>
               <TableHead>Company</TableHead>
-              <TableHead className="w-[150px]">Phone</TableHead>
+              <TableHead className="w-[180px]">Phone</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Source</TableHead>
@@ -84,7 +83,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
                 <TableCell>{lead.date || "-"}</TableCell>
                 <TableCell className="font-medium">{lead.client_name}</TableCell>
                 <TableCell>{lead.company || lead.business_description || "-"}</TableCell>
-                <TableCell>{lead.contact_number || "-"}</TableCell>
+                <TableCell className="font-mono">{formatPhoneNumber(lead.contact_number)}</TableCell>
                 <TableCell>{lead.email_address}</TableCell>
                 <TableCell>
                   <Badge className={statusColors[lead.status] || "bg-gray-100 text-gray-800"}>
