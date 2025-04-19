@@ -99,10 +99,10 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
     e.preventDefault();
     setIsSubmitting(true);
     
-    if (!formData.client_name || !formData.email_address) {
+    if (!formData.client_name) {
       toast({
-        title: "Missing required fields",
-        description: "Please fill in name and email fields.",
+        title: "Missing required field",
+        description: "Please fill in the name field.",
         variant: "destructive",
       });
       setIsSubmitting(false);
@@ -168,14 +168,13 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="email_address">Email *</Label>
+              <Label htmlFor="email_address">Email</Label>
               <Input
                 id="email_address"
                 name="email_address"
                 type="email"
                 value={formData.email_address}
                 onChange={handleChange}
-                required
               />
             </div>
 

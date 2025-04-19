@@ -34,7 +34,7 @@ interface LeadAddModalProps {
 const leadFormSchema = z.object({
   client_name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   business_description: z.string().optional(),
-  email_address: z.string().email({ message: "Please enter a valid email address." }),
+  email_address: z.string().optional(),
   contact_number: z.string().optional(),
   source: z.string().optional(),
   status: z.string().optional().default("new"),
@@ -146,7 +146,7 @@ const LeadAddModal: React.FC<LeadAddModalProps> = ({
                 name="email_address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email *</FormLabel>
+                    <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input type="email" placeholder="john@company.com" {...field} />
                     </FormControl>
