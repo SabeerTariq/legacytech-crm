@@ -66,8 +66,8 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
               <TableHead>Date</TableHead>
               <TableHead className="w-[100px]">Name</TableHead>
               <TableHead>Company</TableHead>
+              <TableHead className="w-[150px]">Phone</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Source</TableHead>
               <TableHead className="text-right">Value</TableHead>
@@ -84,8 +84,8 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
                 <TableCell>{lead.date || "-"}</TableCell>
                 <TableCell className="font-medium">{lead.client_name}</TableCell>
                 <TableCell>{lead.company || lead.business_description || "-"}</TableCell>
-                <TableCell>{lead.email_address}</TableCell>
                 <TableCell>{lead.contact_number || "-"}</TableCell>
+                <TableCell>{lead.email_address}</TableCell>
                 <TableCell>
                   <Badge className={statusColors[lead.status] || "bg-gray-100 text-gray-800"}>
                     {lead.status}
