@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Table,
@@ -90,9 +91,9 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
               <TableHead>Company</TableHead>
               <TableHead className="w-[220px]">Phone</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>City/State</TableHead>
+              <TableHead>Services Required</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Source</TableHead>
-              {/* Update the TableHead for Value to Price */}
               <TableHead className="text-right">Price</TableHead>
               <TableHead>Agent</TableHead>
             </TableRow>
@@ -109,13 +110,13 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
                 <TableCell>{lead.company || lead.business_description || "-"}</TableCell>
                 <TableCell className="font-mono whitespace-nowrap">{formatPhoneNumber(lead.contact_number)}</TableCell>
                 <TableCell>{lead.email_address}</TableCell>
+                <TableCell>{lead.city_state || "-"}</TableCell>
+                <TableCell>{lead.services_required || "-"}</TableCell>
                 <TableCell>
                   <Badge className={statusColors[lead.status] || "bg-gray-100 text-gray-800"}>
                     {lead.status}
                   </Badge>
                 </TableCell>
-                <TableCell>{lead.source || "-"}</TableCell>
-                {/* Update the value display */}
                 <TableCell className="text-right">
                   ${lead.price ? lead.price.toLocaleString() : "0"}
                 </TableCell>
