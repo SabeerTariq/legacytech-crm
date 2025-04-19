@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   Table,
@@ -10,7 +9,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
@@ -24,11 +22,6 @@ export interface Lead {
   status: "new" | "contacted" | "qualified" | "proposal" | "negotiation" | "won" | "lost";
   source?: string;
   value?: number;
-  assignedTo: {
-    name: string;
-    initials: string;
-    avatar?: string;
-  };
   date?: string;
   city_state?: string;
   business_description?: string;
@@ -79,7 +72,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
               <TableHead>Status</TableHead>
               <TableHead>Source</TableHead>
               <TableHead className="text-right">Value</TableHead>
-              <TableHead>Assigned To</TableHead>
+              <TableHead>Agent</TableHead>
               <TableHead>Date</TableHead>
             </TableRow>
           </TableHeader>
@@ -103,15 +96,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
                 <TableCell className="text-right">
                   ${lead.value ? lead.value.toLocaleString() : "0"}
                 </TableCell>
-                <TableCell>
-                  <Avatar>
-                    {lead.assignedTo.avatar ? (
-                      <AvatarImage src={lead.assignedTo.avatar} alt={lead.assignedTo.name} />
-                    ) : (
-                      <AvatarFallback>{lead.assignedTo.initials}</AvatarFallback>
-                    )}
-                  </Avatar>
-                </TableCell>
+                <TableCell>{lead.agent || "-"}</TableCell>
                 <TableCell>{lead.date || "-"}</TableCell>
               </TableRow>
             ))}
