@@ -15,7 +15,6 @@ export const useLeads = () => {
   } = useQuery({
     queryKey: ['leads'],
     queryFn: async () => {
-      // Fetch all leads without user filtering
       const { data: leadsData, error: leadsError } = await supabase
         .from('leads')
         .select(`
@@ -28,7 +27,6 @@ export const useLeads = () => {
           status,
           value,
           created_at,
-          assigned_to_id,
           city_state,
           services_required,
           budget,
@@ -47,61 +45,33 @@ export const useLeads = () => {
         return [];
       }
 
-      console.log("Fetched leads from Supabase:", leadsData);
-      
-      const processedLeads = await Promise.all(leadsData.map(async (lead) => {
-        let profileData = null;
-        
-        if (lead.assigned_to_id) {
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('full_name, avatar_url')
-            .eq('id', lead.assigned_to_id)
-            .single();
-          
-          if (!profileError) {
-            profileData = profile;
-          }
-        }
-
-        return {
-          id: lead.id,
-          client_name: lead.client_name,
-          company: lead.business_description || '',
-          email_address: lead.email_address,
-          contact_number: lead.contact_number || '',
-          status: (lead.status || 'new') as Lead['status'],
-          source: lead.source || '',
-          value: lead.value || 0,
-          assignedTo: {
-            name: profileData?.full_name || 'Unassigned',
-            initials: profileData?.full_name 
-              ? profileData.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase() 
-              : 'UN',
-            avatar: profileData?.avatar_url,
-          },
-          date: lead.date ? new Date(lead.date).toLocaleDateString() : 
-                 lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '',
-          city_state: lead.city_state,
-          business_description: lead.business_description,
-          services_required: lead.services_required,
-          budget: lead.budget,
-          additional_info: lead.additional_info,
-          agent: lead.agent
-        };
+      const processedLeads = leadsData.map((lead) => ({
+        id: lead.id,
+        client_name: lead.client_name,
+        company: lead.business_description || '',
+        email_address: lead.email_address,
+        contact_number: lead.contact_number || '',
+        status: (lead.status || 'new') as Lead['status'],
+        source: lead.source || '',
+        value: lead.value || 0,
+        date: lead.date ? new Date(lead.date).toLocaleDateString() : 
+               lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '',
+        city_state: lead.city_state,
+        business_description: lead.business_description,
+        services_required: lead.services_required,
+        budget: lead.budget,
+        additional_info: lead.additional_info,
+        agent: lead.agent
       }));
 
-      console.log("Processed leads:", processedLeads);
       return processedLeads;
     },
-    // Always enable the query to fetch leads regardless of user authentication status
     enabled: true,
-    // Refetch data periodically to ensure we have the latest data
     refetchInterval: 30000,
   });
 
   const addLeadMutation = useMutation({
-    mutationFn: async (newLead: Omit<Lead, 'id' | 'assignedTo' | 'date'>) => {
+    mutationFn: async (newLead: Omit<Lead, 'id' | 'date'>) => {
       const { data, error } = await supabase
         .from('leads')
         .insert([{
@@ -140,7 +110,7 @@ export const useLeads = () => {
   });
 
   const updateLeadMutation = useMutation({
-    mutationFn: async ({ id, leadData }: { id: string, leadData: Omit<Lead, 'id' | 'assignedTo' | 'date'> }) => {
+    mutationFn: async ({ id, leadData }: { id: string, leadData: Omit<Lead, 'id' | 'date'> }) => {
       const { data, error } = await supabase
         .from('leads')
         .update({
@@ -205,7 +175,7 @@ export const useLeads = () => {
       });
     },
   });
-
+  
   return {
     leads,
     isLoading,

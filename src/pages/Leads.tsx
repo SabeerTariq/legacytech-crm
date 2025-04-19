@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Lead } from "@/components/leads/LeadsList";
@@ -26,12 +25,12 @@ const Leads = () => {
 
   console.log("All leads in Leads page:", leads);
 
-  const handleAddLead = (newLead: Omit<Lead, 'id' | 'assignedTo' | 'date'>) => {
+  const handleAddLead = (newLead: Omit<Lead, 'id' | 'date'>) => {
     addLeadMutation.mutate(newLead);
     setAddModalOpen(false);
   };
 
-  const handleUpdateLead = (updatedLead: Omit<Lead, 'id' | 'assignedTo' | 'date'>) => {
+  const handleUpdateLead = (updatedLead: Omit<Lead, 'id' | 'date'>) => {
     if (selectedLead) {
       updateLeadMutation.mutate({
         id: selectedLead.id,
