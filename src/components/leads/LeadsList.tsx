@@ -63,6 +63,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Date</TableHead>
               <TableHead className="w-[100px]">Name</TableHead>
               <TableHead>Company</TableHead>
               <TableHead>Email</TableHead>
@@ -71,7 +72,6 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
               <TableHead>Source</TableHead>
               <TableHead className="text-right">Value</TableHead>
               <TableHead>Agent</TableHead>
-              <TableHead>Date</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -81,6 +81,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
                 onClick={() => onLeadClick && onLeadClick(lead)} 
                 className={onLeadClick ? "cursor-pointer hover:bg-muted/80" : ""}
               >
+                <TableCell>{lead.date || "-"}</TableCell>
                 <TableCell className="font-medium">{lead.client_name}</TableCell>
                 <TableCell>{lead.company || lead.business_description || "-"}</TableCell>
                 <TableCell>{lead.email_address}</TableCell>
@@ -95,7 +96,6 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
                   ${lead.value ? lead.value.toLocaleString() : "0"}
                 </TableCell>
                 <TableCell>{lead.agent || "-"}</TableCell>
-                <TableCell>{lead.date || "-"}</TableCell>
               </TableRow>
             ))}
           </TableBody>
