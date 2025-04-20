@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { EmployeePerformance } from "@/types/employee";
@@ -9,7 +10,25 @@ export interface Employee {
   department: string;
   role: string;
   join_date: string;
-  performance?: EmployeePerformance;
+  performance?: {
+    sales_target?: number;
+    sales_achieved?: number;
+    projects_completed?: number;
+    tasks_completed?: number;
+    customer_satisfaction?: number;
+    avg_task_completion_time?: number;
+    total_tasks_assigned?: number;
+    tasks_completed_ontime?: number;
+    tasks_completed_late?: number;
+    strikes?: number;
+    // Also include camelCase variants for frontend consistency
+    salesTarget?: number;
+    salesAchieved?: number;
+    projectsCompleted?: number;
+    tasksCompleted?: number;
+    customerSatisfaction?: number;
+    avgTaskCompletionTime?: number;
+  };
 }
 
 export const useEmployees = (department?: string) => {

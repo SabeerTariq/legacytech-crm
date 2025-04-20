@@ -1,3 +1,4 @@
+
 import React from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import DepartmentEmployees from "@/components/employees/DepartmentEmployees";
@@ -7,22 +8,39 @@ import { EmployeeProfile, SalesPerformance } from "@/types/employee";
 const ProjectManagement = () => {
   const { data: employees = [], isLoading } = useEmployees("Project Management");
 
-  const transformedEmployees: EmployeeProfile[] = employees.map(employee => ({
-    id: employee.id,
-    name: employee.name,
-    role: employee.role,
-    department: employee.department,
-    email: employee.email,
-    joinDate: employee.join_date,
-    performance: employee.performance || {
+  const transformedEmployees: EmployeeProfile[] = employees.map(employee => {
+    // Ensure performance data has the correct structure
+    const performanceData = employee.performance || {};
+    
+    const defaultPerformance: SalesPerformance = {
       salesTarget: 0,
       salesAchieved: 0,
       projectsCompleted: 0,
       tasksCompleted: 0,
       customerSatisfaction: 0,
       avgTaskCompletionTime: 0
-    } as SalesPerformance
-  }));
+    };
+    
+    // Convert database field names to frontend field names if needed
+    const performance: SalesPerformance = {
+      salesTarget: performanceData.salesTarget || performanceData.sales_target || defaultPerformance.salesTarget,
+      salesAchieved: performanceData.salesAchieved || performanceData.sales_achieved || defaultPerformance.salesAchieved,
+      projectsCompleted: performanceData.projectsCompleted || performanceData.projects_completed || defaultPerformance.projectsCompleted,
+      tasksCompleted: performanceData.tasksCompleted || performanceData.tasks_completed || defaultPerformance.tasksCompleted,
+      customerSatisfaction: performanceData.customerSatisfaction || performanceData.customer_satisfaction || defaultPerformance.customerSatisfaction,
+      avgTaskCompletionTime: performanceData.avgTaskCompletionTime || performanceData.avg_task_completion_time || defaultPerformance.avgTaskCompletionTime
+    };
+
+    return {
+      id: employee.id,
+      name: employee.name,
+      role: employee.role,
+      department: employee.department,
+      email: employee.email,
+      joinDate: employee.join_date,
+      performance: performance
+    };
+  });
 
   return (
     <MainLayout>
