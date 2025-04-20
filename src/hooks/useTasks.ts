@@ -26,31 +26,37 @@ export const useTasks = (department?: string) => {
     mutationFn: async ({ taskId, employeeId }: { taskId: string; employeeId: string }) => {
       console.log("Assigning task", taskId, "to employee", employeeId);
       
-      // Check if the employee exists in the users table first to avoid foreign key errors
+      // First validate the employee exists
       const { data: employeeData, error: employeeCheckError } = await supabase
         .from("employees")
-        .select("id")
+        .select("id, name")
         .eq("id", employeeId)
         .single();
         
       if (employeeCheckError || !employeeData) {
-        console.error("Employee not found:", employeeCheckError);
-        throw new Error("Employee not found. Cannot assign task.");
+        console.error("Employee validation error:", employeeCheckError);
+        throw new Error("Employee not found or not accessible. Cannot assign task.");
       }
       
-      // Update task with the employee ID
-      const { error: taskError } = await supabase
+      console.log("Employee verified:", employeeData.name);
+      
+      // Now update the task with the employee ID
+      const { data: updatedTask, error: taskError } = await supabase
         .from("project_tasks")
         .update({ 
           assigned_to_id: employeeId,
           status: "in-progress" 
         })
-        .eq("id", taskId);
+        .eq("id", taskId)
+        .select()
+        .single();
 
       if (taskError) {
         console.error("Task assignment error:", taskError);
-        throw taskError;
+        throw new Error(`Failed to assign task: ${taskError.message}`);
       }
+
+      console.log("Task assigned successfully:", updatedTask);
 
       // Store assignment data in employee performance metrics
       const { data: employee, error: employeeError } = await supabase
@@ -61,30 +67,33 @@ export const useTasks = (department?: string) => {
 
       if (employeeError) {
         console.error("Employee fetch error:", employeeError);
-        throw employeeError;
-      }
+        // Don't throw here - we've already assigned the task successfully
+        // Just log the error and continue
+      } else {
+        // Safely handle performance data
+        const performanceData = employee?.performance || {};
+        
+        // Type safety for performance data
+        const totalTasksAssigned = typeof performanceData === 'object' ? 
+          ((performanceData as any).total_tasks_assigned || 0) : 0;
+        
+        const { error: updateError } = await supabase
+          .from("employees")
+          .update({
+            performance: {
+              ...performanceData as object,
+              total_tasks_assigned: totalTasksAssigned + 1
+            }
+          })
+          .eq("id", employeeId);
 
-      // Safely handle performance data
-      const performanceData = employee?.performance || {};
-      
-      // Type safety for performance data
-      const totalTasksAssigned = typeof performanceData === 'object' ? 
-        ((performanceData as any).total_tasks_assigned || 0) : 0;
-      
-      const { error: updateError } = await supabase
-        .from("employees")
-        .update({
-          performance: {
-            ...performanceData as object,
-            total_tasks_assigned: totalTasksAssigned + 1
-          }
-        })
-        .eq("id", employeeId);
-
-      if (updateError) {
-        console.error("Employee update error:", updateError);
-        throw updateError;
+        if (updateError) {
+          console.error("Employee update error:", updateError);
+          // Don't throw here either - the task assignment was successful
+        }
       }
+      
+      return updatedTask;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });

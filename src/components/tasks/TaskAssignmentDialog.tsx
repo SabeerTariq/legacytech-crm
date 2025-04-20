@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useEmployees } from "@/hooks/useEmployees";
 import { toast } from "sonner";
 import { useTasks } from "@/hooks/useTasks";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { InfoIcon } from "lucide-react";
 
 interface TaskAssignmentDialogProps {
   open: boolean;
@@ -50,9 +52,18 @@ const TaskAssignmentDialog: React.FC<TaskAssignmentDialogProps> = ({
       return;
     }
 
+    // Validate that the selected employee exists in the employees list
+    const employeeExists = employees.some(emp => emp.id === selectedEmployee);
+    if (!employeeExists) {
+      toast.error("Selected employee is not valid");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
+      console.log("Assigning task to employee with ID:", selectedEmployee);
+      
       // Use the assignTask mutation from the useTasks hook
       await assignTask.mutateAsync({ 
         taskId: task.id,
