@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Table,
@@ -53,7 +52,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
     qualified: "bg-green-100 text-green-800",
     proposal: "bg-yellow-100 text-yellow-800",
     negotiation: "bg-orange-100 text-orange-800",
-    won: "bg-purple-100 text-purple-800",
+    won: "bg-green-100 text-green-800",
     lost: "bg-red-100 text-red-800",
   };
 
@@ -108,7 +107,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
                 <TableCell>{lead.date || "-"}</TableCell>
                 <TableCell className="font-medium">{lead.client_name}</TableCell>
                 <TableCell>{lead.company || lead.business_description || "-"}</TableCell>
-                <TableCell className="font-mono whitespace-nowrap">{formatPhoneNumber(lead.contact_number)}</TableCell>
+                <TableCell className="whitespace-nowrap">{formatPhoneNumber(lead.contact_number)}</TableCell>
                 <TableCell>{lead.email_address}</TableCell>
                 <TableCell>{lead.city_state || "-"}</TableCell>
                 <TableCell>{lead.services_required || "-"}</TableCell>

@@ -6,9 +6,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { History } from "lucide-react";
+import { History, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useEmployeeHistory } from "@/hooks/useEmployeeHistory";
 import { Badge } from "@/components/ui/badge";
@@ -108,39 +109,36 @@ const SalesMetrics = ({ performance }: { performance: SalesPerformance }) => {
 };
 
 const EmployeeHistory = ({ employeeId, name, department }: EmployeeHistoryProps) => {
-  const { data: history = [], isLoading } = useEmployeeHistory(employeeId, department);
+  const { data: history = [] } = useEmployeeHistory(employeeId, department);
   const isProductionDepartment = ['Design', 'Development', 'Marketing', 'Content'].includes(department);
 
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <History className="h-4 w-4 mr-2" />
-          View History
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <History className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Performance History - {name}</DialogTitle>
+          <DialogTitle>{name}'s Performance History</DialogTitle>
         </DialogHeader>
-        {isLoading ? (
-          <div>Loading history...</div>
-        ) : (
-          <div className="space-y-6">
-            {history.map((record) => (
-              <Card key={record.id} className="p-6">
-                <h3 className="text-lg font-semibold mb-4">
-                  {format(new Date(record.month), 'MMMM yyyy')}
-                </h3>
-                {isProductionDepartment ? (
-                  <ProductionMetrics performance={record.performance as ProductionPerformance} />
-                ) : (
-                  <SalesMetrics performance={record.performance as SalesPerformance} />
-                )}
-              </Card>
-            ))}
-          </div>
-        )}
+        <div className="space-y-6">
+          {history.map((record) => (
+            <Card key={record.id} className="p-4">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h4 className="font-medium">{format(new Date(record.month), 'MMMM yyyy')}</h4>
+                </div>
+              </div>
+              {isProductionDepartment ? (
+                <ProductionMetrics performance={record.performance as ProductionPerformance} />
+              ) : (
+                <SalesMetrics performance={record.performance as SalesPerformance} />
+              )}
+            </Card>
+          ))}
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { CheckIcon, X } from "lucide-react";
 import { Badge } from "./badge";
@@ -79,50 +78,51 @@ export function MultiSelect({
         sideOffset={isMobile ? 5 : 0}
         alignOffset={isMobile ? 0 : 0}
       >
-        {/* The issue is in the Command component - wrap everything in an ErrorBoundary */}
-        <Command>
-          <CommandInput placeholder="Search services..." className="h-9" />
-          <CommandEmpty>No services found.</CommandEmpty>
-          <ScrollArea className={cn("max-h-[300px] overflow-y-auto", isMobile && "max-h-[40vh]")}>
-            <CommandGroup className="p-1">
-              {safeOptions.length > 0 ? (
-                safeOptions.map((option) => {
-                  const isSelected = safeValue.includes(option.value);
-                  return (
-                    <CommandItem
-                      key={option.value}
-                      onSelect={() => {
-                        onChange(
-                          isSelected
-                            ? safeValue.filter((v) => v !== option.value)
-                            : [...safeValue, option.value]
-                        );
-                      }}
-                      className={cn(
-                        "flex items-center gap-2 px-2 py-1.5",
-                        isMobile && "py-3"
-                      )}
-                    >
-                      <div
+        <div className="w-full">
+          <Command>
+            <CommandInput placeholder="Search services..." className="h-9" />
+            <CommandEmpty>No services found.</CommandEmpty>
+            <ScrollArea className={cn("max-h-[300px] overflow-y-auto", isMobile && "max-h-[40vh]")}>
+              <CommandGroup className="p-1">
+                {safeOptions.length > 0 ? (
+                  safeOptions.map((option) => {
+                    const isSelected = safeValue.includes(option.value);
+                    return (
+                      <CommandItem
+                        key={option.value}
+                        onSelect={() => {
+                          onChange(
+                            isSelected
+                              ? safeValue.filter((v) => v !== option.value)
+                              : [...safeValue, option.value]
+                          );
+                        }}
                         className={cn(
-                          "flex h-4 w-4 items-center justify-center rounded-sm border",
-                          isSelected 
-                            ? "bg-primary text-primary-foreground border-primary" 
-                            : "opacity-50 border-input"
+                          "flex items-center gap-2 px-2 py-1.5",
+                          isMobile && "py-3"
                         )}
                       >
-                        {isSelected && <CheckIcon className="h-3 w-3" />}
-                      </div>
-                      <span>{option.label}</span>
-                    </CommandItem>
-                  );
-                })
-              ) : (
-                <div className="py-6 text-center text-sm">No options available</div>
-              )}
-            </CommandGroup>
-          </ScrollArea>
-        </Command>
+                        <div
+                          className={cn(
+                            "flex h-4 w-4 items-center justify-center rounded-sm border",
+                            isSelected 
+                              ? "bg-primary text-primary-foreground border-primary" 
+                              : "opacity-50 border-input"
+                          )}
+                        >
+                          {isSelected && <CheckIcon className="h-3 w-3" />}
+                        </div>
+                        <span>{option.label}</span>
+                      </CommandItem>
+                    );
+                  })
+                ) : (
+                  <div className="py-6 text-center text-sm">No options available</div>
+                )}
+              </CommandGroup>
+            </ScrollArea>
+          </Command>
+        </div>
       </PopoverContent>
     </Popover>
   );

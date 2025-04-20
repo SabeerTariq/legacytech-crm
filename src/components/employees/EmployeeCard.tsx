@@ -23,15 +23,85 @@ interface EmployeeCardProps {
   onEdit: () => void;
 }
 
+const ProductionPerformanceView = ({ performance }: { performance: ProductionPerformance }) => {
+  const completionRate = performance.total_tasks_assigned > 0
+    ? (performance.tasks_completed_ontime / performance.total_tasks_assigned) * 100
+    : 0;
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Target className="h-4 w-4" />
+            <span className="text-sm">Task Completion Rate</span>
+          </div>
+          <Badge variant={completionRate >= 70 ? "default" : "destructive"}>
+            {completionRate.toFixed(1)}%
+          </Badge>
+        </div>
+        <Progress value={completionRate} className="h-2" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <BarChart className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm">Total Tasks</span>
+          </div>
+          <p className="text-2xl font-bold">{performance.total_tasks_assigned}</p>
+        </div>
+        <div className="space-y-1">
+          <span className="text-sm">Completed On Time</span>
+          <p className="text-2xl font-bold">{performance.tasks_completed_ontime}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const SalesPerformanceView = ({ performance }: { performance: SalesPerformance }) => {
+  const achievementRate = performance.salesTarget > 0
+    ? (performance.salesAchieved / performance.salesTarget) * 100
+    : 0;
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Target className="h-4 w-4" />
+            <span className="text-sm">Sales Achievement</span>
+          </div>
+          <Badge variant={achievementRate >= 70 ? "default" : "destructive"}>
+            {achievementRate.toFixed(1)}%
+          </Badge>
+        </div>
+        <Progress value={achievementRate} className="h-2" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <BarChart className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm">Sales Target</span>
+          </div>
+          <p className="text-2xl font-bold">${performance.salesTarget.toLocaleString()}</p>
+        </div>
+        <div className="space-y-1">
+          <span className="text-sm">Sales Achieved</span>
+          <p className="text-2xl font-bold">${performance.salesAchieved.toLocaleString()}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const EmployeeCard = ({ employee, onEdit }: EmployeeCardProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const initials = employee.name.split(' ').map(n => n[0]).join('').toUpperCase();
   const isProductionDepartment = ['Design', 'Development', 'Marketing', 'Content'].includes(employee.department);
-
-  const getPerformanceColor = (value: number) => {
-    return value >= 70 ? "bg-green-500/10 text-green-700" : "bg-red-500/10 text-red-700";
-  };
 
   const handleDelete = async () => {
     try {
@@ -59,22 +129,16 @@ const EmployeeCard = ({ employee, onEdit }: EmployeeCardProps) => {
 
   return (
     <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Avatar className="h-16 w-16">
-            <AvatarImage src={employee.avatar} />
-            <AvatarFallback>{initials}</AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col">
-            <CardTitle>{employee.name}</CardTitle>
-            <p className="text-sm text-muted-foreground">{employee.role}</p>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Mail className="h-4 w-4" />
-              {employee.email}
-            </div>
+      <CardHeader className="flex flex-row items-start justify-between gap-4 p-4">
+        <div className="flex flex-col w-full">
+          <CardTitle className="text-base sm:text-lg truncate">{employee.name}</CardTitle>
+          <p className="text-sm text-muted-foreground truncate">{employee.role}</p>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground truncate">
+            <Mail className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">{employee.email}</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 flex-shrink-0">
           <EmployeeHistory 
             employeeId={employee.id} 
             name={employee.name} 
@@ -82,7 +146,7 @@ const EmployeeCard = ({ employee, onEdit }: EmployeeCardProps) => {
           />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="h-8 w-8">
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -107,87 +171,6 @@ const EmployeeCard = ({ employee, onEdit }: EmployeeCardProps) => {
         )}
       </CardContent>
     </Card>
-  );
-};
-
-const ProductionPerformanceView = ({ performance }: { performance: ProductionPerformance }) => {
-  const completionRate = (performance.tasks_completed_ontime / performance.total_tasks_assigned) * 100;
-  
-  return (
-    <>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <span className="text-sm text-muted-foreground">Tasks Assigned</span>
-          <p className="text-2xl font-bold">{performance.total_tasks_assigned}</p>
-        </div>
-        <div className="space-y-1">
-          <span className="text-sm text-muted-foreground">Completed On Time</span>
-          <p className="text-2xl font-bold">{performance.tasks_completed_ontime}</p>
-        </div>
-      </div>
-      <div className={cn(
-        "space-y-2 rounded-lg p-3",
-        completionRate >= 80 ? "bg-green-500/10 text-green-700" : "bg-red-500/10 text-red-700"
-      )}>
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">Task Completion Rate</span>
-          <Badge variant={completionRate >= 80 ? "default" : "destructive"}>
-            {completionRate.toFixed(1)}%
-          </Badge>
-        </div>
-        {performance.strikes > 0 && (
-          <div className="mt-2 text-red-500 font-medium">
-            ⚠️ Strikes: {performance.strikes}
-          </div>
-        )}
-      </div>
-    </>
-  );
-};
-
-const SalesPerformanceView = ({ performance }: { performance: SalesPerformance }) => {
-  const progressValue = (performance.salesAchieved / performance.salesTarget) * 100;
-
-  const getPerformanceColor = (value: number) => {
-    return value >= 70 ? "bg-green-500/10 text-green-700" : "bg-red-500/10 text-red-700";
-  };
-
-  return (
-    <>
-      <div className={cn("space-y-2 rounded-lg p-3", getPerformanceColor(progressValue))}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Target className="h-4 w-4" />
-            <span className="text-sm font-medium">Sales Target</span>
-          </div>
-          <span className="text-sm font-medium">${performance.salesTarget.toLocaleString()}</span>
-        </div>
-        <Progress
-          value={progressValue}
-          className="h-2"
-        />
-        <div className="flex justify-between text-xs">
-          <span>Progress: ${performance.salesAchieved.toLocaleString()}</span>
-          <Badge variant={progressValue >= 70 ? "default" : "destructive"}>
-            {progressValue.toFixed(1)}%
-          </Badge>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <BarChart className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm">Projects</span>
-          </div>
-          <p className="text-2xl font-bold">{performance.projectsCompleted}</p>
-        </div>
-        <div className="space-y-1">
-          <span className="text-sm">Tasks Completed</span>
-          <p className="text-2xl font-bold">{performance.tasksCompleted}</p>
-        </div>
-      </div>
-    </>
   );
 };
 

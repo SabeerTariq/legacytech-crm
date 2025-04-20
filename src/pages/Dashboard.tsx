@@ -4,13 +4,40 @@ import StatCard from "@/components/dashboard/StatCard";
 import RecentActivity from "@/components/dashboard/RecentActivity";
 import ProjectsOverview from "@/components/dashboard/ProjectsOverview";
 import { AreaChart, BarChart, Calendar, DollarSign, Users, Zap, Mail, MessageSquare, TrendingUp } from "lucide-react";
-import MarketingMetrics from "@/components/dashboard/MarketingMetrics";
-import CampaignPerformance from "@/components/dashboard/CampaignPerformance";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import TeamPerformance from "@/components/dashboard/TeamPerformance";
+import BusinessOverview from "@/components/dashboard/BusinessOverview";
+
+interface Task {
+  id: string;
+  title: string;
+  status: string;
+  created_at: string;
+  assigned_to_id: string | null;
+  project: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+interface Employee {
+  id: string;
+  name: string;
+}
+
+interface Activity {
+  id: string;
+  user: {
+    name: string;
+    initials: string;
+  };
+  action: string;
+  target: string;
+  time: string;
+}
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -69,6 +96,76 @@ const Dashboard = () => {
     enabled: !!user,
   });
 
+  // Fetch recent tasks and employees
+  const { data: activities = [] } = useQuery<Activity[]>({
+    queryKey: ['dashboard-activities'],
+    queryFn: async () => {
+      // Fetch recent tasks
+      const { data: tasks, error: tasksError } = await supabase
+        .from('project_tasks')
+        .select(`
+          id,
+          title,
+          status,
+          created_at,
+          assigned_to_id,
+          project:projects (
+            id,
+            name
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (tasksError) {
+        toast({
+          title: "Error fetching tasks",
+          description: tasksError.message,
+          variant: "destructive",
+        });
+        return [];
+      }
+
+      // Fetch employees for the tasks
+      const employeeIds = tasks
+        .map(task => task.assigned_to_id)
+        .filter((id): id is string => id !== null);
+      
+      let employees: Employee[] = [];
+      if (employeeIds.length > 0) {
+        const { data: employeesData, error: employeesError } = await supabase
+          .from('employees')
+          .select('id, name')
+          .in('id', employeeIds);
+        
+        if (employeesError) {
+          toast({
+            title: "Error fetching employees",
+            description: employeesError.message,
+            variant: "destructive",
+          });
+        } else {
+          employees = employeesData || [];
+        }
+      }
+      
+      return (tasks as Task[]).map(task => {
+        const employee = employees.find(emp => emp.id === task.assigned_to_id);
+        return {
+          id: task.id,
+          user: {
+            name: employee?.name || 'Unassigned',
+            initials: employee?.name?.split(' ').map(n => n[0]).join('') || 'UA',
+          },
+          action: `task ${task.status}`,
+          target: `${task.project?.name || 'Project'}: ${task.title}`,
+          time: new Date(task.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ago',
+        };
+      });
+    },
+    enabled: !!user,
+  });
+
   // Calculate dashboard metrics
   const totalProjects = projects.length;
   const activeProjects = projects.filter(p => p.status !== 'completed').length;
@@ -115,73 +212,6 @@ const Dashboard = () => {
     },
   ];
 
-  // We'll keep the marketing stats fixed for now
-  const marketingStats = [
-    {
-      title: "Email Opens",
-      value: "68%",
-      icon: <Mail />,
-      trend: { value: 4, positive: true },
-    },
-    {
-      title: "SMS Delivery",
-      value: "98%",
-      icon: <MessageSquare />,
-      trend: { value: 2, positive: true },
-    },
-    {
-      title: "Automations",
-      value: "12",
-      icon: <Zap />,
-      trend: { value: 3, positive: true },
-    },
-    {
-      title: "Tasks Due",
-      value: "18",
-      icon: <Calendar />,
-      trend: { value: 2, positive: false },
-    },
-  ];
-
-  // Fetch activities data (for now we'll use the mock data)
-  const activities = [
-    {
-      id: "1",
-      user: { name: "Alex Johnson", initials: "AJ" },
-      action: "completed task",
-      target: "Homepage Design",
-      time: "5 minutes ago",
-    },
-    {
-      id: "2",
-      user: { name: "Maria Garcia", initials: "MG" },
-      action: "added a comment to",
-      target: "E-commerce Website",
-      time: "10 minutes ago",
-    },
-    {
-      id: "3",
-      user: { name: "James Smith", initials: "JS" },
-      action: "assigned task to",
-      target: "Sarah Wilson",
-      time: "30 minutes ago",
-    },
-    {
-      id: "4",
-      user: { name: "Sarah Wilson", initials: "SW" },
-      action: "created a new project",
-      target: "Branding for XYZ",
-      time: "1 hour ago",
-    },
-    {
-      id: "5",
-      user: { name: "David Lee", initials: "DL" },
-      action: "uploaded",
-      target: "SEO Report for Client",
-      time: "2 hours ago",
-    },
-  ];
-
   // Prepare projects for display in ProjectsOverview
   const projectsForDisplay = projects
     .filter(p => p.status !== 'completed')
@@ -200,42 +230,20 @@ const Dashboard = () => {
       <div className="space-y-6">
         <h1 className="text-3xl font-bold">Dashboard</h1>
         
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat, i) => (
-            <StatCard
-              key={i}
-              title={stat.title}
-              value={stat.value}
-              icon={stat.icon}
-              trend={stat.trend}
-            />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {stats.map((stat, index) => (
+            <StatCard key={index} {...stat} />
           ))}
+        </div>
+
+        <BusinessOverview />
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <ProjectsOverview projects={projectsForDisplay} />
+          <RecentActivity activities={activities} />
         </div>
 
         <TeamPerformance />
-        
-        <div className="grid gap-6 md:grid-cols-2">
-          <MarketingMetrics />
-          <CampaignPerformance />
-        </div>
-
-        <h2 className="text-2xl font-semibold mt-8">Marketing Overview</h2>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {marketingStats.map((stat, i) => (
-            <StatCard
-              key={`marketing-${i}`}
-              title={stat.title}
-              value={stat.value}
-              icon={stat.icon}
-              trend={stat.trend}
-            />
-          ))}
-        </div>
-        
-        <div className="grid gap-6 md:grid-cols-2">
-          <RecentActivity activities={activities} />
-          <ProjectsOverview projects={projectsForDisplay} />
-        </div>
       </div>
     </MainLayout>
   );

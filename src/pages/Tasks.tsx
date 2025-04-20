@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import ProjectKanban from "@/components/projects/ProjectKanban";
 import { KanbanColumn, KanbanTask } from "@/components/projects/ProjectKanban";
@@ -8,236 +8,60 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CalendarIcon, Filter, PlusCircle } from "lucide-react";
 import { toast } from "sonner";
 import NewTaskDialog from "@/components/tasks/NewTaskDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 const Tasks = () => {
   const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
   
   // Mock data for tasks by department
   const [departmentColumns, setDepartmentColumns] = useState<Record<string, KanbanColumn[]>>({
     design: [
-      {
-        id: "todo",
-        title: "To Do",
-        tasks: [
-          {
-            id: "design-1",
-            title: "Homepage Mockup",
-            description: "Create mockup for client homepage",
-            priority: "high" as const,
-            dueDate: "Jun 18",
-            assignee: {
-              name: "Sarah Wilson",
-              initials: "SW",
-            },
-          },
-          {
-            id: "design-2",
-            title: "Logo Variations",
-            description: "Create 3 variations of the logo",
-            priority: "medium" as const,
-            dueDate: "Jun 20",
-            assignee: {
-              name: "Maria Garcia",
-              initials: "MG",
-            },
-          },
-        ],
-      },
-      {
-        id: "in-progress",
-        title: "In Progress",
-        tasks: [
-          {
-            id: "design-3",
-            title: "Product Page Design",
-            description: "Design the product showcase page",
-            priority: "medium" as const,
-            dueDate: "Jun 19",
-            assignee: {
-              name: "Sarah Wilson",
-              initials: "SW",
-            },
-          },
-        ],
-      },
-      {
-        id: "completed",
-        title: "Completed",
-        tasks: [
-          {
-            id: "design-4",
-            title: "Color Palette",
-            description: "Finalize color scheme for the brand",
-            priority: "low" as const,
-            dueDate: "Jun 15",
-            assignee: {
-              name: "Maria Garcia",
-              initials: "MG",
-            },
-          },
-        ],
-      },
+      { id: "todo", title: "To Do", tasks: [] },
+      { id: "in-progress", title: "In Progress", tasks: [] },
+      { id: "done", title: "Done", tasks: [] },
     ],
     development: [
-      {
-        id: "todo",
-        title: "To Do",
-        tasks: [
-          {
-            id: "dev-1",
-            title: "Setup API Integration",
-            description: "Connect frontend with the API endpoints",
-            priority: "high" as const,
-            dueDate: "Jun 22",
-            assignee: {
-              name: "James Smith",
-              initials: "JS",
-            },
-          },
-        ],
-      },
-      {
-        id: "in-progress",
-        title: "In Progress",
-        tasks: [
-          {
-            id: "dev-2",
-            title: "Homepage Implementation",
-            description: "Convert design to code for homepage",
-            priority: "high" as const,
-            dueDate: "Jun 20",
-            assignee: {
-              name: "David Lee",
-              initials: "DL",
-            },
-          },
-          {
-            id: "dev-3",
-            title: "User Authentication",
-            description: "Implement login/signup functionality",
-            priority: "medium" as const,
-            dueDate: "Jun 21",
-            assignee: {
-              name: "James Smith",
-              initials: "JS",
-            },
-          },
-        ],
-      },
-      {
-        id: "completed",
-        title: "Completed",
-        tasks: [
-          {
-            id: "dev-4",
-            title: "Project Setup",
-            description: "Setup development environment",
-            priority: "low" as const,
-            dueDate: "Jun 16",
-            assignee: {
-              name: "David Lee",
-              initials: "DL",
-            },
-          },
-        ],
-      },
+      { id: "todo", title: "To Do", tasks: [] },
+      { id: "in-progress", title: "In Progress", tasks: [] },
+      { id: "done", title: "Done", tasks: [] },
     ],
     marketing: [
-      {
-        id: "todo",
-        title: "To Do",
-        tasks: [
-          {
-            id: "mkt-1",
-            title: "Social Media Campaign",
-            description: "Plan social media strategy for launch",
-            priority: "medium" as const,
-            dueDate: "Jun 25",
-            assignee: {
-              name: "Alex Johnson",
-              initials: "AJ",
-            },
-          },
-        ],
-      },
-      {
-        id: "in-progress",
-        title: "In Progress",
-        tasks: [
-          {
-            id: "mkt-2",
-            title: "SEO Optimization",
-            description: "Improve website SEO ranking",
-            priority: "high" as const,
-            dueDate: "Jun 23",
-            assignee: {
-              name: "Alex Johnson",
-              initials: "AJ",
-            },
-          },
-        ],
-      },
-      {
-        id: "completed",
-        title: "Completed",
-        tasks: [],
-      },
+      { id: "todo", title: "To Do", tasks: [] },
+      { id: "in-progress", title: "In Progress", tasks: [] },
+      { id: "done", title: "Done", tasks: [] },
     ],
     content: [
-      {
-        id: "todo",
-        title: "To Do",
-        tasks: [
-          {
-            id: "cnt-1",
-            title: "Product Descriptions",
-            description: "Write copy for product pages",
-            priority: "medium" as const,
-            dueDate: "Jun 24",
-            assignee: {
-              name: "Sarah Wilson",
-              initials: "SW",
-            },
-          },
-        ],
-      },
-      {
-        id: "in-progress",
-        title: "In Progress",
-        tasks: [
-          {
-            id: "cnt-2",
-            title: "Blog Article",
-            description: "Write article about industry trends",
-            priority: "low" as const,
-            dueDate: "Jun 26",
-            assignee: {
-              name: "Maria Garcia",
-              initials: "MG",
-            },
-          },
-        ],
-      },
-      {
-        id: "completed",
-        title: "Completed",
-        tasks: [
-          {
-            id: "cnt-3",
-            title: "Homepage Copy",
-            description: "Write main content for homepage",
-            priority: "high" as const,
-            dueDate: "Jun 17",
-            assignee: {
-              name: "Sarah Wilson",
-              initials: "SW",
-            },
-          },
-        ],
-      },
+      { id: "todo", title: "To Do", tasks: [] },
+      { id: "in-progress", title: "In Progress", tasks: [] },
+      { id: "done", title: "Done", tasks: [] },
     ],
   });
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('projects')
+          .select('id, name')
+          .order('name');
+
+        if (error) {
+          console.error('Error fetching projects:', error);
+          toast.error('Failed to load projects');
+          return;
+        }
+
+        setProjects(data || []);
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+        toast.error('Failed to load projects');
+      }
+    };
+
+    fetchProjects();
+  }, []);
 
   const handleTaskCreated = (taskData: any) => {
     // Create a new task with unique ID
@@ -247,6 +71,9 @@ const Tasks = () => {
       description: taskData.description,
       priority: taskData.priority,
       dueDate: taskData.dueDate,
+      department: taskData.department,
+      project_id: taskData.projectId,
+      status: 'todo',
       assignee: {
         name: "You",
         initials: "YO",
@@ -389,6 +216,7 @@ const Tasks = () => {
         onOpenChange={setIsNewTaskDialogOpen}
         onTaskCreated={handleTaskCreated}
         departments={["design", "development", "marketing", "content"]}
+        projects={projects}
       />
     </MainLayout>
   );

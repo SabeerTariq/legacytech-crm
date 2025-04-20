@@ -1,11 +1,28 @@
-
 import React from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import DepartmentEmployees from "@/components/employees/DepartmentEmployees";
 import { useEmployees } from "@/hooks/useEmployees";
+import { EmployeeProfile, SalesPerformance } from "@/types/employee";
 
 const BusinessDevelopment = () => {
-  const { data: employees, isLoading } = useEmployees("Business Development");
+  const { data: employees = [], isLoading } = useEmployees("Business Development");
+
+  const transformedEmployees: EmployeeProfile[] = employees.map(employee => ({
+    id: employee.id,
+    name: employee.name,
+    role: employee.role,
+    department: employee.department,
+    email: employee.email,
+    joinDate: employee.join_date,
+    performance: employee.performance || {
+      salesTarget: 0,
+      salesAchieved: 0,
+      projectsCompleted: 0,
+      tasksCompleted: 0,
+      customerSatisfaction: 0,
+      avgTaskCompletionTime: 0
+    } as SalesPerformance
+  }));
 
   return (
     <MainLayout>
@@ -16,7 +33,7 @@ const BusinessDevelopment = () => {
         ) : (
           <DepartmentEmployees 
             departmentName="Business Development" 
-            employees={employees || []} 
+            employees={transformedEmployees} 
           />
         )}
       </div>

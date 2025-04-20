@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,26 +7,67 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { FileIcon, FolderIcon, SearchIcon, UploadIcon, PlusIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+interface Document {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  updated_at: string;
+  category: string;
+  url: string;
+}
+
+interface Folder {
+  id: string;
+  name: string;
+  document_count: number;
+}
 
 const DocumentsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Sample documents data
-  const documents = [
-    { id: 1, name: "Marketing Plan 2025.pdf", type: "pdf", size: "3.2 MB", updated: "2025-04-10", category: "marketing" },
-    { id: 2, name: "Client Proposal.docx", type: "word", size: "1.8 MB", updated: "2025-04-12", category: "sales" },
-    { id: 3, name: "Financial Report Q1.xlsx", type: "excel", size: "2.4 MB", updated: "2025-04-15", category: "finance" },
-    { id: 4, name: "Brand Guidelines.pdf", type: "pdf", size: "5.7 MB", updated: "2025-04-16", category: "design" },
-    { id: 5, name: "Project Timeline.pptx", type: "powerpoint", size: "4.1 MB", updated: "2025-04-17", category: "project" },
-  ];
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('documents')
+          .select('*')
+          .order('updated_at', { ascending: false });
 
-  // Sample folders
-  const folders = [
-    { id: 1, name: "Marketing", count: 12 },
-    { id: 2, name: "Client Projects", count: 25 },
-    { id: 3, name: "Templates", count: 8 },
-    { id: 4, name: "Contracts", count: 15 }
-  ];
+        if (error) throw error;
+        setDocuments(data || []);
+      } catch (error) {
+        console.error('Error fetching documents:', error);
+        toast.error('Failed to load documents');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const fetchFolders = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('folders')
+          .select('*')
+          .order('name');
+
+        if (error) throw error;
+        setFolders(data || []);
+      } catch (error) {
+        console.error('Error fetching folders:', error);
+        toast.error('Failed to load folders');
+      }
+    };
+
+    fetchDocuments();
+    fetchFolders();
+  }, []);
 
   // Filter documents based on search
   const filteredDocuments = documents.filter(doc => 
@@ -50,6 +90,14 @@ const DocumentsPage = () => {
     const info = variants[category] || { variant: "default", text: category };
     
     return <Badge variant={info.variant}>{info.text}</Badge>;
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   return (
@@ -94,7 +142,7 @@ const DocumentsPage = () => {
                   <CardContent className="p-4 flex flex-col items-center text-center">
                     <FolderIcon className="h-10 w-10 text-blue-500 mb-2" />
                     <h3 className="font-medium">{folder.name}</h3>
-                    <p className="text-xs text-muted-foreground">{folder.count} files</p>
+                    <p className="text-xs text-muted-foreground">{folder.document_count} files</p>
                   </CardContent>
                 </Card>
               ))}
@@ -115,17 +163,33 @@ const DocumentsPage = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredDocuments.map((doc) => (
-                      <TableRow key={doc.id}>
-                        <TableCell className="font-medium flex items-center">
-                          {getFileIcon(doc.type)}
-                          <span className="ml-2">{doc.name}</span>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center">
+                          Loading documents...
                         </TableCell>
-                        <TableCell>{getFileBadge(doc.category)}</TableCell>
-                        <TableCell>{doc.size}</TableCell>
-                        <TableCell className="text-right">{doc.updated}</TableCell>
                       </TableRow>
-                    ))}
+                    ) : filteredDocuments.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center">
+                          No documents found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredDocuments.map((doc) => (
+                        <TableRow key={doc.id}>
+                          <TableCell className="font-medium flex items-center">
+                            {getFileIcon(doc.type)}
+                            <span className="ml-2">{doc.name}</span>
+                          </TableCell>
+                          <TableCell>{getFileBadge(doc.category)}</TableCell>
+                          <TableCell>{formatFileSize(doc.size)}</TableCell>
+                          <TableCell className="text-right">
+                            {new Date(doc.updated_at).toLocaleDateString()}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>

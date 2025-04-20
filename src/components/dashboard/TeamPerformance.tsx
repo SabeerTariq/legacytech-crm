@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Target, BarChart } from "lucide-react";
 import { useEmployees } from "@/hooks/useEmployees";
@@ -7,6 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import EmployeeCard from "@/components/employees/EmployeeCard";
 import { cn } from "@/lib/utils";
 import { EmployeeProfile, ProductionPerformance } from "@/types/employee";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { EmployeeDialog } from "@/components/employees/EmployeeDialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 interface TeamStats {
   totalEmployees: number;
@@ -16,7 +20,60 @@ interface TeamStats {
 }
 
 const TeamPerformanceCard = ({ department }: { department: string }) => {
-  const { data: employees = [] } = useEmployees(department);
+  const { toast } = useToast();
+  const { data: employees = [], isLoading, error } = useEmployees(department);
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeProfile | undefined>();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  console.log("TeamPerformanceCard render:", { department, employees, isLoading, error });
+
+  if (error) {
+    console.error("Error in TeamPerformanceCard:", error);
+    toast({
+      title: "Error",
+      description: "Failed to load team data",
+      variant: "destructive",
+    });
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">{department} Team</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-destructive">Failed to load team data</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const handleEdit = (employee: EmployeeProfile) => {
+    setSelectedEmployee(employee);
+    setDialogOpen(true);
+  };
+
+  const handleSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ["employees"] });
+    setDialogOpen(false);
+  };
+
+  const transformToEmployeeProfile = (employee: any): EmployeeProfile => {
+    return {
+      id: employee.id,
+      name: employee.name,
+      role: employee.role,
+      department: employee.department,
+      email: employee.email,
+      joinDate: employee.join_date,
+      performance: employee.performance || {
+        total_tasks_assigned: 0,
+        tasks_completed_ontime: 0,
+        tasks_completed_late: 0,
+        strikes: 0,
+        avg_completion_time: 0
+      }
+    };
+  };
 
   const stats: TeamStats = employees.reduce((acc, employee) => {
     const performance = employee.performance as ProductionPerformance;
@@ -46,6 +103,25 @@ const TeamPerformanceCard = ({ department }: { department: string }) => {
 
   // Ensure we're working with a valid number
   const safeAvgCompletionRate = isNaN(avgCompletionRate) ? 0 : avgCompletionRate;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">{department} Team</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-4 w-1/4" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -86,7 +162,7 @@ const TeamPerformanceCard = ({ department }: { department: string }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <BarChart className="h-4 w-4 text-muted-foreground" />
@@ -102,26 +178,37 @@ const TeamPerformanceCard = ({ department }: { department: string }) => {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {employees.map((employee) => (
           <EmployeeCard 
             key={employee.id} 
-            employee={employee} 
-            onEdit={() => {}} 
+            employee={transformToEmployeeProfile(employee)} 
+            onEdit={() => handleEdit(transformToEmployeeProfile(employee))} 
           />
         ))}
       </div>
+
+      <EmployeeDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        department={department}
+        employee={selectedEmployee}
+        onSuccess={handleSuccess}
+      />
     </div>
   );
 };
 
 const TeamPerformance = () => {
   return (
-    <div className="grid gap-6">
-      <TeamPerformanceCard department="Design" />
-      <TeamPerformanceCard department="Development" />
-      <TeamPerformanceCard department="Marketing" />
-      <TeamPerformanceCard department="Content" />
+    <div className="space-y-6">
+      <h2 className="text-2xl font-semibold tracking-tight">Departments</h2>
+      <div className="grid gap-6">
+        <TeamPerformanceCard department="Design" />
+        <TeamPerformanceCard department="Development" />
+        <TeamPerformanceCard department="Marketing" />
+        <TeamPerformanceCard department="Content" />
+      </div>
     </div>
   );
 };
