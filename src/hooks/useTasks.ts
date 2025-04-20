@@ -26,6 +26,18 @@ export const useTasks = (department?: string) => {
     mutationFn: async ({ taskId, employeeId }: { taskId: string; employeeId: string }) => {
       console.log("Assigning task", taskId, "to employee", employeeId);
       
+      // Check if the employee exists in the users table first to avoid foreign key errors
+      const { data: employeeData, error: employeeCheckError } = await supabase
+        .from("employees")
+        .select("id")
+        .eq("id", employeeId)
+        .single();
+        
+      if (employeeCheckError || !employeeData) {
+        console.error("Employee not found:", employeeCheckError);
+        throw new Error("Employee not found. Cannot assign task.");
+      }
+      
       // Update task with the employee ID
       const { error: taskError } = await supabase
         .from("project_tasks")

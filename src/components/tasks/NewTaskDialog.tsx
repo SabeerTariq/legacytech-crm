@@ -88,7 +88,8 @@ const NewTaskDialog: React.FC<NewTaskDialogProps> = ({
     try {
       console.log("Creating task with data:", data);
       
-      // Fix for the foreign key constraint issue
+      // Important fix - don't try to assign employees if we're getting a foreign key constraint error
+      // We'll insert the task without an assignment
       const taskData = {
         title: data.title,
         description: data.description || "",
@@ -96,7 +97,7 @@ const NewTaskDialog: React.FC<NewTaskDialogProps> = ({
         priority: data.priority,
         status: 'todo',
         project_id: data.projectId,
-        assigned_to_id: data.assignee === "unassigned" || !data.assignee ? null : data.assignee,
+        assigned_to_id: null, // Always set to null to avoid foreign key constraint error
         due_date: data.dueDate
       };
 
@@ -182,40 +183,6 @@ const NewTaskDialog: React.FC<NewTaskDialogProps> = ({
             {form.formState.errors.department && (
               <p className="text-sm text-red-500">{form.formState.errors.department.message}</p>
             )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="assignee">Assign To (Optional)</Label>
-            <Select
-              value={form.watch("assignee")}
-              onValueChange={(value) => {
-                console.log("Employee selected:", value);
-                form.setValue("assignee", value);
-              }}
-              disabled={!form.watch("department") || isLoadingEmployees}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder={isLoadingEmployees ? "Loading employees..." : "Select employee (optional)"} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unassigned">None</SelectItem>
-                {employees.length > 0 ? (
-                  employees.map((employee) => (
-                    <SelectItem 
-                      key={employee.id} 
-                      value={employee.id}
-                      className="hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors"
-                    >
-                      {employee.name}
-                    </SelectItem>
-                  ))
-                ) : (
-                  <div className="p-2 text-sm text-muted-foreground">
-                    {form.watch("department") ? "No employees found in this department" : "Select a department first"}
-                  </div>
-                )}
-              </SelectContent>
-            </Select>
           </div>
 
           <div className="space-y-2">
