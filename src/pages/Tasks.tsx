@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { KanbanColumn } from "@/components/projects/ProjectKanban";
@@ -8,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import TasksLoading from "@/components/tasks/TasksLoading";
 import TasksHeader from "@/components/tasks/TasksHeader";
 import TasksTabs from "@/components/tasks/TasksTabs";
+import { Task } from "@/types/task"; // Add this import
 
 const Tasks = () => {
   const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false);
