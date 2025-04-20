@@ -1,17 +1,13 @@
-
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
-import ProjectKanban from "@/components/projects/ProjectKanban";
 import { KanbanColumn } from "@/components/projects/ProjectKanban";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { CalendarIcon, Filter, PlusCircle } from "lucide-react";
 import { toast } from "sonner";
 import NewTaskDialog from "@/components/tasks/NewTaskDialog";
 import { useTasks } from "@/hooks/useTasks";
 import { supabase } from "@/integrations/supabase/client";
-import { Task } from "@/types/task";
+import TasksLoading from "@/components/tasks/TasksLoading";
+import TasksHeader from "@/components/tasks/TasksHeader";
+import TasksTabs from "@/components/tasks/TasksTabs";
 
 const Tasks = () => {
   const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false);
@@ -165,19 +161,10 @@ const Tasks = () => {
     // Tasks will be refreshed automatically through React Query
   };
 
-  // Display loading state while tasks are loading
   if (isLoading) {
     return (
       <MainLayout>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h1 className="text-3xl font-bold">Tasks</h1>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading tasks...</p>
-          </div>
-        </div>
+        <TasksLoading />
       </MainLayout>
     );
   }
@@ -185,88 +172,13 @@ const Tasks = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h1 className="text-3xl font-bold">Tasks</h1>
-          <div className="flex items-center gap-2">
-            <Button variant="outline">
-              <Filter className="mr-2 h-4 w-4" />
-              Filter
-            </Button>
-            <Button variant="outline">
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              Calendar
-            </Button>
-            <Button onClick={() => setIsNewTaskDialogOpen(true)}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Task
-            </Button>
-          </div>
-        </div>
-
-        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4">
-            <TabsTrigger value="all">All Tasks</TabsTrigger>
-            <TabsTrigger value="design">Design</TabsTrigger>
-            <TabsTrigger value="development">Development</TabsTrigger>
-            <TabsTrigger value="marketing">Marketing</TabsTrigger>
-            <TabsTrigger value="content">Content</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="all" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>All Department Tasks</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ProjectKanban initialColumns={allTaskColumns} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="design">
-            <Card>
-              <CardHeader>
-                <CardTitle>Design Department Tasks</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ProjectKanban initialColumns={departmentColumns.design} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="development">
-            <Card>
-              <CardHeader>
-                <CardTitle>Development Department Tasks</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ProjectKanban initialColumns={departmentColumns.development || []} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="marketing">
-            <Card>
-              <CardHeader>
-                <CardTitle>Marketing Department Tasks</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ProjectKanban initialColumns={departmentColumns.marketing || []} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="content">
-            <Card>
-              <CardHeader>
-                <CardTitle>Content Department Tasks</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ProjectKanban initialColumns={departmentColumns.content || []} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        <TasksHeader onNewTask={() => setIsNewTaskDialogOpen(true)} />
+        <TasksTabs
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          allTaskColumns={allTaskColumns}
+          departmentColumns={departmentColumns}
+        />
       </div>
 
       <NewTaskDialog
