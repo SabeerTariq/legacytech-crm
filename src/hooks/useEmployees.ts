@@ -1,7 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { EmployeePerformance } from "@/types/employee";
+import { EmployeePerformance, SalesPerformance } from "@/types/employee";
 
 export interface Employee {
   id: string;
@@ -10,27 +10,8 @@ export interface Employee {
   department: string;
   role: string;
   join_date: string;
-  performance?: {
-    sales_target?: number;
-    sales_achieved?: number;
-    projects_completed?: number;
-    tasks_completed?: number;
-    customer_satisfaction?: number;
-    avg_task_completion_time?: number;
-    total_tasks_assigned?: number;
-    tasks_completed_ontime?: number;
-    tasks_completed_late?: number;
-    strikes?: number;
-    // Also include camelCase variants for frontend consistency
-    salesTarget?: number;
-    salesAchieved?: number;
-    projectsCompleted?: number;
-    tasksCompleted?: number;
-    customerSatisfaction?: number;
-    avgTaskCompletionTime?: number;
-  };
-  // Make joinDate required to match EmployeeProfile interface
-  joinDate: string;
+  joinDate: string; // Add this to match EmployeeProfile
+  performance?: Partial<SalesPerformance>; // Adjust type to match expected interface
 }
 
 export const useEmployees = (department?: string) => {
@@ -57,10 +38,17 @@ export const useEmployees = (department?: string) => {
       
       console.log("Fetched employees:", data);
 
-      // Transform the data to match the Employee interface and add joinDate
+      // Transform the data to match the Employee interface
       const transformedData = data.map((emp: any) => ({
         ...emp,
-        joinDate: emp.join_date // Add joinDate field to match EmployeeProfile interface
+        joinDate: emp.join_date, // Ensure joinDate is present
+        performance: {
+          salesTarget: emp.performance?.salesTarget || 0,
+          salesAchieved: emp.performance?.salesAchieved || 0,
+          projectsCompleted: emp.performance?.projectsCompleted || 0,
+          tasksCompleted: emp.performance?.tasksCompleted || 0,
+          // Add other required fields with default values
+        }
       }));
       
       return transformedData as Employee[];

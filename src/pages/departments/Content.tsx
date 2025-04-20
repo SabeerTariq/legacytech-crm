@@ -3,6 +3,7 @@ import React from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import DepartmentEmployees from "@/components/employees/DepartmentEmployees";
 import { useEmployees } from "@/hooks/useEmployees";
+import { EmployeeProfile } from "@/types/employee";
 
 const Content = () => {
   const { data: employees, isLoading } = useEmployees("Content");
@@ -16,7 +17,7 @@ const Content = () => {
         ) : (
           <DepartmentEmployees 
             departmentName="Content" 
-            employees={employees || []} 
+            employees={employees as EmployeeProfile[]} 
           />
         )}
       </div>

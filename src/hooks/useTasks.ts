@@ -41,17 +41,18 @@ export const useTasks = (department?: string) => {
 
       if (employeeError) throw employeeError;
 
-      // Update employee performance metrics
+      // Safely handle performance data
       const performanceData = employee?.performance || {};
-      const total = typeof performanceData === 'object' && performanceData ? 
-        (performanceData.total_tasks_assigned || 0) : 0;
+      const totalTasksAssigned = typeof performanceData === 'object' && performanceData 
+        ? (performanceData.total_tasks_assigned as number || 0) 
+        : 0;
       
       const { error: updateError } = await supabase
         .from("employees")
         .update({
           performance: {
-            ...performanceData,
-            total_tasks_assigned: total + 1
+            ...performanceData as object,
+            total_tasks_assigned: totalTasksAssigned + 1
           }
         })
         .eq("id", employeeId);
@@ -89,18 +90,20 @@ export const useTasks = (department?: string) => {
 
       if (employeeError) throw employeeError;
 
-      // Update employee performance with strike and late completion directly
+      // Safely handle performance data
       const performanceData = employee?.performance || {};
-      const strikes = typeof performanceData === 'object' && performanceData ? 
-        (performanceData.strikes || 0) : 0;
-      const lateCompletions = typeof performanceData === 'object' && performanceData ? 
-        (performanceData.tasks_completed_late || 0) : 0;
+      const strikes = typeof performanceData === 'object' && performanceData 
+        ? (performanceData.strikes as number || 0) 
+        : 0;
+      const lateCompletions = typeof performanceData === 'object' && performanceData 
+        ? (performanceData.tasks_completed_late as number || 0) 
+        : 0;
       
       const { error: updateError } = await supabase
         .from("employees")
         .update({
           performance: {
-            ...performanceData,
+            ...performanceData as object,
             strikes: strikes + 1,
             tasks_completed_late: lateCompletions + 1
           }
