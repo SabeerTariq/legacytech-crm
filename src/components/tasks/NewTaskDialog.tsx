@@ -88,6 +88,7 @@ const NewTaskDialog: React.FC<NewTaskDialogProps> = ({
     try {
       console.log("Creating task with data:", data);
       
+      // Fix the foreign key constraint issue
       const taskData = {
         title: data.title,
         description: data.description || "",
@@ -95,7 +96,7 @@ const NewTaskDialog: React.FC<NewTaskDialogProps> = ({
         priority: data.priority,
         status: 'todo',
         project_id: data.projectId,
-        assigned_to_id: data.assignee || null, // Use null if no assignee is selected
+        assigned_to_id: data.assignee === "unassigned" ? null : data.assignee || null, // Handle "unassigned" case
         due_date: data.dueDate
       };
 
@@ -197,7 +198,6 @@ const NewTaskDialog: React.FC<NewTaskDialogProps> = ({
                 <SelectValue placeholder={isLoadingEmployees ? "Loading employees..." : "Select employee (optional)"} />
               </SelectTrigger>
               <SelectContent>
-                {/* Fix: Using "unassigned" as a value instead of empty string */}
                 <SelectItem value="unassigned">None</SelectItem>
                 {employees.length > 0 ? (
                   employees.map((employee) => (

@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useEmployees } from "@/hooks/useEmployees";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useTasks } from "@/hooks/useTasks";
 
 interface TaskAssignmentDialogProps {
   open: boolean;
@@ -27,6 +28,7 @@ const TaskAssignmentDialog: React.FC<TaskAssignmentDialogProps> = ({
   const [selectedEmployee, setSelectedEmployee] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { data: employees = [], isLoading } = useEmployees(task.department);
+  const { assignTask } = useTasks();
 
   const handleSubmit = async () => {
     if (!selectedEmployee) {
@@ -37,51 +39,11 @@ const TaskAssignmentDialog: React.FC<TaskAssignmentDialogProps> = ({
     setIsSubmitting(true);
 
     try {
-      // First, check if the task exists
-      const { data: taskData, error: taskCheckError } = await supabase
-        .from("project_tasks")
-        .select("*")
-        .eq("id", task.id)
-        .single();
-
-      if (taskCheckError) {
-        console.error("Task check error:", taskCheckError);
-        throw new Error("Task not found. Please try again.");
-      }
-
-      // Update task assignment
-      const { error: taskError } = await supabase
-        .from("project_tasks")
-        .update({ 
-          assigned_to_id: selectedEmployee,
-          status: "in-progress"
-        })
-        .eq("id", task.id);
-
-      if (taskError) {
-        console.error("Task update error:", taskError);
-        throw new Error("Failed to update task assignment");
-      }
-
-      // Update employee's total tasks assigned
-      const employee = employees.find(emp => emp.id === selectedEmployee);
-      if (employee) {
-        const performance = employee.performance || {};
-        const { error: employeeError } = await supabase
-          .from("employees")
-          .update({
-            performance: {
-              ...performance,
-              total_tasks_assigned: ((performance as any).total_tasks_assigned || 0) + 1
-            }
-          })
-          .eq("id", selectedEmployee);
-
-        if (employeeError) {
-          console.error("Employee update error:", employeeError);
-          throw new Error("Failed to update employee performance");
-        }
-      }
+      // Use the assignTask mutation from the useTasks hook
+      await assignTask.mutateAsync({ 
+        taskId: task.id,
+        employeeId: selectedEmployee
+      });
 
       toast.success("Task assigned successfully");
       onOpenChange(false);
