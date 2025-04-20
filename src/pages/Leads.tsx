@@ -30,11 +30,14 @@ const Leads = () => {
     setAddModalOpen(false);
   };
 
-  const handleUpdateLead = (updatedLead: Omit<Lead, 'id' | 'date'>) => {
+  const handleUpdateLead = (updatedLead: Omit<Lead, 'id' | 'assignedTo'>) => {
     if (selectedLead) {
       updateLeadMutation.mutate({
         id: selectedLead.id,
-        leadData: updatedLead
+        leadData: {
+          ...updatedLead,
+          date: updatedLead.date
+        }
       });
       setEditModalOpen(false);
     }

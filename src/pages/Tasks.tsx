@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { KanbanColumn } from "@/components/projects/ProjectKanban";
@@ -96,6 +95,41 @@ const Tasks = () => {
       const allInProgressTasks: any[] = [];
       const allDoneTasks: any[] = [];
       
+      // First, process all tasks for the "All Tasks" view
+      allTasks.forEach(task => {
+        const kanbanTask = {
+          id: task.id,
+          title: task.title,
+          description: task.description || '',
+          priority: task.priority,
+          dueDate: task.due_date,
+          department: task.department,
+          project_id: task.project_id,
+          status: task.status,
+          assignee: task.assigned_to_id ? {
+            name: "Assigned",
+            initials: "AS",
+          } : undefined,
+        };
+        
+        const statusColumnMap: Record<string, string> = {
+          'todo': 'todo',
+          'in-progress': 'in-progress',
+          'completed': 'done'
+        };
+        
+        const columnId = statusColumnMap[task.status] || 'todo';
+        
+        if (columnId === 'todo') {
+          allTodoTasks.push(kanbanTask);
+        } else if (columnId === 'in-progress') {
+          allInProgressTasks.push(kanbanTask);
+        } else if (columnId === 'done') {
+          allDoneTasks.push(kanbanTask);
+        }
+      });
+      
+      // Then process tasks for individual departments
       Object.keys(updatedColumns).forEach(dept => {
         const deptTasks = tasksByDepartment[dept] || [];
         
@@ -132,15 +166,6 @@ const Tasks = () => {
           
           if (column) {
             column.tasks.push(kanbanTask);
-            
-            // Also add to the all tasks columns
-            if (columnId === 'todo') {
-              allTodoTasks.push(kanbanTask);
-            } else if (columnId === 'in-progress') {
-              allInProgressTasks.push(kanbanTask);
-            } else if (columnId === 'done') {
-              allDoneTasks.push(kanbanTask);
-            }
           }
         });
       });

@@ -45,25 +45,34 @@ export const useLeads = () => {
         return [];
       }
 
-      const processedLeads = (leadsData || []).map((lead) => ({
-        id: lead.id,
-        client_name: lead.client_name,
-        company: lead.business_description || '',
-        email_address: lead.email_address,
-        contact_number: lead.contact_number || '',
-        status: (lead.status || 'new') as Lead['status'],
-        source: lead.source || '',
-        price: lead.price || 0,
-        date: lead.date ? new Date(lead.date).toLocaleDateString() : 
-               lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '',
-        city_state: lead.city_state,
-        business_description: lead.business_description,
-        services_required: lead.services_required,
-        budget: lead.budget,
-        additional_info: lead.additional_info,
-        agent: lead.agent
-      }));
+      const processedLeads = (leadsData || []).map((lead) => {
+        console.log('Raw lead date:', lead.date);
+        console.log('Raw created_at:', lead.created_at);
+        
+        const processedLead = {
+          id: lead.id,
+          client_name: lead.client_name,
+          company: lead.business_description || '',
+          email_address: lead.email_address,
+          contact_number: lead.contact_number || '',
+          status: (lead.status || 'new') as Lead['status'],
+          source: lead.source || '',
+          price: lead.price || 0,
+          date: lead.date ? new Date(lead.date).toLocaleDateString() : 
+                 lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '',
+          city_state: lead.city_state,
+          business_description: lead.business_description,
+          services_required: lead.services_required,
+          budget: lead.budget,
+          additional_info: lead.additional_info,
+          agent: lead.agent
+        };
+        
+        console.log('Processed lead date:', processedLead.date);
+        return processedLead;
+      });
 
+      console.log('All processed leads:', processedLeads);
       return processedLeads;
     },
     enabled: true,
@@ -110,7 +119,7 @@ export const useLeads = () => {
   });
 
   const updateLeadMutation = useMutation({
-    mutationFn: async ({ id, leadData }: { id: string, leadData: Omit<Lead, 'id' | 'date'> }) => {
+    mutationFn: async ({ id, leadData }: { id: string, leadData: Partial<Lead> }) => {
       const { data, error } = await supabase
         .from('leads')
         .update({
@@ -126,6 +135,7 @@ export const useLeads = () => {
           budget: leadData.budget,
           additional_info: leadData.additional_info,
           agent: leadData.agent,
+          date: leadData.date,
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)

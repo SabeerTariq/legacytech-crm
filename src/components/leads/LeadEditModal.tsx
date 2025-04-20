@@ -20,7 +20,7 @@ interface LeadEditModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   lead: Lead | null;
-  onLeadUpdated: (updatedLead: Omit<Lead, 'id' | 'assignedTo' | 'date'>) => void;
+  onLeadUpdated: (updatedLead: Omit<Lead, 'id' | 'assignedTo'>) => void;
   onLeadDeleted?: (leadId: string) => void;
 }
 
@@ -45,6 +45,7 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
     budget: "",
     additional_info: "",
     agent: "",
+    date: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -65,6 +66,7 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
         budget: lead.budget || "",
         additional_info: lead.additional_info || "",
         agent: lead.agent || "",
+        date: lead.date || "",
       });
       // Reset submission state when modal opens
       setIsSubmitting(false);
@@ -112,7 +114,8 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
     console.log("Submitting updated lead:", formData);
     onLeadUpdated({
       ...formData,
-      company: formData.business_description
+      company: formData.business_description,
+      date: formData.date
     });
     // We'll wait for the parent component to close the modal after successful update
   };
@@ -138,14 +141,27 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
         <DialogHeader>
           <DialogTitle>Edit Lead</DialogTitle>
           <DialogDescription>
-            Update the information for this lead.
+            Make changes to the lead information below.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="client_name">Name *</Label>
+              <Label htmlFor="date">Date</Label>
+              <Input
+                id="date"
+                name="date"
+                type="date"
+                value={formData.date}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="client_name">Client Name</Label>
               <Input
                 id="client_name"
                 name="client_name"
@@ -202,9 +218,6 @@ const LeadEditModal: React.FC<LeadEditModalProps> = ({
                 <SelectContent>
                   <SelectItem value="new">New</SelectItem>
                   <SelectItem value="contacted">Contacted</SelectItem>
-                  <SelectItem value="qualified">Qualified</SelectItem>
-                  <SelectItem value="proposal">Proposal</SelectItem>
-                  <SelectItem value="negotiation">Negotiation</SelectItem>
                   <SelectItem value="won">Won</SelectItem>
                   <SelectItem value="lost">Lost</SelectItem>
                 </SelectContent>

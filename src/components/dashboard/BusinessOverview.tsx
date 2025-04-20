@@ -2,25 +2,135 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 
-const BusinessOverview = () => {
-  // Sample data - replace with real data from your backend
+interface BusinessOverviewProps {
+  selectedMonth: number;
+}
+
+const BusinessOverview = ({ selectedMonth }: BusinessOverviewProps) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  // Fetch leads data
+  const { data: leads = [] } = useQuery({
+    queryKey: ['dashboard-leads', selectedMonth],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('id, status, date, created_at')
+        .or(`status.eq.won,status.eq.new,status.eq.contacted,status.eq.lost`);
+      
+      if (error) {
+        toast({
+          title: "Error fetching leads",
+          description: error.message,
+          variant: "destructive",
+        });
+        return [];
+      }
+      
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  // Fetch projects data
+  const { data: projects = [] } = useQuery({
+    queryKey: ['dashboard-projects', selectedMonth],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', user?.id);
+      
+      if (error) {
+        toast({
+          title: "Error fetching projects",
+          description: error.message,
+          variant: "destructive",
+        });
+        return [];
+      }
+      
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  // Process project data for the chart
+  const currentDate = new Date();
+  const targetDate = subMonths(currentDate, selectedMonth);
+  const startDate = startOfMonth(targetDate);
+  const endDate = endOfMonth(targetDate);
+
+  const monthProjects = React.useMemo(() => {
+    return projects.filter(project => {
+      const projectDate = new Date(project.due_date);
+      return projectDate >= startDate && projectDate <= endDate;
+    });
+  }, [projects, startDate, endDate]);
+
   const projectStatusData = [
-    { name: "Completed", value: 12 },
-    { name: "In Progress", value: 8 },
-    { name: "On Hold", value: 3 },
-    { name: "Not Started", value: 5 },
+    { name: "To Do", value: monthProjects.filter(p => p.status === 'new' || p.status === 'not-started' || p.status === 'todo').length },
+    { name: "In Progress", value: monthProjects.filter(p => p.status === 'in-progress').length },
+    { name: "Completed", value: monthProjects.filter(p => p.status === 'completed').length },
   ];
+
+  // Process leads data for the chart
+  const targetMonth = targetDate.getMonth();
+  const targetYear = targetDate.getFullYear();
+
+  console.log('Filtering leads for:', {
+    targetMonth,
+    targetYear,
+    totalLeads: leads.length,
+    selectedMonth
+  });
+
+  const monthLeads = leads.filter(lead => {
+    const leadDate = new Date(lead.date || lead.created_at);
+    const leadMonth = leadDate.getMonth();
+    const leadYear = leadDate.getFullYear();
+    const isInTargetMonth = leadMonth === targetMonth && leadYear === targetYear;
+    
+    console.log('Lead date check:', {
+      leadDate,
+      leadMonth,
+      leadYear,
+      isInTargetMonth,
+      leadStatus: lead.status
+    });
+    
+    return isInTargetMonth;
+  });
+
+  console.log('Filtered leads:', {
+    monthLeads: monthLeads.length,
+    leadStatuses: monthLeads.map(lead => lead.status)
+  });
 
   const leadStatusData = [
-    { name: "New", value: 15 },
-    { name: "Contacted", value: 10 },
-    { name: "Qualified", value: 8 },
-    { name: "Converted", value: 5 },
-    { name: "Lost", value: 3 },
+    { name: "Total Leads", value: monthLeads.length },
+    { name: "New", value: monthLeads.filter(lead => lead.status === "new").length },
+    { name: "Contacted", value: monthLeads.filter(lead => lead.status === "contacted").length },
+    { name: "Won", value: monthLeads.filter(lead => lead.status === "won").length },
+    { name: "Lost", value: monthLeads.filter(lead => lead.status === "lost").length },
   ];
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+  console.log('BusinessOverview - Lead Status Calculation:', {
+    totalMonthLeads: monthLeads.length,
+    wonLeads: leadStatusData.find(stat => stat.name === "Won")?.value,
+    month: targetDate.toLocaleString('default', { month: 'long' }),
+    year: targetDate.getFullYear(),
+    leadStatuses: monthLeads.map(lead => lead.status)
+  });
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
 
   try {
     return (

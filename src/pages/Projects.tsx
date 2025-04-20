@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,7 @@ const Projects: React.FC = () => {
   const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
 
   const { 
-    data: projects, 
+    data: projects = [], 
     isLoading: isProjectsLoading, 
     error: projectsError,
     refetch
@@ -21,7 +20,6 @@ const Projects: React.FC = () => {
     queryKey: ['projects'],
     queryFn: async () => {
       try {
-        // Simplified query to avoid issues with relationships
         const { data, error } = await supabase
           .from('projects')
           .select('*');
@@ -45,7 +43,8 @@ const Projects: React.FC = () => {
           description: projectData.description || null,
           due_date: projectData.dueDate,
           status: projectData.status,
-          user_id: (await supabase.auth.getUser()).data.user?.id
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          assigned_to_id: projectData.assigned_to_id || null
         }])
         .select();
       
@@ -53,31 +52,12 @@ const Projects: React.FC = () => {
       
       toast.success("Project created successfully!");
       refetch();
+      setIsNewProjectDialogOpen(false);
     } catch (error) {
       console.error("Error creating project:", error);
       toast.error("Failed to create project");
     }
   };
-
-  if (isProjectsLoading) {
-    return (
-      <MainLayout>
-        <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
-          <span className="loading loading-dots loading-lg"></span>
-        </div>
-      </MainLayout>
-    );
-  }
-
-  if (projectsError) {
-    return (
-      <MainLayout>
-        <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
-          <p className="text-red-500">Error: {(projectsError as Error).message}</p>
-        </div>
-      </MainLayout>
-    );
-  }
 
   return (
     <MainLayout>
@@ -90,7 +70,15 @@ const Projects: React.FC = () => {
           </Button>
         </div>
 
-        {projects && projects.length > 0 ? (
+        {isProjectsLoading ? (
+          <div className="flex h-full items-center justify-center">
+            <span className="loading loading-dots loading-lg"></span>
+          </div>
+        ) : projectsError ? (
+          <div className="flex h-full items-center justify-center">
+            <p className="text-red-500">Error: {(projectsError as Error).message}</p>
+          </div>
+        ) : projects.length > 0 ? (
           <ProjectKanban projects={projects} />
         ) : (
           <div className="flex flex-col items-center justify-center flex-1 text-center p-6">
