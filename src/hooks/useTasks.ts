@@ -24,7 +24,7 @@ export const useTasks = (department?: string) => {
 
   const assignTask = useMutation({
     mutationFn: async ({ taskId, employeeId }: { taskId: string; employeeId: string }) => {
-      // Update task with the employee ID (using assigned_to_id instead of assignee_id)
+      // Update task with the employee ID
       const { error: taskError } = await supabase
         .from("project_tasks")
         .update({ assigned_to_id: employeeId })
@@ -42,7 +42,7 @@ export const useTasks = (department?: string) => {
       if (employeeError) throw employeeError;
 
       // Update employee performance metrics
-      const performance = employee.performance as any;
+      const performance = employee?.performance || {};
       const { error: updateError } = await supabase
         .from("employees")
         .update({
@@ -87,7 +87,7 @@ export const useTasks = (department?: string) => {
       if (employeeError) throw employeeError;
 
       // Update employee performance with strike and late completion directly
-      const performance = employee.performance as any;
+      const performance = employee?.performance || {};
       const { error: updateError } = await supabase
         .from("employees")
         .update({
@@ -113,4 +113,4 @@ export const useTasks = (department?: string) => {
     updateTaskStatus,
     addStrike,
   };
-}; 
+};

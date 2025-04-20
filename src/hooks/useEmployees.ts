@@ -29,6 +29,8 @@ export interface Employee {
     customerSatisfaction?: number;
     avgTaskCompletionTime?: number;
   };
+  // Add joinDate to match EmployeeProfile interface
+  joinDate?: string;
 }
 
 export const useEmployees = (department?: string) => {
@@ -54,7 +56,14 @@ export const useEmployees = (department?: string) => {
       }
       
       console.log("Fetched employees:", data);
-      return data as unknown as Employee[];
+
+      // Transform the data to match the Employee interface and add joinDate
+      const transformedData = data.map((emp: any) => ({
+        ...emp,
+        joinDate: emp.join_date // Add joinDate field to match EmployeeProfile interface
+      }));
+      
+      return transformedData as Employee[];
     },
   });
 };

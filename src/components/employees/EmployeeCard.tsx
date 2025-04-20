@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -61,8 +62,11 @@ const ProductionPerformanceView = ({ performance }: { performance: ProductionPer
 };
 
 const SalesPerformanceView = ({ performance }: { performance: SalesPerformance }) => {
-  const achievementRate = performance.salesTarget > 0
-    ? (performance.salesAchieved / performance.salesTarget) * 100
+  // Ensure values are not undefined before using toLocaleString()
+  const salesTarget = performance.salesTarget || 0;
+  const salesAchieved = performance.salesAchieved || 0;
+  const achievementRate = salesTarget > 0
+    ? (salesAchieved / salesTarget) * 100
     : 0;
 
   return (
@@ -86,11 +90,11 @@ const SalesPerformanceView = ({ performance }: { performance: SalesPerformance }
             <BarChart className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm">Sales Target</span>
           </div>
-          <p className="text-2xl font-bold">${performance.salesTarget.toLocaleString()}</p>
+          <p className="text-2xl font-bold">${salesTarget.toLocaleString()}</p>
         </div>
         <div className="space-y-1">
           <span className="text-sm">Sales Achieved</span>
-          <p className="text-2xl font-bold">${performance.salesAchieved.toLocaleString()}</p>
+          <p className="text-2xl font-bold">${salesAchieved.toLocaleString()}</p>
         </div>
       </div>
     </div>
