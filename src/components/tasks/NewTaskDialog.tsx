@@ -88,7 +88,7 @@ const NewTaskDialog: React.FC<NewTaskDialogProps> = ({
     try {
       console.log("Creating task with data:", data);
       
-      // Fix the foreign key constraint issue
+      // Fix for the foreign key constraint issue
       const taskData = {
         title: data.title,
         description: data.description || "",
@@ -96,7 +96,7 @@ const NewTaskDialog: React.FC<NewTaskDialogProps> = ({
         priority: data.priority,
         status: 'todo',
         project_id: data.projectId,
-        assigned_to_id: data.assignee === "unassigned" ? null : data.assignee || null, // Handle "unassigned" case
+        assigned_to_id: data.assignee === "unassigned" || !data.assignee ? null : data.assignee,
         due_date: data.dueDate
       };
 

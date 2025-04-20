@@ -29,7 +29,10 @@ export const useTasks = (department?: string) => {
       // Update task with the employee ID
       const { error: taskError } = await supabase
         .from("project_tasks")
-        .update({ assigned_to_id: employeeId })
+        .update({ 
+          assigned_to_id: employeeId,
+          status: "in-progress" 
+        })
         .eq("id", taskId);
 
       if (taskError) {
