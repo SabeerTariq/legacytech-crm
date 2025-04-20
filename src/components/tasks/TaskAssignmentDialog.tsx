@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -26,8 +26,23 @@ const TaskAssignmentDialog: React.FC<TaskAssignmentDialogProps> = ({
 }) => {
   const [selectedEmployee, setSelectedEmployee] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { data: employees = [], isLoading } = useEmployees(task.department);
+  
+  // Capitalize the department name for consistency with the database
+  const departmentName = task.department.charAt(0).toUpperCase() + task.department.slice(1);
+  console.log("Department selected:", task.department);
+  console.log("Capitalized department:", departmentName);
+  
+  const { data: employees = [], isLoading } = useEmployees(departmentName);
+  console.log("Employees data updated:", employees);
+  
   const { assignTask } = useTasks();
+
+  // Reset the selected employee when the dialog opens or task changes
+  useEffect(() => {
+    if (open) {
+      setSelectedEmployee("");
+    }
+  }, [open, task]);
 
   const handleSubmit = async () => {
     if (!selectedEmployee) {
@@ -80,11 +95,17 @@ const TaskAssignmentDialog: React.FC<TaskAssignmentDialogProps> = ({
                 <SelectValue placeholder={isLoading ? "Loading employees..." : "Select employee"} />
               </SelectTrigger>
               <SelectContent>
-                {employees.map((employee) => (
-                  <SelectItem key={employee.id} value={employee.id}>
-                    {employee.name}
-                  </SelectItem>
-                ))}
+                {employees.length > 0 ? (
+                  employees.map((employee) => (
+                    <SelectItem key={employee.id} value={employee.id}>
+                      {employee.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <div className="p-2 text-sm text-muted-foreground">
+                    No employees found in this department
+                  </div>
+                )}
               </SelectContent>
             </Select>
           </div>
