@@ -1,3 +1,4 @@
+
 import React from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import StatCard from "@/components/dashboard/StatCard";
@@ -8,7 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import TeamPerformance from "@/components/dashboard/TeamPerformance";
+import TeamPerformance from "@/components/dashboard/team/TeamPerformance";
 import BusinessOverview from "@/components/dashboard/BusinessOverview";
 
 interface Task {
