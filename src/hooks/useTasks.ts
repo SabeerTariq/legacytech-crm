@@ -32,7 +32,7 @@ export const useTasks = (department?: string) => {
 
       if (taskError) throw taskError;
 
-      // Store assignment data in employee performance metrics instead of separate table
+      // Store assignment data in employee performance metrics
       const { data: employee, error: employeeError } = await supabase
         .from("employees")
         .select("performance")
@@ -42,13 +42,16 @@ export const useTasks = (department?: string) => {
       if (employeeError) throw employeeError;
 
       // Update employee performance metrics
-      const performance = employee?.performance || {};
+      const performanceData = employee?.performance || {};
+      const total = typeof performanceData === 'object' && performanceData ? 
+        (performanceData.total_tasks_assigned || 0) : 0;
+      
       const { error: updateError } = await supabase
         .from("employees")
         .update({
           performance: {
-            ...performance,
-            total_tasks_assigned: (performance.total_tasks_assigned || 0) + 1
+            ...performanceData,
+            total_tasks_assigned: total + 1
           }
         })
         .eq("id", employeeId);
@@ -87,14 +90,19 @@ export const useTasks = (department?: string) => {
       if (employeeError) throw employeeError;
 
       // Update employee performance with strike and late completion directly
-      const performance = employee?.performance || {};
+      const performanceData = employee?.performance || {};
+      const strikes = typeof performanceData === 'object' && performanceData ? 
+        (performanceData.strikes || 0) : 0;
+      const lateCompletions = typeof performanceData === 'object' && performanceData ? 
+        (performanceData.tasks_completed_late || 0) : 0;
+      
       const { error: updateError } = await supabase
         .from("employees")
         .update({
           performance: {
-            ...performance,
-            strikes: (performance.strikes || 0) + 1,
-            tasks_completed_late: (performance.tasks_completed_late || 0) + 1
+            ...performanceData,
+            strikes: strikes + 1,
+            tasks_completed_late: lateCompletions + 1
           }
         })
         .eq("id", employeeId);

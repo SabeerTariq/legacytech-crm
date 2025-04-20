@@ -29,8 +29,8 @@ export interface Employee {
     customerSatisfaction?: number;
     avgTaskCompletionTime?: number;
   };
-  // Add joinDate to match EmployeeProfile interface
-  joinDate?: string;
+  // Make joinDate required to match EmployeeProfile interface
+  joinDate: string;
 }
 
 export const useEmployees = (department?: string) => {

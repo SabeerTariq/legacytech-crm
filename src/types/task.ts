@@ -1,3 +1,4 @@
+
 export interface Task {
   id: string;
   title: string;
@@ -12,17 +13,9 @@ export interface Task {
   updated_at: string;
 }
 
-export interface TaskAssignment {
-  id: string;
-  task_id: string;
-  employee_id: string;
-  assigned_at: string;
-  completed_on_time: boolean;
-}
-
 export interface TaskPerformance {
   total_tasks_assigned: number;
   tasks_completed_ontime: number;
   tasks_completed_late: number;
   strikes: number;
-} 
+}

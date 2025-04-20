@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -74,7 +75,8 @@ const NewTaskDialog: React.FC<NewTaskDialogProps> = ({
       
       const taskData = {
         title: data.title,
-        description: data.description,
+        description: data.description || "",
+        department: data.department,
         priority: data.priority,
         status: 'todo',
         project_id: data.projectId,
@@ -103,6 +105,7 @@ const NewTaskDialog: React.FC<NewTaskDialogProps> = ({
       toast.success('Task created successfully');
       onTaskCreated(createdTask);
       onOpenChange(false);
+      form.reset(); // Reset the form after successful submission
     } catch (error) {
       console.error('Error creating task:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to create task');
