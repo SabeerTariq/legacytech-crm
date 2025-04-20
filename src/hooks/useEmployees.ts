@@ -11,7 +11,7 @@ export interface Employee {
   role: string;
   join_date: string;
   joinDate: string; // Add this to match EmployeeProfile
-  performance?: Partial<SalesPerformance>; // Adjust type to match expected interface
+  performance?: Partial<SalesPerformance> & Partial<Record<string, number | string>>; // Allow for both interfaces
 }
 
 export const useEmployees = (department?: string) => {
@@ -43,11 +43,19 @@ export const useEmployees = (department?: string) => {
         ...emp,
         joinDate: emp.join_date, // Ensure joinDate is present
         performance: {
+          // SalesPerformance fields
           salesTarget: emp.performance?.salesTarget || 0,
           salesAchieved: emp.performance?.salesAchieved || 0,
           projectsCompleted: emp.performance?.projectsCompleted || 0,
           tasksCompleted: emp.performance?.tasksCompleted || 0,
-          // Add other required fields with default values
+          customerSatisfaction: emp.performance?.customerSatisfaction || 0,
+          avgTaskCompletionTime: emp.performance?.avgTaskCompletionTime || 0,
+          
+          // TaskPerformance fields (if needed)
+          total_tasks_assigned: emp.performance?.total_tasks_assigned || 0,
+          tasks_completed_ontime: emp.performance?.tasks_completed_ontime || 0,
+          tasks_completed_late: emp.performance?.tasks_completed_late || 0,
+          strikes: emp.performance?.strikes || 0
         }
       }));
       

@@ -24,13 +24,18 @@ export const useTasks = (department?: string) => {
 
   const assignTask = useMutation({
     mutationFn: async ({ taskId, employeeId }: { taskId: string; employeeId: string }) => {
+      console.log("Assigning task", taskId, "to employee", employeeId);
+      
       // Update task with the employee ID
       const { error: taskError } = await supabase
         .from("project_tasks")
         .update({ assigned_to_id: employeeId })
         .eq("id", taskId);
 
-      if (taskError) throw taskError;
+      if (taskError) {
+        console.error("Task assignment error:", taskError);
+        throw taskError;
+      }
 
       // Store assignment data in employee performance metrics
       const { data: employee, error: employeeError } = await supabase
@@ -39,13 +44,17 @@ export const useTasks = (department?: string) => {
         .eq("id", employeeId)
         .single();
 
-      if (employeeError) throw employeeError;
+      if (employeeError) {
+        console.error("Employee fetch error:", employeeError);
+        throw employeeError;
+      }
 
       // Safely handle performance data
       const performanceData = employee?.performance || {};
-      const totalTasksAssigned = typeof performanceData === 'object' && performanceData 
-        ? (performanceData.total_tasks_assigned as number || 0) 
-        : 0;
+      
+      // Type safety for performance data
+      const totalTasksAssigned = typeof performanceData === 'object' ? 
+        ((performanceData as any).total_tasks_assigned || 0) : 0;
       
       const { error: updateError } = await supabase
         .from("employees")
@@ -57,7 +66,10 @@ export const useTasks = (department?: string) => {
         })
         .eq("id", employeeId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error("Employee update error:", updateError);
+        throw updateError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -92,12 +104,13 @@ export const useTasks = (department?: string) => {
 
       // Safely handle performance data
       const performanceData = employee?.performance || {};
-      const strikes = typeof performanceData === 'object' && performanceData 
-        ? (performanceData.strikes as number || 0) 
-        : 0;
-      const lateCompletions = typeof performanceData === 'object' && performanceData 
-        ? (performanceData.tasks_completed_late as number || 0) 
-        : 0;
+      
+      // Type safety for performance data
+      const strikes = typeof performanceData === 'object' ? 
+        ((performanceData as any).strikes || 0) : 0;
+        
+      const lateCompletions = typeof performanceData === 'object' ? 
+        ((performanceData as any).tasks_completed_late || 0) : 0;
       
       const { error: updateError } = await supabase
         .from("employees")

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -71,7 +72,7 @@ const TaskAssignmentDialog: React.FC<TaskAssignmentDialogProps> = ({
           .update({
             performance: {
               ...performance,
-              total_tasks_assigned: (performance.total_tasks_assigned || 0) + 1
+              total_tasks_assigned: ((performance as any).total_tasks_assigned || 0) + 1
             }
           })
           .eq("id", selectedEmployee);
@@ -143,4 +144,4 @@ const TaskAssignmentDialog: React.FC<TaskAssignmentDialogProps> = ({
   );
 };
 
-export default TaskAssignmentDialog; 
+export default TaskAssignmentDialog;

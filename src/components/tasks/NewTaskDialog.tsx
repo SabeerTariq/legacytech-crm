@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,7 +19,7 @@ const taskSchema = z.object({
   department: z.string().min(1, "Department is required"),
   priority: z.enum(["low", "medium", "high"]),
   dueDate: z.string().min(1, "Due date is required"),
-  assignee: z.string().min(1, "Assignee is required"),
+  assignee: z.string().optional(), // Make assignee optional
   projectId: z.string().min(1, "Project is required"),
 });
 
@@ -55,6 +55,21 @@ const NewTaskDialog: React.FC<NewTaskDialogProps> = ({
     },
   });
 
+  // Reset form when dialog opens/closes
+  useEffect(() => {
+    if (!open) {
+      form.reset({
+        title: "",
+        description: "",
+        department: "",
+        priority: "medium",
+        dueDate: "",
+        assignee: "",
+        projectId: "",
+      });
+    }
+  }, [open, form]);
+
   const handleDepartmentChange = (value: string) => {
     console.log("Department selected:", value);
     const capitalizedDepartment = value.charAt(0).toUpperCase() + value.slice(1);
@@ -80,7 +95,7 @@ const NewTaskDialog: React.FC<NewTaskDialogProps> = ({
         priority: data.priority,
         status: 'todo',
         project_id: data.projectId,
-        assigned_to_id: data.assignee,
+        assigned_to_id: data.assignee || null, // Use null if no assignee is selected
         due_date: data.dueDate
       };
 
@@ -169,7 +184,7 @@ const NewTaskDialog: React.FC<NewTaskDialogProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="assignee">Assign To</Label>
+            <Label htmlFor="assignee">Assign To (Optional)</Label>
             <Select
               value={form.watch("assignee")}
               onValueChange={(value) => {
@@ -179,9 +194,10 @@ const NewTaskDialog: React.FC<NewTaskDialogProps> = ({
               disabled={!form.watch("department") || isLoadingEmployees}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder={isLoadingEmployees ? "Loading employees..." : "Select employee"} />
+                <SelectValue placeholder={isLoadingEmployees ? "Loading employees..." : "Select employee (optional)"} />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="">None</SelectItem>
                 {employees.length > 0 ? (
                   employees.map((employee) => (
                     <SelectItem 
@@ -199,9 +215,6 @@ const NewTaskDialog: React.FC<NewTaskDialogProps> = ({
                 )}
               </SelectContent>
             </Select>
-            {form.formState.errors.assignee && (
-              <p className="text-sm text-red-500">{form.formState.errors.assignee.message}</p>
-            )}
           </div>
 
           <div className="space-y-2">
