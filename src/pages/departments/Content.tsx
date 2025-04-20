@@ -2,10 +2,24 @@
 import React from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import DepartmentEmployees from "@/components/employees/DepartmentEmployees";
-import { useEmployees, Employee } from "@/hooks/useEmployees";
+import { useEmployees } from "@/hooks/useEmployees";
+import { EmployeeProfile, ProductionPerformance } from "@/types/employee";
 
 const Content = () => {
-  const { data: employees, isLoading } = useEmployees("Content");
+  const { data: employees = [], isLoading } = useEmployees("Content");
+
+  // Transform employee data to match EmployeeProfile
+  const transformedEmployees: EmployeeProfile[] = employees.map(employee => {
+    return {
+      id: employee.id,
+      name: employee.name,
+      role: employee.role,
+      department: employee.department,
+      email: employee.email,
+      joinDate: employee.join_date,
+      performance: employee.performance as ProductionPerformance
+    };
+  });
 
   return (
     <MainLayout>
@@ -16,7 +30,7 @@ const Content = () => {
         ) : (
           <DepartmentEmployees 
             departmentName="Content" 
-            employees={employees as any[]} // Type casting to avoid TS errors
+            employees={transformedEmployees} 
           />
         )}
       </div>

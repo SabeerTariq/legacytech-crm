@@ -58,6 +58,22 @@ const TeamPerformanceCard = ({ department }: { department: string }) => {
   };
 
   const transformToEmployeeProfile = (employee: any): EmployeeProfile => {
+    // Determine if it's a production department
+    const isProduction = ['Design', 'Development', 'Marketing', 'Content'].includes(employee.department);
+    
+    let performance;
+    if (isProduction) {
+      performance = {
+        total_tasks_assigned: Number(employee.performance?.total_tasks_assigned ?? 0),
+        tasks_completed_ontime: Number(employee.performance?.tasks_completed_ontime ?? 0),
+        tasks_completed_late: Number(employee.performance?.tasks_completed_late ?? 0),
+        strikes: Number(employee.performance?.strikes ?? 0),
+        avg_completion_time: Number(employee.performance?.avg_completion_time ?? 0)
+      } as ProductionPerformance;
+    } else {
+      performance = employee.performance;
+    }
+
     return {
       id: employee.id,
       name: employee.name,
@@ -65,29 +81,28 @@ const TeamPerformanceCard = ({ department }: { department: string }) => {
       department: employee.department,
       email: employee.email,
       joinDate: employee.join_date,
-      performance: employee.performance || {
-        total_tasks_assigned: 0,
-        tasks_completed_ontime: 0,
-        tasks_completed_late: 0,
-        strikes: 0,
-        avg_completion_time: 0
-      }
+      performance: performance
     };
   };
 
   const stats: TeamStats = employees.reduce((acc, employee) => {
-    const performance = employee.performance as ProductionPerformance;
+    // Safely cast and access performance data regardless of department
+    const prodPerformance = employee.performance as ProductionPerformance;
+    
+    // Safely calculate completion rate
+    const total = Number(prodPerformance?.total_tasks_assigned || 0);
+    const completed = Number(prodPerformance?.tasks_completed_ontime || 0);
     
     // Check if total_tasks_assigned is 0, if so, default completion rate to 0
-    const completionRate = performance.total_tasks_assigned > 0 
-      ? (performance.tasks_completed_ontime / performance.total_tasks_assigned * 100)
+    const completionRate = total > 0 
+      ? (completed / total * 100)
       : 0;
     
     return {
       totalEmployees: acc.totalEmployees + 1,
       averageTaskCompletionRate: acc.averageTaskCompletionRate + completionRate,
-      totalTasksAssigned: acc.totalTasksAssigned + (performance.total_tasks_assigned || 0),
-      tasksCompletedOnTime: acc.tasksCompletedOnTime + (performance.tasks_completed_ontime || 0),
+      totalTasksAssigned: acc.totalTasksAssigned + Number(prodPerformance?.total_tasks_assigned || 0),
+      tasksCompletedOnTime: acc.tasksCompletedOnTime + Number(prodPerformance?.tasks_completed_ontime || 0),
     };
   }, {
     totalEmployees: 0,
