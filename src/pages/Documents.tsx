@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { FileIcon, FolderIcon, SearchIcon, UploadIcon, PlusIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface Document {
@@ -32,41 +31,53 @@ const DocumentsPage = () => {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  useEffect(() => {
-    const fetchDocuments = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('documents')
-          .select('*')
-          .order('updated_at', { ascending: false });
-
-        if (error) throw error;
-        setDocuments(data || []);
-      } catch (error) {
-        console.error('Error fetching documents:', error);
-        toast.error('Failed to load documents');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    const fetchFolders = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('folders')
-          .select('*')
-          .order('name');
-
-        if (error) throw error;
-        setFolders(data || []);
-      } catch (error) {
-        console.error('Error fetching folders:', error);
-        toast.error('Failed to load folders');
-      }
-    };
-
-    fetchDocuments();
-    fetchFolders();
+  // Sample data - replace with real API calls when the tables exist
+  React.useEffect(() => {
+    // Simulate loading
+    const timer = setTimeout(() => {
+      const mockDocuments: Document[] = [
+        {
+          id: '1',
+          name: 'Project Proposal.pdf',
+          type: 'pdf',
+          size: 2500000,
+          updated_at: '2025-04-10T10:30:00Z',
+          category: 'project',
+          url: '#'
+        },
+        {
+          id: '2',
+          name: 'Marketing Plan Q2.docx',
+          type: 'docx',
+          size: 1800000,
+          updated_at: '2025-04-15T14:20:00Z',
+          category: 'marketing',
+          url: '#'
+        },
+        {
+          id: '3',
+          name: 'Financial Report.xlsx',
+          type: 'xlsx',
+          size: 3200000,
+          updated_at: '2025-04-18T09:45:00Z',
+          category: 'finance',
+          url: '#'
+        }
+      ];
+      
+      const mockFolders: Folder[] = [
+        { id: '1', name: 'Projects', document_count: 12 },
+        { id: '2', name: 'Marketing', document_count: 8 },
+        { id: '3', name: 'Sales', document_count: 5 },
+        { id: '4', name: 'Design', document_count: 15 }
+      ];
+      
+      setDocuments(mockDocuments);
+      setFolders(mockFolders);
+      setIsLoading(false);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   // Filter documents based on search

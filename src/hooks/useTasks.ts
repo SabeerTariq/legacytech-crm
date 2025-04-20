@@ -1,6 +1,7 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Task, TaskAssignment } from "@/types/task";
+import { Task } from "@/types/task";
 
 export const useTasks = (department?: string) => {
   const queryClient = useQueryClient();
@@ -23,23 +24,36 @@ export const useTasks = (department?: string) => {
 
   const assignTask = useMutation({
     mutationFn: async ({ taskId, employeeId }: { taskId: string; employeeId: string }) => {
+      // Update task with the employee ID (using assigned_to_id instead of assignee_id)
       const { error: taskError } = await supabase
         .from("project_tasks")
-        .update({ assignee_id: employeeId })
+        .update({ assigned_to_id: employeeId })
         .eq("id", taskId);
 
       if (taskError) throw taskError;
 
-      const { error: assignmentError } = await supabase
-        .from("task_assignments")
-        .insert({
-          task_id: taskId,
-          employee_id: employeeId,
-          assigned_at: new Date().toISOString(),
-          completed_on_time: false,
-        });
+      // Store assignment data in employee performance metrics instead of separate table
+      const { data: employee, error: employeeError } = await supabase
+        .from("employees")
+        .select("performance")
+        .eq("id", employeeId)
+        .single();
 
-      if (assignmentError) throw assignmentError;
+      if (employeeError) throw employeeError;
+
+      // Update employee performance metrics
+      const performance = employee.performance as any;
+      const { error: updateError } = await supabase
+        .from("employees")
+        .update({
+          performance: {
+            ...performance,
+            total_tasks_assigned: (performance.total_tasks_assigned || 0) + 1
+          }
+        })
+        .eq("id", employeeId);
+
+      if (updateError) throw updateError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -63,15 +77,6 @@ export const useTasks = (department?: string) => {
 
   const addStrike = useMutation({
     mutationFn: async ({ taskId, employeeId }: { taskId: string; employeeId: string }) => {
-      // Update task assignment to mark as completed late
-      const { error: assignmentError } = await supabase
-        .from("task_assignments")
-        .update({ completed_on_time: false })
-        .eq("task_id", taskId)
-        .eq("employee_id", employeeId);
-
-      if (assignmentError) throw assignmentError;
-
       // Get current employee performance
       const { data: employee, error: employeeError } = await supabase
         .from("employees")
@@ -81,7 +86,7 @@ export const useTasks = (department?: string) => {
 
       if (employeeError) throw employeeError;
 
-      // Update employee performance with strike and late completion
+      // Update employee performance with strike and late completion directly
       const performance = employee.performance as any;
       const { error: updateError } = await supabase
         .from("employees")
