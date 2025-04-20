@@ -208,6 +208,8 @@ const TeamPerformance = () => {
         <TeamPerformanceCard department="Development" />
         <TeamPerformanceCard department="Marketing" />
         <TeamPerformanceCard department="Content" />
+        <TeamPerformanceCard department="Business Development" />
+        <TeamPerformanceCard department="Project Management" />
       </div>
     </div>
   );
