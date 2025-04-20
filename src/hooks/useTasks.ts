@@ -17,7 +17,12 @@ export const useTasks = (department?: string) => {
 
       const { data, error } = await query;
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching tasks:", error);
+        throw error;
+      }
+      
+      console.log(`Fetched ${data?.length || 0} tasks${department ? ` for department ${department}` : ''}`);
       return data as Task[];
     },
   });

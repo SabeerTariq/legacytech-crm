@@ -43,6 +43,13 @@ const Tasks = () => {
     ],
   });
 
+  // Track combined columns for "All Tasks" tab
+  const [allTaskColumns, setAllTaskColumns] = useState<KanbanColumn[]>([
+    { id: "todo", title: "To Do", tasks: [] },
+    { id: "in-progress", title: "In Progress", tasks: [] },
+    { id: "done", title: "Done", tasks: [] },
+  ]);
+
   useEffect(() => {
     const fetchProjects = async () => {
       try {
@@ -70,6 +77,8 @@ const Tasks = () => {
   // Update columns when tasks change
   useEffect(() => {
     if (allTasks?.length) {
+      console.log("Tasks loaded:", allTasks.length);
+      
       // Group tasks by department
       const tasksByDepartment: Record<string, Task[]> = {};
       
@@ -83,6 +92,11 @@ const Tasks = () => {
       
       // Update department columns
       const updatedColumns = { ...departmentColumns };
+      
+      // Create status buckets for all tasks view
+      const allTodoTasks: any[] = [];
+      const allInProgressTasks: any[] = [];
+      const allDoneTasks: any[] = [];
       
       Object.keys(updatedColumns).forEach(dept => {
         const deptTasks = tasksByDepartment[dept] || [];
@@ -120,11 +134,29 @@ const Tasks = () => {
           
           if (column) {
             column.tasks.push(kanbanTask);
+            
+            // Also add to the all tasks columns
+            if (columnId === 'todo') {
+              allTodoTasks.push(kanbanTask);
+            } else if (columnId === 'in-progress') {
+              allInProgressTasks.push(kanbanTask);
+            } else if (columnId === 'done') {
+              allDoneTasks.push(kanbanTask);
+            }
           }
         });
       });
       
       setDepartmentColumns(updatedColumns);
+      
+      // Update all tasks columns
+      setAllTaskColumns([
+        { id: "todo", title: "To Do", tasks: allTodoTasks },
+        { id: "in-progress", title: "In Progress", tasks: allInProgressTasks },
+        { id: "done", title: "Done", tasks: allDoneTasks },
+      ]);
+      
+      console.log("All tasks processed:", allTodoTasks.length + allInProgressTasks.length + allDoneTasks.length);
     }
   }, [allTasks]);
 
@@ -186,40 +218,7 @@ const Tasks = () => {
                 <CardTitle>All Department Tasks</CardTitle>
               </CardHeader>
               <CardContent>
-                <ProjectKanban
-                  initialColumns={[
-                    {
-                      id: "todo",
-                      title: "To Do",
-                      tasks: [
-                        ...departmentColumns.design[0].tasks,
-                        ...departmentColumns.development?.[0]?.tasks || [],
-                        ...departmentColumns.marketing?.[0]?.tasks || [],
-                        ...departmentColumns.content?.[0]?.tasks || [],
-                      ],
-                    },
-                    {
-                      id: "in-progress",
-                      title: "In Progress",
-                      tasks: [
-                        ...departmentColumns.design[1].tasks,
-                        ...departmentColumns.development?.[1]?.tasks || [],
-                        ...departmentColumns.marketing?.[1]?.tasks || [],
-                        ...departmentColumns.content?.[1]?.tasks || [],
-                      ],
-                    },
-                    {
-                      id: "completed",
-                      title: "Completed",
-                      tasks: [
-                        ...departmentColumns.design[2].tasks,
-                        ...departmentColumns.development?.[2]?.tasks || [],
-                        ...departmentColumns.marketing?.[2]?.tasks || [],
-                        ...departmentColumns.content?.[2]?.tasks || [],
-                      ],
-                    },
-                  ]}
-                />
+                <ProjectKanban initialColumns={allTaskColumns} />
               </CardContent>
             </Card>
           </TabsContent>
