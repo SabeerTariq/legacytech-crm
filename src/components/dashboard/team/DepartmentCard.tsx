@@ -120,7 +120,7 @@ const DepartmentCard = ({ department }: DepartmentCardProps) => {
       role: employee.role,
       department: employee.department,
       email: employee.email,
-      avatar: employee.avatar,
+      avatar: employee.avatar || '', // Add default empty string for avatar
       joinDate: employee.joinDate || employee.join_date,
       performance: employee.performance || (
         isProductionDepartment ? 

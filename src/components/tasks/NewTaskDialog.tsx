@@ -197,7 +197,8 @@ const NewTaskDialog: React.FC<NewTaskDialogProps> = ({
                 <SelectValue placeholder={isLoadingEmployees ? "Loading employees..." : "Select employee (optional)"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                {/* Fix: Using "unassigned" as a value instead of empty string */}
+                <SelectItem value="unassigned">None</SelectItem>
                 {employees.length > 0 ? (
                   employees.map((employee) => (
                     <SelectItem 
