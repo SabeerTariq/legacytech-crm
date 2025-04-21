@@ -72,29 +72,30 @@ const Tasks = () => {
     fetchProjects();
   }, []);
 
-  // Update columns when tasks change - fixed to properly process tasks when the component mounts
+  // Process tasks immediately when they're available or loading state changes
   useEffect(() => {
-    if (!isLoading && allTasks && allTasks.length > 0) {
+    // Only process tasks when they're available (not loading and exist)
+    if (allTasks) {
       console.log("Processing tasks:", allTasks.length);
-      
-      // Group tasks by department
-      const tasksByDepartment: Record<string, Task[]> = {};
-      
-      allTasks.forEach(task => {
-        const department = task.department?.toLowerCase() || 'general';
-        if (!tasksByDepartment[department]) {
-          tasksByDepartment[department] = [];
-        }
-        tasksByDepartment[department].push(task);
-      });
       
       // Create status buckets for all tasks view
       const allTodoTasks: any[] = [];
       const allInProgressTasks: any[] = [];
       const allDoneTasks: any[] = [];
       
-      // Process all tasks for the "All Tasks" view
+      // Group tasks by department
+      const tasksByDepartment: Record<string, Task[]> = {};
+      
+      // Process all tasks
       allTasks.forEach(task => {
+        // Group by department for department-specific views
+        const department = task.department?.toLowerCase() || 'general';
+        if (!tasksByDepartment[department]) {
+          tasksByDepartment[department] = [];
+        }
+        tasksByDepartment[department].push(task);
+        
+        // Create kanban task object
         const kanbanTask = {
           id: task.id,
           title: task.title,
@@ -110,6 +111,7 @@ const Tasks = () => {
           } : undefined,
         };
         
+        // Determine which column the task belongs to for all tasks view
         const statusColumnMap: Record<string, string> = {
           'todo': 'todo',
           'in-progress': 'in-progress',
@@ -182,7 +184,7 @@ const Tasks = () => {
       setDepartmentColumns(updatedColumns);
       console.log("All tasks processed:", allTodoTasks.length + allInProgressTasks.length + allDoneTasks.length);
     }
-  }, [allTasks, isLoading]); // Added isLoading as a dependency to re-run after loading completes
+  }, [allTasks]); // Only depend on allTasks changes
 
   const handleTaskCreated = (taskData: any) => {
     toast.success("Task created successfully!");

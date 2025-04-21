@@ -1,106 +1,52 @@
 import React, { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { Lead } from "./LeadsList";
+import { Lead } from "@/components/leads/LeadsList";
 
 interface LeadAddModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onLeadAdded?: (lead: Omit<Lead, 'id' | 'assignedTo' | 'date'>) => void;
+  onLeadAdded: (lead: Omit<Lead, 'id' | 'date'>) => void;
 }
 
-const leadFormSchema = z.object({
-  client_name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  business_description: z.string().optional(),
-  email_address: z.string().optional(),
-  contact_number: z.string().optional(),
-  source: z.string().optional(),
-  status: z.string().optional().default("new"),
-  price: z.number().optional(),
-  city_state: z.string().optional(),
-  services_required: z.string().optional(),
-  budget: z.string().optional(),
-  additional_info: z.string().optional(),
-  agent: z.string().optional(),
-});
+const LeadAddModal = ({ open, onOpenChange, onLeadAdded }: LeadAddModalProps) => {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [company, setCompany] = useState("");
+  const [source, setSource] = useState("website");
+  const [status, setStatus] = useState("new");
+  const [notes, setNotes] = useState("");
 
-type LeadFormValues = z.infer<typeof leadFormSchema>;
-
-const LeadAddModal: React.FC<LeadAddModalProps> = ({
-  open,
-  onOpenChange,
-  onLeadAdded,
-}) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
-  
-  const form = useForm<LeadFormValues>({
-    resolver: zodResolver(leadFormSchema),
-    defaultValues: {
-      client_name: "",
-      business_description: "",
-      email_address: "",
-      contact_number: "",
-      source: "",
-      status: "new",
-      price: 0,
-      city_state: "",
-      services_required: "",
-      budget: "",
-      additional_info: "",
-      agent: "",
-    },
-  });
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const newLead: Omit<Lead, 'id' | 'date'> = {
-        client_name: form.getValues('client_name'),
-        company: form.getValues('business_description'),
-        email_address: form.getValues('email_address'),
-        contact_number: form.getValues('contact_number'),
-        status: form.getValues('status'),
-        source: form.getValues('source'),
-        price: form.getValues('price'),
-        city_state: form.getValues('city_state'),
-        business_description: form.getValues('business_description'),
-        services_required: form.getValues('services_required'),
-        budget: form.getValues('budget'),
-        additional_info: form.getValues('additional_info'),
-        agent: form.getValues('agent')
-      };
+    
+    const newLead = {
+      name,
+      email,
+      phone,
+      company,
+      source,
+      status,
+      notes,
+    };
+    
+    onLeadAdded(newLead);
+    resetForm();
+  };
 
-      if (onLeadAdded) {
-        onLeadAdded(newLead);
-      }
-      form.reset();
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Error adding lead:', error);
-    }
+  const resetForm = () => {
+    setName("");
+    setEmail("");
+    setPhone("");
+    setCompany("");
+    setSource("website");
+    setStatus("new");
+    setNotes("");
   };
 
   return (
@@ -108,231 +54,101 @@ const LeadAddModal: React.FC<LeadAddModalProps> = ({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Add New Lead</DialogTitle>
-          <DialogDescription>
-            Enter the details of the new lead to add to your CRM.
-          </DialogDescription>
         </DialogHeader>
-        
-        <Form {...form}>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="client_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="John Smith" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="business_description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Business/Company</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Acme Inc." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="email_address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="john@company.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="contact_number"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone</FormLabel>
-                    <FormControl>
-                      <Input placeholder="(555) 123-4567" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="source"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Source</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select lead source" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Website Contact Form">Website Contact Form</SelectItem>
-                        <SelectItem value="Referral">Referral</SelectItem>
-                        <SelectItem value="LinkedIn">LinkedIn</SelectItem>
-                        <SelectItem value="Google Search">Google Search</SelectItem>
-                        <SelectItem value="Trade Show">Trade Show</SelectItem>
-                        <SelectItem value="Email Campaign">Email Campaign</SelectItem>
-                        <SelectItem value="Cold Call">Cold Call</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="new">New</SelectItem>
-                        <SelectItem value="contacted">Contacted</SelectItem>
-                        <SelectItem value="won">Won</SelectItem>
-                        <SelectItem value="lost">Lost</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Price ($)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="0" 
-                        {...field}
-                        onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="city_state"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City/State</FormLabel>
-                    <FormControl>
-                      <Input placeholder="San Francisco, CA" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
               />
             </div>
-            
-            <FormField
-              control={form.control}
-              name="services_required"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Services Required</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="What services are they looking for?" 
-                      className="resize-none" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="budget"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Budget Range</FormLabel>
-                    <FormControl>
-                      <Input placeholder="$5,000 - $10,000" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="agent"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Agent</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Agent name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
               />
             </div>
-            
-            <FormField
-              control={form.control}
-              name="additional_info"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Additional Information</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Any additional notes or information" 
-                      className="resize-none" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="company">Company</Label>
+              <Input
+                id="company"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="source">Source</Label>
+              <Select value={source} onValueChange={setSource}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select source" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="website">Website</SelectItem>
+                  <SelectItem value="referral">Referral</SelectItem>
+                  <SelectItem value="social">Social Media</SelectItem>
+                  <SelectItem value="email">Email Campaign</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">New</SelectItem>
+                  <SelectItem value="contacted">Contacted</SelectItem>
+                  <SelectItem value="qualified">Qualified</SelectItem>
+                  <SelectItem value="proposal">Proposal</SelectItem>
+                  <SelectItem value="negotiation">Negotiation</SelectItem>
+                  <SelectItem value="won">Won</SelectItem>
+                  <SelectItem value="lost">Lost</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={4}
             />
-            
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Adding..." : "Add Lead"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+          </div>
+          
+          <div className="flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Add Lead</Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
