@@ -1,4 +1,3 @@
-
 import React from 'react';
 import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,8 +8,53 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Upload } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { useToast } from "@/components/ui/use-toast";
+
+const companyInfoSchema = z.object({
+  companyName: z.string().min(1, "Company name is required"),
+  website: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
+  address: z.string().min(1, "Address is required"),
+  cityStateZip: z.string().min(1, "City, State, and ZIP are required"),
+});
+
+type CompanyInfoFormValues = z.infer<typeof companyInfoSchema>;
 
 const SettingsPage = () => {
+  const [isUploadModalOpen, setIsUploadModalOpen] = React.useState(false);
+  const { toast } = useToast();
+
+  const companyInfoForm = useForm<CompanyInfoFormValues>({
+    resolver: zodResolver(companyInfoSchema),
+    defaultValues: {
+      companyName: "AgencyFlow Inc.",
+      website: "agencyflow.com",
+      address: "123 Agency Street, Suite 456",
+      cityStateZip: "San Francisco, CA 94103",
+    },
+  });
+
+  const onSubmit = async (data: CompanyInfoFormValues) => {
+    try {
+      // Here you would typically make an API call to save the company information
+      console.log("Saving company info:", data);
+      toast({
+        title: "Success",
+        description: "Company information has been updated.",
+      });
+    } catch (error) {
+      console.error("Error saving company info:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update company information.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -26,8 +70,32 @@ const SettingsPage = () => {
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="data">Data Management</TabsTrigger>
             <TabsTrigger value="api">API</TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="data" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Data Management</CardTitle>
+                <CardDescription>
+                  Manage your data imports and exports.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Upload Leads</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Import leads from a CSV file.
+                  </p>
+                  <Button variant="outline" onClick={() => setIsUploadModalOpen(true)}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload Leads
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
           
           <TabsContent value="general" className="space-y-4">
             <Card>
@@ -37,29 +105,63 @@ const SettingsPage = () => {
                   Manage your company details and information.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="company">Company Name</Label>
-                    <Input id="company" defaultValue="AgencyFlow Inc." />
+              <form onSubmit={companyInfoForm.handleSubmit(onSubmit)}>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="companyName">Company Name</Label>
+                      <Input 
+                        id="companyName" 
+                        {...companyInfoForm.register("companyName")}
+                      />
+                      {companyInfoForm.formState.errors.companyName && (
+                        <p className="text-sm text-red-500">
+                          {companyInfoForm.formState.errors.companyName.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="website">Company Website</Label>
+                      <Input 
+                        id="website" 
+                        {...companyInfoForm.register("website")}
+                      />
+                      {companyInfoForm.formState.errors.website && (
+                        <p className="text-sm text-red-500">
+                          {companyInfoForm.formState.errors.website.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Business Address</Label>
+                      <Input 
+                        id="address" 
+                        {...companyInfoForm.register("address")}
+                      />
+                      {companyInfoForm.formState.errors.address && (
+                        <p className="text-sm text-red-500">
+                          {companyInfoForm.formState.errors.address.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cityStateZip">City, State, ZIP</Label>
+                      <Input 
+                        id="cityStateZip" 
+                        {...companyInfoForm.register("cityStateZip")}
+                      />
+                      {companyInfoForm.formState.errors.cityStateZip && (
+                        <p className="text-sm text-red-500">
+                          {companyInfoForm.formState.errors.cityStateZip.message}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="domain">Company Website</Label>
-                    <Input id="domain" defaultValue="agencyflow.com" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Business Address</Label>
-                    <Input id="address" defaultValue="123 Agency Street, Suite 456" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="city">City, State, ZIP</Label>
-                    <Input id="city" defaultValue="San Francisco, CA 94103" />
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button>Save Changes</Button>
-              </CardFooter>
+                </CardContent>
+                <CardFooter>
+                  <Button type="submit">Save Changes</Button>
+                </CardFooter>
+              </form>
             </Card>
             
             <Card>

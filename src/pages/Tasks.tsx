@@ -115,10 +115,11 @@ const Tasks = () => {
         const statusColumnMap: Record<string, string> = {
           'todo': 'todo',
           'in-progress': 'in-progress',
-          'completed': 'done'
+          'completed': 'done',
+          'done': 'done'
         };
         
-        const columnId = statusColumnMap[task.status] || 'todo';
+        const columnId = statusColumnMap[task.status?.toLowerCase()] || 'todo';
         
         if (columnId === 'todo') {
           allTodoTasks.push(kanbanTask);
@@ -158,10 +159,11 @@ const Tasks = () => {
           const statusColumnMap: Record<string, string> = {
             'todo': 'todo',
             'in-progress': 'in-progress',
-            'completed': 'done'
+            'completed': 'done',
+            'done': 'done'
           };
           
-          const columnId = statusColumnMap[task.status] || 'todo';
+          const columnId = statusColumnMap[task.status?.toLowerCase()] || 'todo';
           const column = updatedColumns[dept].find(c => c.id === columnId);
           
           if (column) {

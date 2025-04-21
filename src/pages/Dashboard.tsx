@@ -199,6 +199,9 @@ const Dashboard = () => {
   const targetDate = subMonths(currentDate, selectedMonth);
   const startDate = startOfMonth(targetDate);
   const endDate = endOfMonth(targetDate);
+  const lastMonthDate = subMonths(targetDate, 1);
+  const lastMonthStart = startOfMonth(lastMonthDate);
+  const lastMonthEnd = endOfMonth(lastMonthDate);
 
   // Calculate metrics for current month
   const monthProjects = React.useMemo(() => {
@@ -212,10 +215,6 @@ const Dashboard = () => {
   const activeProjects = monthProjects.filter(p => p.status !== 'completed').length;
   
   // Calculate metrics for last month
-  const lastMonthDate = subMonths(targetDate, 1);
-  const lastMonthStart = startOfMonth(lastMonthDate);
-  const lastMonthEnd = endOfMonth(lastMonthDate);
-
   const lastMonthProjects = React.useMemo(() => {
     return projects.filter(project => {
       const projectDate = new Date(project.dueDate);

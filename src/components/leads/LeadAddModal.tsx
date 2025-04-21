@@ -74,30 +74,33 @@ const LeadAddModal: React.FC<LeadAddModalProps> = ({
     },
   });
 
-  const onSubmit = (values: LeadFormValues) => {
-    setIsSubmitting(true);
-    
-    if (onLeadAdded) {
-      onLeadAdded({
-        client_name: values.client_name,
-        company: values.business_description,
-        email_address: values.email_address,
-        contact_number: values.contact_number,
-        source: values.source,
-        status: values.status as Lead['status'],
-        price: values.price || 0,
-        business_description: values.business_description,
-        city_state: values.city_state,
-        services_required: values.services_required,
-        budget: values.budget,
-        additional_info: values.additional_info,
-        agent: values.agent,
-      });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const newLead: Omit<Lead, 'id' | 'date'> = {
+        client_name: form.getValues('client_name'),
+        company: form.getValues('business_description'),
+        email_address: form.getValues('email_address'),
+        contact_number: form.getValues('contact_number'),
+        status: form.getValues('status'),
+        source: form.getValues('source'),
+        price: form.getValues('price'),
+        city_state: form.getValues('city_state'),
+        business_description: form.getValues('business_description'),
+        services_required: form.getValues('services_required'),
+        budget: form.getValues('budget'),
+        additional_info: form.getValues('additional_info'),
+        agent: form.getValues('agent')
+      };
+
+      if (onLeadAdded) {
+        onLeadAdded(newLead);
+      }
+      form.reset();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error adding lead:', error);
     }
-    
-    form.reset();
-    onOpenChange(false);
-    setIsSubmitting(false);
   };
 
   return (
@@ -111,7 +114,7 @@ const LeadAddModal: React.FC<LeadAddModalProps> = ({
         </DialogHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}

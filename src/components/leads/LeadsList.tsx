@@ -72,7 +72,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onAddLeadClick, onLeadClic
     .sort((a, b) => {
       const dateA = a.date ? new Date(a.date).getTime() : 0;
       const dateB = b.date ? new Date(b.date).getTime() : 0;
-      return dateA - dateB;
+      return dateB - dateA;
     });
 
   const totalPages = Math.ceil(sortedAndFilteredLeads.length / leadsPerPage);
