@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { KanbanColumn } from "@/components/projects/ProjectKanban";
@@ -8,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import TasksLoading from "@/components/tasks/TasksLoading";
 import TasksHeader from "@/components/tasks/TasksHeader";
 import TasksTabs from "@/components/tasks/TasksTabs";
-import { Task } from "@/types/task"; // Add this import
+import { Task } from "@/types/task"; // Import Task type
 
 const Tasks = () => {
   const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false);
@@ -71,10 +72,10 @@ const Tasks = () => {
     fetchProjects();
   }, []);
 
-  // Update columns when tasks change
+  // Update columns when tasks change - fixed to properly process tasks when the component mounts
   useEffect(() => {
-    if (allTasks?.length) {
-      console.log("Tasks loaded:", allTasks.length);
+    if (!isLoading && allTasks && allTasks.length > 0) {
+      console.log("Processing tasks:", allTasks.length);
       
       // Group tasks by department
       const tasksByDepartment: Record<string, Task[]> = {};
@@ -87,15 +88,12 @@ const Tasks = () => {
         tasksByDepartment[department].push(task);
       });
       
-      // Update department columns
-      const updatedColumns = { ...departmentColumns };
-      
       // Create status buckets for all tasks view
       const allTodoTasks: any[] = [];
       const allInProgressTasks: any[] = [];
       const allDoneTasks: any[] = [];
       
-      // First, process all tasks for the "All Tasks" view
+      // Process all tasks for the "All Tasks" view
       allTasks.forEach(task => {
         const kanbanTask = {
           id: task.id,
@@ -130,7 +128,16 @@ const Tasks = () => {
         }
       });
       
-      // Then process tasks for individual departments
+      // Update all tasks columns immediately
+      setAllTaskColumns([
+        { id: "todo", title: "To Do", tasks: allTodoTasks },
+        { id: "in-progress", title: "In Progress", tasks: allInProgressTasks },
+        { id: "done", title: "Done", tasks: allDoneTasks },
+      ]);
+      
+      // Process tasks for individual departments
+      const updatedColumns = { ...departmentColumns };
+      
       Object.keys(updatedColumns).forEach(dept => {
         const deptTasks = tasksByDepartment[dept] || [];
         
@@ -173,17 +180,9 @@ const Tasks = () => {
       });
       
       setDepartmentColumns(updatedColumns);
-      
-      // Update all tasks columns
-      setAllTaskColumns([
-        { id: "todo", title: "To Do", tasks: allTodoTasks },
-        { id: "in-progress", title: "In Progress", tasks: allInProgressTasks },
-        { id: "done", title: "Done", tasks: allDoneTasks },
-      ]);
-      
       console.log("All tasks processed:", allTodoTasks.length + allInProgressTasks.length + allDoneTasks.length);
     }
-  }, [allTasks]);
+  }, [allTasks, isLoading]); // Added isLoading as a dependency to re-run after loading completes
 
   const handleTaskCreated = (taskData: any) => {
     toast.success("Task created successfully!");

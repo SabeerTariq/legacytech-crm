@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Lead } from "@/components/leads/LeadsList";
@@ -32,7 +33,8 @@ const Leads = () => {
     const endDate = endOfMonth(targetDate);
 
     return leads.filter(lead => {
-      const leadDate = new Date(lead.date || lead.created_at);
+      // Fix TypeScript error by checking if date exists, otherwise use created_at
+      const leadDate = new Date(lead.date || (lead as any).created_at);
       return leadDate >= startDate && leadDate <= endDate;
     });
   }, [leads, selectedMonth]);
