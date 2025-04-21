@@ -26,10 +26,10 @@ const LeadAddModal = ({ open, onOpenChange, onLeadAdded }: LeadAddModalProps) =>
     e.preventDefault();
     
     const newLead = {
-      name,
-      email,
-      phone,
-      company,
+      client_name: name,
+      email_address: email,
+      contact_number: phone,
+      business_description: company,
       source,
       status,
       notes,

@@ -9,7 +9,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -17,15 +16,9 @@ serve(async (req) => {
   try {
     const { messages, userId } = await req.json();
     
-    // Get OpenAI API key from environment variables
     const openAIKey = Deno.env.get('OPENAI_API_KEY');
-    
     if (!openAIKey) {
-      console.error('Missing OpenAI API key in environment variables');
-      return new Response(
-        JSON.stringify({ error: 'OpenAI API key is not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      throw new Error('OpenAI API key is not configured');
     }
 
     // Initialize Supabase client
@@ -33,16 +26,12 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!supabaseUrl || !supabaseKey) {
-      console.error('Missing Supabase credentials');
-      return new Response(
-        JSON.stringify({ error: 'Supabase credentials are not configured correctly' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      throw new Error('Supabase credentials are not configured correctly');
     }
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch relevant data
+    // Fetch relevant data for context
     const { data: leads, error: leadsError } = await supabase
       .from('leads')
       .select('*')
@@ -61,16 +50,34 @@ serve(async (req) => {
       console.error('Error fetching projects:', projectsError);
     }
 
-    // Create context from data
+    const { data: tasks, error: tasksError } = await supabase
+      .from('project_tasks')
+      .select('*')
+      .eq('assigned_to_id', userId);
+
+    if (tasksError) {
+      console.error('Error fetching tasks:', tasksError);
+    }
+
+    // Create dynamic context based on the data
     const contextData = `
-      You have access to the following CRM data:
-      - ${leads?.length || 0} leads 
-      - ${projects?.length || 0} projects
-      
-      You are Saul, an AI assistant for CRM management and business development.
-      Give concise, professional responses to help the user with their business needs.
-    `;
-    
+You are Saul, an AI assistant for CRM and business development.
+You have access to the following CRM data for the current user:
+
+Leads (${leads?.length || 0} total):
+${leads?.map(lead => `- ${lead.client_name} (${lead.status || 'New'})`).join('\n') || 'No leads found'}
+
+Projects (${projects?.length || 0} total):
+${projects?.map(project => `- ${project.name} (${project.status})`).join('\n') || 'No projects found'}
+
+Tasks (${tasks?.length || 0} total):
+${tasks?.map(task => `- ${task.title} (${task.status})`).join('\n') || 'No tasks found'}
+
+Keep your responses professional, concise and focused on helping the user manage their business effectively.
+If asked about specific data, provide exact numbers and details from the available information.
+If asked about trends or patterns, analyze the available data to provide insights.
+`;
+
     try {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -89,12 +96,8 @@ serve(async (req) => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('OpenAI API error:', JSON.stringify(errorData));
-        
-        return new Response(
-          JSON.stringify({ error: `OpenAI API error: ${errorData.error?.message || 'Unknown error'}` }),
-          { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        console.error('OpenAI API error:', errorData);
+        throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
       }
 
       const data = await response.json();
@@ -106,17 +109,13 @@ serve(async (req) => {
       
     } catch (openaiError) {
       console.error('Error calling OpenAI API:', openaiError);
-      return new Response(
-        JSON.stringify({ error: `Failed to communicate with OpenAI: ${openaiError.message}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      throw new Error(`Failed to communicate with OpenAI: ${openaiError.message}`);
     }
     
   } catch (error) {
     console.error('Error in function:', error);
     return new Response(
-      JSON.stringify({ error: `Server error: ${error.message}` }),
-      { 
+      JSON.stringify({ error: error.message }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
