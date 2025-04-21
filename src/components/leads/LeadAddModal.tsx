@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,7 @@ const LeadAddModal = ({ open, onOpenChange, onLeadAdded }: LeadAddModalProps) =>
   const [phone, setPhone] = useState("");
   const [company, setCompany] = useState("");
   const [source, setSource] = useState("website");
-  const [status, setStatus] = useState("new");
+  const [status, setStatus] = useState<"new" | "contacted" | "qualified" | "proposal" | "negotiation" | "won" | "lost">("new");
   const [notes, setNotes] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -115,7 +116,7 @@ const LeadAddModal = ({ open, onOpenChange, onLeadAdded }: LeadAddModalProps) =>
             </div>
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select value={status} onValueChange={setStatus}>
+              <Select value={status} onValueChange={(value: "new" | "contacted" | "qualified" | "proposal" | "negotiation" | "won" | "lost") => setStatus(value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
