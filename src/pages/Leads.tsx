@@ -7,6 +7,7 @@ import LeadsHeader from "@/components/leads/LeadsHeader";
 import LeadsContent from "@/components/leads/LeadsContent";
 import { useLeads } from "@/hooks/useLeads";
 import { subMonths, startOfMonth, endOfMonth } from "date-fns";
+import TasksLoading from "@/components/tasks/TasksLoading";
 
 const Leads = () => {
   const [addModalOpen, setAddModalOpen] = useState(false);
