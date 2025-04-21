@@ -31,28 +31,41 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch relevant data for context with detailed error handling
-    console.log("Fetching leads data for user:", userId);
-    const { data: leads, error: leadsError } = await supabase
+    // Fetch leads with less restrictive filter - don't filter by user_id initially
+    console.log("Fetching all leads in the database:");
+    const { data: allLeads, error: leadsError } = await supabase
       .from('leads')
-      .select('*')
-      .eq('user_id', userId);
+      .select('*');
     
     if (leadsError) {
       console.error('Error fetching leads:', leadsError);
       throw new Error(`Failed to fetch leads: ${leadsError.message}`);
     }
     
-    // Log the number of leads found to help with debugging
-    console.log(`Found ${leads?.length || 0} leads for user ${userId}`);
-    if (leads && leads.length > 0) {
-      console.log("Sample lead data:", JSON.stringify(leads[0]));
+    // Log all leads to help with debugging
+    console.log(`Found ${allLeads?.length || 0} total leads in database`);
+    if (allLeads && allLeads.length > 0) {
+      console.log("All leads in database:");
+      allLeads.forEach((lead, index) => {
+        console.log(`Lead ${index + 1}:`, JSON.stringify({
+          id: lead.id,
+          client_name: lead.client_name,
+          email: lead.email_address,
+          user_id: lead.user_id
+        }));
+      });
     }
+
+    // Then filter for user's leads if userId is provided
+    const leads = userId 
+      ? allLeads.filter(lead => lead.user_id === userId || lead.user_id === null)
+      : allLeads;
+    
+    console.log(`After filtering, found ${leads?.length || 0} leads for user ${userId || 'anonymous'}`);
     
     const { data: projects, error: projectsError } = await supabase
       .from('projects')
-      .select('*')
-      .eq('user_id', userId);
+      .select('*');
       
     if (projectsError) {
       console.error('Error fetching projects:', projectsError);
@@ -61,8 +74,7 @@ serve(async (req) => {
 
     const { data: tasks, error: tasksError } = await supabase
       .from('project_tasks')
-      .select('*')
-      .eq('assigned_to_id', userId);
+      .select('*');
 
     if (tasksError) {
       console.error('Error fetching tasks:', tasksError);
@@ -72,7 +84,7 @@ serve(async (req) => {
     // Create dynamic context based on the data with more detailed information
     const contextData = `
 You are Saul, an AI assistant for CRM and business development.
-You have access to the following CRM data for the current user:
+You have access to the following CRM data:
 
 Leads (${leads?.length || 0} total):
 ${leads?.map(lead => {
@@ -100,6 +112,9 @@ If asked about specific data, provide exact numbers and details from the availab
 If asked about specific leads, projects, or tasks, search through the data carefully and provide all relevant details.
 If asked about trends or patterns, analyze the available data to provide insights.
 If asked about a specific client or lead that you can't find, explain that you don't have that information in your current dataset.
+
+IMPORTANT: When searching for leads or clients, make sure to check for partial matches in client names, not just exact matches. Be thorough in your search.
+If the user asks about a specific client, check if any part of the client's name matches what the user asked about.
 `;
 
     try {

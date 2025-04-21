@@ -10,7 +10,12 @@ interface Message {
 }
 
 export const useAiChat = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+    { 
+      role: 'system', 
+      content: 'Welcome to Better Ask Saul! Ask me anything about your leads, projects, or tasks and I\'ll help you find the information you need.'
+    }
+  ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -68,4 +73,3 @@ export const useAiChat = () => {
     handleSubmit,
   };
 };
-
