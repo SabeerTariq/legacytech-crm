@@ -15,6 +15,9 @@ export const useLeads = () => {
   } = useQuery({
     queryKey: ['leads'],
     queryFn: async () => {
+      console.log("Fetching leads, current user:", user?.id);
+      
+      // Fetch without user_id filter to see all available leads
       const { data: leadsData, error: leadsError } = await supabase
         .from('leads')
         .select(`
@@ -37,6 +40,7 @@ export const useLeads = () => {
         `);
 
       if (leadsError) {
+        console.error("Error fetching leads:", leadsError);
         toast({
           title: "Error fetching leads",
           description: leadsError.message,
@@ -45,9 +49,26 @@ export const useLeads = () => {
         return [];
       }
 
+      console.log("Total leads found in database:", leadsData?.length || 0);
+      
+      if (leadsData && leadsData.length > 0) {
+        // Log the first few leads to debug
+        leadsData.slice(0, 5).forEach((lead, index) => {
+          console.log(`Lead ${index + 1}:`, 
+            JSON.stringify({
+              id: lead.id,
+              name: lead.client_name,
+              email: lead.email_address,
+              userId: lead.user_id
+            })
+          );
+        });
+      } else {
+        console.log("No leads found in the database");
+      }
+
       const processedLeads = (leadsData || []).map((lead) => {
-        console.log('Raw lead date:', lead.date);
-        console.log('Raw created_at:', lead.created_at);
+        console.log(`Processing lead: ${lead.client_name}`);
         
         const processedLead = {
           id: lead.id,
@@ -60,23 +81,22 @@ export const useLeads = () => {
           price: lead.price || 0,
           date: lead.date ? new Date(lead.date).toLocaleDateString() : 
                  lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '',
-          city_state: lead.city_state,
-          business_description: lead.business_description,
-          services_required: lead.services_required,
-          budget: lead.budget,
-          additional_info: lead.additional_info,
-          agent: lead.agent
+          city_state: lead.city_state || '',
+          business_description: lead.business_description || '',
+          services_required: lead.services_required || '',
+          budget: lead.budget || '',
+          additional_info: lead.additional_info || '',
+          agent: lead.agent || ''
         };
         
-        console.log('Processed lead date:', processedLead.date);
         return processedLead;
       });
 
-      console.log('All processed leads:', processedLeads);
       return processedLeads;
     },
     enabled: true,
-    refetchInterval: 30000,
+    refetchInterval: 15000, // Refresh every 15 seconds
+    refetchOnWindowFocus: true,
   });
 
   const addLeadMutation = useMutation({

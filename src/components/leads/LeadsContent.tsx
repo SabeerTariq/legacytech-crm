@@ -1,6 +1,8 @@
 
 import React from "react";
 import LeadsList, { Lead } from "@/components/leads/LeadsList";
+import { Button } from "@/components/ui/button";
+import { UserPlus } from "lucide-react";
 
 interface LeadsContentProps {
   leads: Lead[];
@@ -25,13 +27,14 @@ const LeadsContent = ({
       )
     : leads;
 
-  console.log("Leads data:", leads);
-  console.log("Filtered leads:", filteredLeads);
+  console.log("LeadsContent - Leads count:", leads.length);
+  console.log("LeadsContent - Filtered leads count:", filteredLeads.length);
 
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        <p className="ml-2">Loading leads...</p>
       </div>
     );
   }
@@ -39,7 +42,10 @@ const LeadsContent = ({
   if (leads.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4 text-center">
-        <p className="text-muted-foreground">No leads found. Add your first lead to get started.</p>
+        <p className="text-muted-foreground">No leads found in the database. Add your first lead to get started.</p>
+        <Button onClick={() => window.location.reload()} className="mt-4">
+          Refresh
+        </Button>
       </div>
     );
   }
@@ -47,7 +53,10 @@ const LeadsContent = ({
   if (filteredLeads.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4 text-center">
-        <p className="text-muted-foreground">No leads match your search criteria.</p>
+        <p className="text-muted-foreground">No leads match your search criteria or selected time period.</p>
+        <Button onClick={() => window.location.reload()} className="mt-4">
+          Refresh
+        </Button>
       </div>
     );
   }
