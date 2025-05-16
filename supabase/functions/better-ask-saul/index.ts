@@ -31,7 +31,7 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch all leads without user_id filtering to ensure we can see everything
+    // Fetch leads with less restrictive filter - don't filter by user_id initially
     console.log("Fetching all leads in the database:");
     const { data: allLeads, error: leadsError } = await supabase
       .from('leads')
@@ -56,10 +56,13 @@ serve(async (req) => {
       });
     }
 
-    // Include all leads, regardless of user_id
-    const leads = allLeads || [];
+    // Then filter for user's leads if userId is provided
+    const leads = userId 
+      ? allLeads.filter(lead => lead.user_id === userId || lead.user_id === null)
+      : allLeads;
     
-    // Fetch projects and tasks
+    console.log(`After filtering, found ${leads?.length || 0} leads for user ${userId || 'anonymous'}`);
+    
     const { data: projects, error: projectsError } = await supabase
       .from('projects')
       .select('*');
@@ -110,9 +113,8 @@ If asked about specific leads, projects, or tasks, search through the data caref
 If asked about trends or patterns, analyze the available data to provide insights.
 If asked about a specific client or lead that you can't find, explain that you don't have that information in your current dataset.
 
-IMPORTANT: When searching for leads or clients, check for partial matches in client names, not just exact matches. Be thorough in your search.
-For example, if the user asks about "Levi" or any other client name, search through all leads and return ANY lead whose name contains that string, regardless of case.
-Make sure to do case-insensitive matching when looking for client names.
+IMPORTANT: When searching for leads or clients, make sure to check for partial matches in client names, not just exact matches. Be thorough in your search.
+If the user asks about a specific client, check if any part of the client's name matches what the user asked about.
 `;
 
     try {

@@ -12,13 +12,9 @@ export const useLeads = () => {
   const {
     data: leads = [],
     isLoading,
-    refetch,
   } = useQuery({
     queryKey: ['leads'],
     queryFn: async () => {
-      console.log("Fetching leads, current user:", user?.id);
-      
-      // Fetch all leads without any user_id filter
       const { data: leadsData, error: leadsError } = await supabase
         .from('leads')
         .select(`
@@ -41,7 +37,6 @@ export const useLeads = () => {
         `);
 
       if (leadsError) {
-        console.error("Error fetching leads:", leadsError);
         toast({
           title: "Error fetching leads",
           description: leadsError.message,
@@ -50,32 +45,10 @@ export const useLeads = () => {
         return [];
       }
 
-      console.log("Total leads found in database:", leadsData?.length || 0);
-      
-      if (leadsData && leadsData.length > 0) {
-        // Log sample leads to help with debugging
-        console.log("Sample leads from database:");
-        leadsData.slice(0, 5).forEach((lead, index) => {
-          console.log(`Lead ${index + 1}:`, 
-            JSON.stringify({
-              id: lead.id,
-              name: lead.client_name,
-              email: lead.email_address,
-              userId: lead.user_id
-            })
-          );
-        });
-
-        // Look specifically for Levi in the data
-        const leviLead = leadsData.find(lead => lead.client_name.toLowerCase().includes('levi'));
-        if (leviLead) {
-          console.log("Found Levi in the database:", JSON.stringify(leviLead));
-        }
-      } else {
-        console.log("No leads found in the database");
-      }
-
       const processedLeads = (leadsData || []).map((lead) => {
+        console.log('Raw lead date:', lead.date);
+        console.log('Raw created_at:', lead.created_at);
+        
         const processedLead = {
           id: lead.id,
           client_name: lead.client_name,
@@ -87,25 +60,23 @@ export const useLeads = () => {
           price: lead.price || 0,
           date: lead.date ? new Date(lead.date).toLocaleDateString() : 
                  lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '',
-          city_state: lead.city_state || '',
-          business_description: lead.business_description || '',
-          services_required: lead.services_required || '',
-          budget: lead.budget || '',
-          additional_info: lead.additional_info || '',
-          agent: lead.agent || ''
+          city_state: lead.city_state,
+          business_description: lead.business_description,
+          services_required: lead.services_required,
+          budget: lead.budget,
+          additional_info: lead.additional_info,
+          agent: lead.agent
         };
         
+        console.log('Processed lead date:', processedLead.date);
         return processedLead;
       });
 
-      console.log("Processed leads count:", processedLeads.length);
+      console.log('All processed leads:', processedLeads);
       return processedLeads;
     },
     enabled: true,
-    refetchInterval: 15000, // Refresh every 15 seconds
-    refetchOnWindowFocus: true,
-    retry: 3, // Retry failed requests up to 3 times
-    staleTime: 10000, // Consider data fresh for 10 seconds
+    refetchInterval: 30000,
   });
 
   const addLeadMutation = useMutation({
@@ -221,6 +192,5 @@ export const useLeads = () => {
     addLeadMutation,
     updateLeadMutation,
     deleteLeadMutation,
-    refetch,  // Expose refetch to allow manual refreshing
   };
 };
