@@ -12,6 +12,7 @@ export const useLeads = () => {
   const {
     data: leads = [],
     isLoading,
+    refetch,
   } = useQuery({
     queryKey: ['leads'],
     queryFn: async () => {
@@ -212,5 +213,6 @@ export const useLeads = () => {
     addLeadMutation,
     updateLeadMutation,
     deleteLeadMutation,
+    refetch,  // Expose refetch to allow manual refreshing
   };
 };

@@ -2,13 +2,15 @@
 import React from "react";
 import LeadsList, { Lead } from "@/components/leads/LeadsList";
 import { Button } from "@/components/ui/button";
-import { UserPlus } from "lucide-react";
+import { UserPlus, RefreshCw } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface LeadsContentProps {
   leads: Lead[];
   searchQuery: string;
   isLoading: boolean;
   onLeadClick: (lead: Lead) => void;
+  onRefresh: () => void;
 }
 
 const LeadsContent = ({
@@ -16,8 +18,9 @@ const LeadsContent = ({
   searchQuery,
   isLoading,
   onLeadClick,
+  onRefresh,
 }: LeadsContentProps) => {
-  // Simplified filtering logic to ensure all leads are displayed properly
+  const { toast } = useToast();
   const filteredLeads = searchQuery
     ? leads.filter(
         (lead) =>
@@ -29,6 +32,11 @@ const LeadsContent = ({
 
   console.log("LeadsContent - Leads count:", leads.length);
   console.log("LeadsContent - Filtered leads count:", filteredLeads.length);
+  
+  // If there are leads in the database but not showing, log them for debugging
+  if (leads.length === 0) {
+    console.log("No leads found in the leads state. Checking if we need to refresh data.");
+  }
 
   if (isLoading) {
     return (
@@ -42,9 +50,13 @@ const LeadsContent = ({
   if (leads.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4 text-center">
-        <p className="text-muted-foreground">No leads found in the database. Add your first lead to get started.</p>
-        <Button onClick={() => window.location.reload()} className="mt-4">
-          Refresh
+        <p className="text-muted-foreground">No leads found in the database. Add your first lead to get started or refresh to fetch data again.</p>
+        <Button 
+          onClick={onRefresh} 
+          className="mt-4 flex items-center"
+        >
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Refresh Leads
         </Button>
       </div>
     );
@@ -54,19 +66,39 @@ const LeadsContent = ({
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4 text-center">
         <p className="text-muted-foreground">No leads match your search criteria or selected time period.</p>
-        <Button onClick={() => window.location.reload()} className="mt-4">
-          Refresh
+        <Button 
+          onClick={onRefresh} 
+          className="mt-4 flex items-center"
+        >
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Refresh Leads
         </Button>
       </div>
     );
   }
 
   return (
-    <LeadsList 
-      leads={filteredLeads}
-      onAddLeadClick={null}
-      onLeadClick={onLeadClick}
-    />
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <p className="text-sm text-muted-foreground">
+          Showing {filteredLeads.length} {filteredLeads.length === 1 ? 'lead' : 'leads'}
+        </p>
+        <Button 
+          onClick={onRefresh} 
+          variant="outline" 
+          size="sm"
+          className="flex items-center"
+        >
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Refresh
+        </Button>
+      </div>
+      <LeadsList 
+        leads={filteredLeads}
+        onAddLeadClick={null}
+        onLeadClick={onLeadClick}
+      />
+    </div>
   );
 };
 
