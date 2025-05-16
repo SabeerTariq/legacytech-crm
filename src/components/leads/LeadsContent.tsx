@@ -4,6 +4,7 @@ import LeadsList, { Lead } from "@/components/leads/LeadsList";
 import { Button } from "@/components/ui/button";
 import { UserPlus, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Spinner } from "@/components/ui/spinner";
 
 interface LeadsContentProps {
   leads: Lead[];
@@ -33,15 +34,21 @@ const LeadsContent = ({
   console.log("LeadsContent - Leads count:", leads.length);
   console.log("LeadsContent - Filtered leads count:", filteredLeads.length);
   
-  // If there are leads in the database but not showing, log them for debugging
-  if (leads.length === 0) {
+  // Debug: Log the first few leads if they exist
+  if (leads.length > 0) {
+    console.log("First 3 leads:", leads.slice(0, 3).map(lead => ({
+      id: lead.id,
+      name: lead.client_name,
+      email: lead.email_address
+    })));
+  } else {
     console.log("No leads found in the leads state. Checking if we need to refresh data.");
   }
 
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        <Spinner size="lg" className="mr-2" />
         <p className="ml-2">Loading leads...</p>
       </div>
     );
@@ -50,14 +57,20 @@ const LeadsContent = ({
   if (leads.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4 text-center">
-        <p className="text-muted-foreground">No leads found in the database. Add your first lead to get started or refresh to fetch data again.</p>
-        <Button 
-          onClick={onRefresh} 
-          className="mt-4 flex items-center"
-        >
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Refresh Leads
-        </Button>
+        <p className="text-muted-foreground">No leads found in the database. Click refresh to manually fetch data.</p>
+        <div className="flex gap-2">
+          <Button 
+            onClick={onRefresh} 
+            className="mt-4 flex items-center"
+            variant="default"
+          >
+            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+            Refreshing Leads...
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground mt-6">
+          If leads still don't appear after refreshing, please check the console logs for more information.
+        </p>
       </div>
     );
   }

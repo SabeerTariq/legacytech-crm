@@ -11,6 +11,8 @@ import { subMonths, startOfMonth, endOfMonth } from "date-fns";
 import TasksLoading from "@/components/tasks/TasksLoading";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 
 const Leads = () => {
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -18,6 +20,7 @@ const Leads = () => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
 
   const {
@@ -29,22 +32,43 @@ const Leads = () => {
     refetch,
   } = useLeads();
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = useCallback(async () => {
     console.log("Manually refreshing leads data...");
-    refetch().then(() => {
+    setIsRefreshing(true);
+    
+    try {
+      await refetch();
+      console.log("Data refreshed successfully, found", leads.length, "leads");
+      
       toast({
         title: "Refreshed",
-        description: "Lead data has been refreshed",
+        description: `Lead data has been refreshed. Found ${leads.length} leads.`,
       });
-    }).catch(error => {
+
+      // Double-check database with direct query
+      const { data, error } = await supabase.from('leads').select('*');
+      if (error) {
+        console.error("Error in direct database check:", error);
+      } else {
+        console.log(`Direct database check found ${data.length} leads`);
+      }
+    } catch (error) {
       console.error("Error refreshing leads:", error);
       toast({
         title: "Refresh failed",
         description: "Could not refresh lead data. Please try again.",
         variant: "destructive",
       });
-    });
-  }, [refetch, toast]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetch, toast, leads.length]);
+
+  // Run refresh when component mounts
+  useEffect(() => {
+    console.log("Leads component mounted, triggering initial data load");
+    handleRefresh();
+  }, [handleRefresh]);
 
   // Filter leads by selected month
   const filteredLeads = React.useMemo(() => {
@@ -79,7 +103,6 @@ const Leads = () => {
         }
         
         const isInRange = leadDate >= startDate && leadDate <= endDate;
-        console.log(`Lead "${lead.client_name}" date: ${leadDate.toLocaleDateString()}, in range: ${isInRange}`);
         return isInRange;
       } catch (error) {
         console.warn(`Error parsing date for lead ${lead.client_name}:`, error);
@@ -92,24 +115,17 @@ const Leads = () => {
     return filtered;
   }, [leads, selectedMonth]);
 
+  // Log leads count for debugging
   useEffect(() => {
-    if (leads && leads.length === 0) {
-      console.log("No leads found in the leads state. Checking database directly...");
-      // Direct check to see what's in the database
-      const checkDatabase = async () => {
-        try {
-          const { data, error } = await supabase.from('leads').select('*').limit(5);
-          if (error) {
-            console.error("Error checking leads database:", error);
-          } else {
-            console.log(`Direct database check found ${data.length} leads:`, data);
-          }
-        } catch (err) {
-          console.error("Exception when checking database:", err);
-        }
-      };
-      
-      checkDatabase();
+    console.log("Current leads count:", leads.length);
+    if (leads && leads.length > 0) {
+      // Check if Levi is in the data
+      const leviLead = leads.find(lead => lead.client_name.toLowerCase().includes('levi'));
+      if (leviLead) {
+        console.log("Found Levi in the leads state:", leviLead);
+      } else {
+        console.log("Levi not found in leads state, please check data fetching");
+      }
     }
   }, [leads]);
 
@@ -189,7 +205,10 @@ const Leads = () => {
   if (isLoading) {
     return (
       <MainLayout>
-        <TasksLoading />
+        <div className="flex flex-col items-center justify-center h-64">
+          <Spinner size="lg" className="mb-4" />
+          <p>Loading leads data...</p>
+        </div>
       </MainLayout>
     );
   }
@@ -197,6 +216,15 @@ const Leads = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
+        {!leads || leads.length === 0 ? (
+          <Alert>
+            <AlertTitle>No leads found</AlertTitle>
+            <AlertDescription>
+              We couldn't find any leads in the database. Click refresh to try again or add a new lead.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
         <LeadsHeader 
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -208,7 +236,7 @@ const Leads = () => {
         <LeadsContent 
           leads={filteredLeads}
           searchQuery={searchQuery}
-          isLoading={isLoading}
+          isLoading={isRefreshing}
           onLeadClick={handleLeadClick}
           onRefresh={handleRefresh}
         />

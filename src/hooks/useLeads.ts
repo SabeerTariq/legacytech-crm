@@ -18,7 +18,7 @@ export const useLeads = () => {
     queryFn: async () => {
       console.log("Fetching leads, current user:", user?.id);
       
-      // Fetch without user_id filter to see all available leads
+      // Fetch all leads without any user_id filter
       const { data: leadsData, error: leadsError } = await supabase
         .from('leads')
         .select(`
@@ -53,7 +53,8 @@ export const useLeads = () => {
       console.log("Total leads found in database:", leadsData?.length || 0);
       
       if (leadsData && leadsData.length > 0) {
-        // Log the first few leads to debug
+        // Log sample leads to help with debugging
+        console.log("Sample leads from database:");
         leadsData.slice(0, 5).forEach((lead, index) => {
           console.log(`Lead ${index + 1}:`, 
             JSON.stringify({
@@ -64,13 +65,17 @@ export const useLeads = () => {
             })
           );
         });
+
+        // Look specifically for Levi in the data
+        const leviLead = leadsData.find(lead => lead.client_name.toLowerCase().includes('levi'));
+        if (leviLead) {
+          console.log("Found Levi in the database:", JSON.stringify(leviLead));
+        }
       } else {
         console.log("No leads found in the database");
       }
 
       const processedLeads = (leadsData || []).map((lead) => {
-        console.log(`Processing lead: ${lead.client_name}`);
-        
         const processedLead = {
           id: lead.id,
           client_name: lead.client_name,
@@ -93,11 +98,14 @@ export const useLeads = () => {
         return processedLead;
       });
 
+      console.log("Processed leads count:", processedLeads.length);
       return processedLeads;
     },
     enabled: true,
     refetchInterval: 15000, // Refresh every 15 seconds
     refetchOnWindowFocus: true,
+    retry: 3, // Retry failed requests up to 3 times
+    staleTime: 10000, // Consider data fresh for 10 seconds
   });
 
   const addLeadMutation = useMutation({
