@@ -15,7 +15,9 @@ import {
   Zap,
   ClipboardList,
   DollarSign,
-  Bot  // Replace Gavel with Bot
+  Bot,  // Replace Gavel with Bot
+  RefreshCw,
+  UserCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
@@ -53,6 +55,19 @@ const NavigationMenu = () => {
     { icon: FolderKanban, label: "Project Management", path: "/departments/project-management" },
   ];
 
+  const renewalsNavItems = [
+    { icon: RefreshCw, label: "Active Renewals", path: "/renewals/active" },
+    { icon: RefreshCw, label: "Pending Renewals", path: "/renewals/pending" },
+    { icon: RefreshCw, label: "Renewal History", path: "/renewals/history" },
+  ];
+
+  const hrNavItems = [
+    { icon: UserCheck, label: "Employees", path: "/hr/employees" },
+    { icon: UserCheck, label: "Recruitment", path: "/hr/recruitment" },
+    { icon: UserCheck, label: "Performance", path: "/hr/performance" },
+    { icon: UserCheck, label: "Benefits", path: "/hr/benefits" },
+  ];
+
   return (
     <>
       <SidebarGroup>
@@ -84,6 +99,54 @@ const NavigationMenu = () => {
         <SidebarGroupContent>
           <SidebarMenu>
             {departmentsNavItems.map((item) => (
+              <SidebarMenuItem key={item.path}>
+                <SidebarMenuButton asChild>
+                  <Link 
+                    to={item.path} 
+                    className={cn(
+                      "flex items-center gap-2",
+                      location.pathname === item.path && "bg-accent text-accent-foreground"
+                    )}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+
+      <SidebarGroup>
+        <SidebarGroupLabel>Renewals</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {renewalsNavItems.map((item) => (
+              <SidebarMenuItem key={item.path}>
+                <SidebarMenuButton asChild>
+                  <Link 
+                    to={item.path} 
+                    className={cn(
+                      "flex items-center gap-2",
+                      location.pathname === item.path && "bg-accent text-accent-foreground"
+                    )}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+
+      <SidebarGroup>
+        <SidebarGroupLabel>HR</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {hrNavItems.map((item) => (
               <SidebarMenuItem key={item.path}>
                 <SidebarMenuButton asChild>
                   <Link 

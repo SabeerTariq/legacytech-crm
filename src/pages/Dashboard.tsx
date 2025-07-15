@@ -3,6 +3,9 @@ import MainLayout from "@/components/layout/MainLayout";
 import StatCard from "@/components/dashboard/StatCard";
 import RecentActivity from "@/components/dashboard/RecentActivity";
 import ProjectsOverview from "@/components/dashboard/ProjectsOverview";
+import BusinessDevelopmentPerformance from "@/components/dashboard/BusinessDevelopmentPerformance";
+import ProjectManagementPerformance from "@/components/dashboard/ProjectManagementPerformance";
+import ProductionTeamPerformance from "@/components/dashboard/ProductionTeamPerformance";
 import { AreaChart, BarChart, Calendar, DollarSign, Users, Zap, Mail, MessageSquare, TrendingUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -365,6 +368,12 @@ const Dashboard = () => {
         </div>
 
         <BusinessOverview selectedMonth={selectedMonth} />
+
+        <BusinessDevelopmentPerformance />
+
+        <ProjectManagementPerformance />
+
+        <ProductionTeamPerformance />
 
         <div className="grid gap-6 md:grid-cols-2">
           <ProjectsOverview projects={monthProjects} />
