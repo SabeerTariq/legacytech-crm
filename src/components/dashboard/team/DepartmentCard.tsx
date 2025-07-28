@@ -67,7 +67,7 @@ const DepartmentCard = ({ department }: DepartmentCardProps) => {
   }
 
   // Determine if this is a production department
-  const isProductionDepartment = ['Design', 'Development', 'Marketing', 'Content'].includes(department);
+  const isProductionDepartment = ['Development', 'Production'].includes(department);
   
   const stats = employees.reduce((acc, employee) => {
     const performance = employee.performance;
@@ -115,13 +115,8 @@ const DepartmentCard = ({ department }: DepartmentCardProps) => {
   // Transform employee data to match EmployeeProfile for proper typing
   const transformedEmployees: EmployeeProfile[] = employees.map(employee => {
     return {
-      id: employee.id,
-      name: employee.name,
-      role: employee.role,
-      department: employee.department,
-      email: employee.email,
-      avatar: '', // Employee type doesn't have avatar property, so use empty string as default
-      joinDate: employee.joinDate || employee.join_date,
+      ...employee,
+      date_of_joining: employee.date_of_joining,
       performance: employee.performance || (
         isProductionDepartment ? 
           { total_tasks_assigned: 0, tasks_completed_ontime: 0, tasks_completed_late: 0, strikes: 0, avg_completion_time: 0 } as ProductionPerformance :

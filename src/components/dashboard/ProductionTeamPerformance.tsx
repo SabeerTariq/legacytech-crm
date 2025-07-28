@@ -24,11 +24,14 @@ import {
   Code,
   Megaphone,
   PenTool,
-  Globe
+  Globe,
+  ShoppingCart,
+  MoreHorizontal,
+  Factory
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+// Authentication removed - no user context needed
 import { useToast } from "@/hooks/use-toast";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 
@@ -93,7 +96,7 @@ const mockTasks: Task[] = [
     id: "1",
     title: "Website Homepage Design",
     status: "completed",
-    assigned_to_id: "design-1",
+    assigned_to_id: "production-1",
     created_at: "2024-01-15T10:00:00Z",
     due_date: "2024-01-20T17:00:00Z",
     priority: "high",
@@ -123,7 +126,7 @@ const mockTasks: Task[] = [
     id: "4",
     title: "Blog Content Writing",
     status: "completed",
-    assigned_to_id: "content-1",
+    assigned_to_id: "production-3",
     created_at: "2024-01-18T14:00:00Z",
     due_date: "2024-01-22T17:00:00Z",
     priority: "medium",
@@ -133,7 +136,7 @@ const mockTasks: Task[] = [
     id: "5",
     title: "Logo Design",
     status: "completed",
-    assigned_to_id: "outsourced-1",
+    assigned_to_id: "other-1",
     created_at: "2024-01-19T08:00:00Z",
     due_date: "2024-01-26T17:00:00Z",
     priority: "high",
@@ -153,7 +156,7 @@ const mockTasks: Task[] = [
     id: "7",
     title: "Email Newsletter Design",
     status: "pending",
-    assigned_to_id: "design-2",
+    assigned_to_id: "production-2",
     created_at: "2024-01-21T13:00:00Z",
     due_date: "2024-02-05T17:00:00Z",
     priority: "low",
@@ -163,7 +166,7 @@ const mockTasks: Task[] = [
     id: "8",
     title: "SEO Content Optimization",
     status: "completed",
-    assigned_to_id: "content-2",
+    assigned_to_id: "production-4",
     created_at: "2024-01-22T15:00:00Z",
     due_date: "2024-01-29T17:00:00Z",
     priority: "medium",
@@ -174,10 +177,10 @@ const mockTasks: Task[] = [
 // Mock employee data for demonstration
 const mockEmployees: EmployeePerformance[] = [
   {
-    id: "design-1",
+    id: "production-1",
     name: "Alex Johnson",
     email: "alex@company.com",
-    department: "Design",
+    department: "Production",
     performance: {
       total_tasks_assigned: 15,
       tasks_completed_ontime: 12,
@@ -187,10 +190,10 @@ const mockEmployees: EmployeePerformance[] = [
     }
   },
   {
-    id: "design-2",
+    id: "production-2",
     name: "Sarah Chen",
     email: "sarah@company.com",
-    department: "Design",
+    department: "Production",
     performance: {
       total_tasks_assigned: 12,
       tasks_completed_ontime: 10,
@@ -239,10 +242,10 @@ const mockEmployees: EmployeePerformance[] = [
     }
   },
   {
-    id: "content-1",
+    id: "production-3",
     name: "Lisa Wang",
     email: "lisa@company.com",
-    department: "Content",
+    department: "Production",
     performance: {
       total_tasks_assigned: 16,
       tasks_completed_ontime: 14,
@@ -252,10 +255,10 @@ const mockEmployees: EmployeePerformance[] = [
     }
   },
   {
-    id: "content-2",
+    id: "production-4",
     name: "Tom Wilson",
     email: "tom@company.com",
-    department: "Content",
+    department: "Production",
     performance: {
       total_tasks_assigned: 13,
       tasks_completed_ontime: 12,
@@ -265,10 +268,10 @@ const mockEmployees: EmployeePerformance[] = [
     }
   },
   {
-    id: "outsourced-1",
+    id: "other-1",
     name: "Freelance Designer",
     email: "freelance@external.com",
-    department: "Outsourced",
+    department: "Other",
     performance: {
       total_tasks_assigned: 8,
       tasks_completed_ontime: 7,
@@ -280,7 +283,7 @@ const mockEmployees: EmployeePerformance[] = [
 ];
 
 const ProductionTeamPerformance: React.FC = () => {
-  const { user } = useAuth();
+  // User context removed - no authentication needed
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [useMockData, setUseMockData] = React.useState(true);
@@ -313,7 +316,6 @@ const ProductionTeamPerformance: React.FC = () => {
       
       return data as Task[];
     },
-    enabled: !!user,
   });
 
   // Fetch employees data
@@ -327,7 +329,7 @@ const ProductionTeamPerformance: React.FC = () => {
       const { data, error } = await supabase
         .from('employees')
         .select('*')
-        .in('department', ['Design', 'Development', 'Marketing', 'Content']);
+        .in('department', ['Development', 'Production']);
       
       if (error) {
         toast({
@@ -353,7 +355,6 @@ const ProductionTeamPerformance: React.FC = () => {
         }
       })) as EmployeePerformance[];
     },
-    enabled: !!user,
   });
 
   // Mutation to generate sample tasks
@@ -369,7 +370,7 @@ const ProductionTeamPerformance: React.FC = () => {
           project_id: "1",
           assigned_to_id: employees[0]?.id,
           created_at: format(new Date(), 'yyyy-MM-dd HH:mm:ss'),
-          user_id: user?.id
+          user_id: 'admin'
         },
         {
           title: "Sample Development Task",
@@ -380,7 +381,7 @@ const ProductionTeamPerformance: React.FC = () => {
           project_id: "1",
           assigned_to_id: employees[2]?.id,
           created_at: format(new Date(), 'yyyy-MM-dd HH:mm:ss'),
-          user_id: user?.id
+          user_id: 'admin'
         }
       ];
 
@@ -502,22 +503,26 @@ const ProductionTeamPerformance: React.FC = () => {
 
   const getDepartmentIcon = (department: string) => {
     switch (department) {
-      case 'Design': return <Palette className="h-4 w-4" />;
       case 'Development': return <Code className="h-4 w-4" />;
+      case 'Front Sales': return <ShoppingCart className="h-4 w-4" />;
+      case 'HR': return <Users className="h-4 w-4" />;
       case 'Marketing': return <Megaphone className="h-4 w-4" />;
-      case 'Content': return <PenTool className="h-4 w-4" />;
-      case 'Outsourced': return <Globe className="h-4 w-4" />;
+      case 'Other': return <MoreHorizontal className="h-4 w-4" />;
+      case 'Production': return <Factory className="h-4 w-4" />;
+      case 'Upseller': return <TrendingUp className="h-4 w-4" />;
       default: return <Users className="h-4 w-4" />;
     }
   };
 
   const departments = [
     { value: "all", label: "All Teams", icon: <Users className="h-4 w-4" /> },
-    { value: "Design", label: "Design", icon: <Palette className="h-4 w-4" /> },
     { value: "Development", label: "Development", icon: <Code className="h-4 w-4" /> },
+    { value: "Front Sales", label: "Front Sales", icon: <ShoppingCart className="h-4 w-4" /> },
+    { value: "HR", label: "HR", icon: <Users className="h-4 w-4" /> },
     { value: "Marketing", label: "Marketing", icon: <Megaphone className="h-4 w-4" /> },
-    { value: "Content", label: "Content", icon: <PenTool className="h-4 w-4" /> },
-    { value: "Outsourced", label: "Outsourced", icon: <Globe className="h-4 w-4" /> }
+    { value: "Other", label: "Other", icon: <MoreHorizontal className="h-4 w-4" /> },
+    { value: "Production", label: "Production", icon: <Factory className="h-4 w-4" /> },
+    { value: "Upseller", label: "Upseller", icon: <TrendingUp className="h-4 w-4" /> }
   ];
 
   return (

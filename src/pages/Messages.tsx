@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from "react";
-import MainLayout from "@/components/layout/MainLayout";
 import MessageChat from "@/components/communication/MessageChat";
 import { Input } from "@/components/ui/input";
 import { Search, UserPlus, ArrowLeft, Loader2 } from "lucide-react";
@@ -71,9 +70,9 @@ const Messages: React.FC = () => {
 
     try {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .neq('id', user.id); // Exclude current user
+        .from('user_profiles')
+        .select('user_id as id, display_name as full_name')
+        .neq('user_id', user.id); // Exclude current user
 
       if (error) {
         console.error('Error fetching users:', error);
@@ -155,8 +154,7 @@ const Messages: React.FC = () => {
   };
 
   return (
-    <MainLayout>
-      <div className="h-[calc(100vh-8rem)] flex flex-col">
+    <div className="h-[calc(100vh-8rem)] flex flex-col">
         <div className="flex items-center justify-between mb-6">
           {isMobile && selectedConversation && !showConversationList ? (
             <div className="flex items-center">
@@ -312,7 +310,6 @@ const Messages: React.FC = () => {
           )}
         </div>
       </div>
-    </MainLayout>
   );
 };
 

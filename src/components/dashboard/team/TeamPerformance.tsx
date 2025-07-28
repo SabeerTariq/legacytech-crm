@@ -6,21 +6,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const TeamPerformance = () => {
   const departments = [
-    "Design",
     "Development",
+    "Front Sales",
+    "HR",
     "Marketing",
-    "Content",
-    "Business Development",
-    "Project Management",
+    "Other",
+    "Production",
+    "Upseller"
   ];
 
   // Group departments by type
   const productionDepartments = departments.filter(d => 
-    ["Design", "Development", "Marketing", "Content"].includes(d)
+    ["Development", "Production"].includes(d)
   );
   
   const businessDepartments = departments.filter(d => 
-    ["Business Development", "Project Management"].includes(d)
+    ["Front Sales", "Marketing", "Upseller"].includes(d)
+  );
+  
+  const supportDepartments = departments.filter(d => 
+    ["HR", "Other"].includes(d)
   );
 
   return (
@@ -33,6 +38,7 @@ const TeamPerformance = () => {
           <TabsList>
             <TabsTrigger value="production">Production Teams</TabsTrigger>
             <TabsTrigger value="business">Business Teams</TabsTrigger>
+            <TabsTrigger value="support">Support Teams</TabsTrigger>
           </TabsList>
           
           <TabsContent value="production" className="space-y-6">
@@ -43,6 +49,12 @@ const TeamPerformance = () => {
           
           <TabsContent value="business" className="space-y-6">
             {businessDepartments.map((department) => (
+              <DepartmentCard key={department} department={department} />
+            ))}
+          </TabsContent>
+          
+          <TabsContent value="support" className="space-y-6">
+            {supportDepartments.map((department) => (
               <DepartmentCard key={department} department={department} />
             ))}
           </TabsContent>

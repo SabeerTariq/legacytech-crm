@@ -1,0 +1,41 @@
+// Mapping of job titles to roles
+const jobTitleToRole = {
+  "Super-Admin/Owner": "super_admin",
+  "President": "president",
+  "Vice-President": "vice_president",
+  "Finance Manager": "finance_manager",
+  "HR Head": "hr",
+  "Administrator": "admin",
+  "Front seller Jr": "front_seller_jr",
+  "Front seller Sr": "front_seller_sr",
+  "Front Sell Team Lead": "front_sell_team_lead",
+  "Upseller Jr + Project Manager": "upseller_jr_pm",
+  "Upseller Sr+ Project Manager": "upseller_sr_pm",
+  "Upseller Team Lead+ Project Manager": "upseller_team_lead_pm",
+  "Project Co-Ordinator": "project_coordinator",
+  "Production Head": "production_head",
+  "Designer Jr": "designer_jr",
+  "Designer Sr": "designer_sr",
+  "Design Team Lead": "design_team_lead",
+  "Wordpress Developer Frontend Sr": "wp_dev_frontend_sr",
+  "Wordpress Developer Frontend Jr": "wp_dev_frontend_jr",
+  "Wordpress Developer Frontend Intern": "wp_dev_frontend_intern",
+  "Wordpress Developer Backedn Sr": "wp_dev_backend_sr",
+  "Wordpress Developer Backend Jr": "wp_dev_backend_jr",
+  "Wordpress Developer Backend Intern": "wp_dev_backend_intern",
+  "Wordpress Developer Team Lead": "wp_dev_team_lead",
+  "Custom Developer Frontend Sr": "custom_dev_frontend_sr",
+  "Custom Developer Frontend Jr": "custom_dev_frontend_jr",
+  "Custom Developer Frontend Intern": "custom_dev_frontend_intern",
+  "Custom Developer Backend Sr": "custom_dev_backend_sr",
+  "Custom Developer Backend Jr": "custom_dev_backend_jr",
+  "Custom Developer Backend Intern": "custom_dev_backend_intern",
+  "Custom Developer Team Lead": "custom_dev_team_lead",
+  "Custom Fullstack Developer Jr": "custom_fullstack_dev_jr",
+  "Custom Fullstack Developer Sr": "custom_fullstack_dev_sr",
+  "Python Developer": "python_developer",
+};
+
+export function getRoleForJobTitle(jobTitle) {
+  return jobTitleToRole[jobTitle] || "employee";
+} 

@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+// Authentication removed - no user context needed
 import { useToast } from "@/hooks/use-toast";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 
@@ -170,7 +170,7 @@ const mockProjectManagementData: SalesDisposition[] = [
 ];
 
 const ProjectManagementPerformance: React.FC = () => {
-  const { user } = useAuth();
+  // User context removed - no authentication needed
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [useMockData, setUseMockData] = React.useState(true);
@@ -206,7 +206,6 @@ const ProjectManagementPerformance: React.FC = () => {
       
       return data as SalesDisposition[];
     },
-    enabled: !!user,
   });
 
   // Fetch Project Management employees
@@ -242,7 +241,6 @@ const ProjectManagementPerformance: React.FC = () => {
         }
       })) as EmployeePerformance[];
     },
-    enabled: !!user,
   });
 
   // Mutation to generate sample sales dispositions for Project Management
@@ -271,7 +269,7 @@ const ProjectManagementPerformance: React.FC = () => {
           project_manager: "Mike Davis",
           assigned_to: "Mike Davis",
           assigned_by: "Manager",
-          user_id: user?.id
+          user_id: 'admin'
         },
         {
           sale_date: format(new Date(), 'yyyy-MM-dd'),
@@ -295,7 +293,7 @@ const ProjectManagementPerformance: React.FC = () => {
           project_manager: "Emily Wilson",
           assigned_to: "Emily Wilson",
           assigned_by: "Manager",
-          user_id: user?.id
+          user_id: 'admin'
         }
       ];
 

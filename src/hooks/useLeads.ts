@@ -1,11 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+// Authentication removed - no user context needed
 import { Lead } from "@/components/leads/LeadsList";
 import { useToast } from "@/hooks/use-toast";
 
 export const useLeads = () => {
-  const { user } = useAuth();
+  // User context removed - no authentication needed
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -27,16 +27,19 @@ export const useLeads = () => {
           status,
           price,
           created_at,
+          updated_at,
           city_state,
           services_required,
           budget,
           additional_info,
-          agent,
           date,
-          user_id
-        `);
+          user_id,
+          agent
+        `)
+        .neq("status", "converted"); // Filter out converted leads
 
       if (leadsError) {
+        console.error('Error fetching leads:', leadsError);
         toast({
           title: "Error fetching leads",
           description: leadsError.message,
@@ -45,34 +48,37 @@ export const useLeads = () => {
         return [];
       }
 
-      const processedLeads = (leadsData || []).map((lead) => {
-        console.log('Raw lead date:', lead.date);
-        console.log('Raw created_at:', lead.created_at);
-        
-        const processedLead = {
-          id: lead.id,
-          client_name: lead.client_name,
-          company: lead.business_description || '',
-          email_address: lead.email_address,
-          contact_number: lead.contact_number || '',
-          status: (lead.status || 'new') as Lead['status'],
-          source: lead.source || '',
-          price: lead.price || 0,
-          date: lead.date ? new Date(lead.date).toLocaleDateString() : 
-                 lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '',
-          city_state: lead.city_state,
-          business_description: lead.business_description,
-          services_required: lead.services_required,
-          budget: lead.budget,
-          additional_info: lead.additional_info,
-          agent: lead.agent
-        };
-        
-        console.log('Processed lead date:', processedLead.date);
-        return processedLead;
-      });
+      if (!leadsData) {
+        return [];
+      }
 
-      console.log('All processed leads:', processedLeads);
+      const processedLeads = leadsData.map((lead) => ({
+        id: lead.id,
+        client_name: lead.client_name,
+        email_address: lead.email_address,
+        contact_number: lead.contact_number || '',
+        status: (lead.status || 'new') as Lead['status'],
+        source: lead.source || '',
+        price: lead.price || 0,
+        date: lead.date || lead.created_at || '',
+        city_state: lead.city_state,
+        business_description: lead.business_description,
+        services_required: lead.services_required,
+        budget: lead.budget,
+        additional_info: lead.additional_info,
+        user_id: lead.user_id,
+        agent: lead.agent,
+        // Enhanced fields (will be null for now)
+        priority: undefined as Lead['priority'],
+        lead_score: undefined,
+        last_contact: undefined,
+        next_follow_up: undefined,
+        converted_at: undefined,
+        sales_disposition_id: undefined,
+        created_at: lead.created_at,
+        updated_at: lead.updated_at,
+      }));
+
       return processedLeads;
     },
     enabled: true,
@@ -86,16 +92,17 @@ export const useLeads = () => {
         .insert([{
           user_id: user?.id,
           client_name: newLead.client_name,
-          business_description: newLead.business_description || newLead.company,
+          business_description: newLead.business_description,
           email_address: newLead.email_address,
           contact_number: newLead.contact_number,
           source: newLead.source,
+          status: newLead.status,
           price: newLead.price || 0,
           city_state: newLead.city_state,
           services_required: newLead.services_required,
           budget: newLead.budget,
           additional_info: newLead.additional_info,
-          agent: newLead.agent
+          agent: newLead.agent || user?.user_metadata?.full_name || 'Unknown',
         }])
         .select();
 
@@ -104,10 +111,6 @@ export const useLeads = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
-      toast({
-        title: "Lead added successfully",
-        description: "Your new lead has been added to the database.",
-      });
     },
     onError: (error) => {
       toast({
@@ -124,7 +127,7 @@ export const useLeads = () => {
         .from('leads')
         .update({
           client_name: leadData.client_name,
-          business_description: leadData.business_description || leadData.company,
+          business_description: leadData.business_description,
           email_address: leadData.email_address,
           contact_number: leadData.contact_number,
           source: leadData.source,
@@ -134,7 +137,6 @@ export const useLeads = () => {
           services_required: leadData.services_required,
           budget: leadData.budget,
           additional_info: leadData.additional_info,
-          agent: leadData.agent,
           date: leadData.date,
           updated_at: new Date().toISOString(),
         })
@@ -146,10 +148,6 @@ export const useLeads = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
-      toast({
-        title: "Lead updated successfully",
-        description: "Your lead has been updated in the database.",
-      });
     },
     onError: (error) => {
       toast({
@@ -172,10 +170,6 @@ export const useLeads = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
-      toast({
-        title: "Lead deleted",
-        description: "The lead has been removed from the database.",
-      });
     },
     onError: (error) => {
       toast({

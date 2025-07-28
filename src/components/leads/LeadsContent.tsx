@@ -1,63 +1,51 @@
 
 import React from "react";
-import LeadsList, { Lead } from "@/components/leads/LeadsList";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
+import LeadsList from "./LeadsList";
+import { Lead } from "./LeadsList";
 
 interface LeadsContentProps {
   leads: Lead[];
   searchQuery: string;
-  isLoading: boolean;
-  onLeadClick: (lead: Lead) => void;
+  onSearchChange: (query: string) => void;
+  onLeadClick?: (lead: Lead) => void;
+  onUpdateStatus?: (leadId: string, status: Lead['status']) => void;
 }
 
-const LeadsContent = ({
+const LeadsContent: React.FC<LeadsContentProps> = ({
   leads,
   searchQuery,
-  isLoading,
+  onSearchChange,
   onLeadClick,
-}: LeadsContentProps) => {
-  // Simplified filtering logic to ensure all leads are displayed properly
-  const filteredLeads = searchQuery
-    ? leads.filter(
-        (lead) =>
+  onUpdateStatus,
+}) => {
+  const filteredLeads = leads.filter((lead) =>
           lead.client_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (lead.company && lead.company.toLowerCase().includes(searchQuery.toLowerCase())) ||
-          lead.email_address.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : leads;
+    lead.email_address.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    lead.business_description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    lead.city_state?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    lead.source?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  console.log("Leads data:", leads);
-  console.log("Filtered leads:", filteredLeads);
-
-  if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+    <div className="space-y-4">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+        <Input
+          placeholder="Search leads by name, email, company, location, or source..."
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="pl-10"
+        />
       </div>
-    );
-  }
 
-  if (leads.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4 text-center">
-        <p className="text-muted-foreground">No leads found. Add your first lead to get started.</p>
-      </div>
-    );
-  }
-
-  if (filteredLeads.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4 text-center">
-        <p className="text-muted-foreground">No leads match your search criteria.</p>
-      </div>
-    );
-  }
-
-  return (
     <LeadsList 
       leads={filteredLeads}
-      onAddLeadClick={null}
       onLeadClick={onLeadClick}
+      onUpdateStatus={onUpdateStatus}
     />
+    </div>
   );
 };
 

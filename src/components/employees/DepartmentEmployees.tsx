@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { EmployeeDialog } from "./EmployeeDialog";
 import { useQueryClient } from "@tanstack/react-query";
+// Removed useAuth import - no permission checks needed
 
 interface DepartmentEmployeesProps {
   departmentName: string;
@@ -17,6 +18,9 @@ const DepartmentEmployees = ({ departmentName, employees }: DepartmentEmployeesP
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeProfile | undefined>();
   const queryClient = useQueryClient();
+
+  // Removed permission check - all authenticated users can manage employees
+  const canManageEmployees = true;
 
   const handleSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ["employees"] });
@@ -37,10 +41,12 @@ const DepartmentEmployees = ({ departmentName, employees }: DepartmentEmployeesP
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>{departmentName} Team</CardTitle>
-          <Button onClick={openAddDialog} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Employee
-          </Button>
+          {canManageEmployees && (
+            <Button onClick={openAddDialog} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Employee
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -48,20 +54,22 @@ const DepartmentEmployees = ({ departmentName, employees }: DepartmentEmployeesP
               <EmployeeCard 
                 key={employee.id} 
                 employee={employee} 
-                onEdit={() => openEditDialog(employee)}
+                onEdit={canManageEmployees ? () => openEditDialog(employee) : undefined}
               />
             ))}
           </div>
         </CardContent>
       </Card>
 
-      <EmployeeDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        department={departmentName}
-        employee={selectedEmployee}
-        onSuccess={handleSuccess}
-      />
+      {canManageEmployees && (
+        <EmployeeDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          department={departmentName}
+          employee={selectedEmployee}
+          onSuccess={handleSuccess}
+        />
+      )}
     </div>
   );
 };

@@ -1,64 +1,63 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, Upload, UserPlus } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format, subMonths } from "date-fns";
+import { Plus, Bot } from "lucide-react";
 
 interface LeadsHeaderProps {
   searchQuery: string;
-  onSearchChange: (value: string) => void;
+  onSearchChange: (query: string) => void;
   onAddClick: () => void;
+  onScraperClick?: () => void;
+  isLeadScraper?: boolean;
   selectedMonth: number;
   onMonthChange: (value: string) => void;
 }
 
-const LeadsHeader = ({
-  searchQuery,
-  onSearchChange,
+const LeadsHeader: React.FC<LeadsHeaderProps> = ({
   onAddClick,
+  onScraperClick,
+  isLeadScraper = false,
   selectedMonth,
   onMonthChange,
-}: LeadsHeaderProps) => {
-  // Generate month options for the last 12 months
-  const monthOptions = Array.from({ length: 12 }, (_, i) => {
-    const date = subMonths(new Date(), i);
-    return {
-      value: i.toString(),
-      label: format(date, 'MMMM yyyy')
-    };
-  });
+}) => {
+  const monthOptions = [
+    { value: "0", label: "All Time" },
+    { value: "1", label: "Last Month" },
+    { value: "2", label: "2 Months Ago" },
+    { value: "3", label: "3 Months Ago" },
+    { value: "6", label: "6 Months Ago" },
+  ];
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      <h1 className="text-3xl font-bold">Leads</h1>
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Leads</h1>
+        <p className="text-muted-foreground">
+          Manage and track your sales leads
+        </p>
+      </div>
+      
       <div className="flex items-center gap-2">
-        <Select value={selectedMonth.toString()} onValueChange={onMonthChange}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select month" />
-          </SelectTrigger>
-          <SelectContent>
-            {monthOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="relative w-full sm:w-auto">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search leads..."
-            className="w-full sm:w-[200px] pl-8"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
-        </div>
-        <Button 
-          className="sm:flex-1"
-          onClick={onAddClick}
+        <select
+          value={selectedMonth}
+          onChange={(e) => onMonthChange(e.target.value)}
+          className="px-3 py-2 border border-input bg-background rounded-md text-sm"
         >
-          <UserPlus className="mr-2 h-4 w-4" />
+          {monthOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        
+        {isLeadScraper && onScraperClick && (
+          <Button onClick={onScraperClick} variant="outline">
+            <Bot className="mr-2 h-4 w-4" />
+            Lead Scraper
+          </Button>
+        )}
+        
+        <Button onClick={onAddClick}>
+          <Plus className="mr-2 h-4 w-4" />
           Add Lead
         </Button>
       </div>

@@ -4,7 +4,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+// Authentication removed - no user context needed
 import { useToast } from "@/hooks/use-toast";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 
@@ -13,7 +13,7 @@ interface BusinessOverviewProps {
 }
 
 const BusinessOverview = ({ selectedMonth }: BusinessOverviewProps) => {
-  const { user } = useAuth();
+  // User context removed - no authentication needed
   const { toast } = useToast();
 
   // Fetch leads data
@@ -36,7 +36,6 @@ const BusinessOverview = ({ selectedMonth }: BusinessOverviewProps) => {
       
       return data;
     },
-    enabled: !!user,
   });
 
   // Fetch projects data
@@ -45,8 +44,7 @@ const BusinessOverview = ({ selectedMonth }: BusinessOverviewProps) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('projects')
-        .select('*')
-        .eq('user_id', user?.id);
+        .select('*');
       
       if (error) {
         toast({
@@ -59,7 +57,6 @@ const BusinessOverview = ({ selectedMonth }: BusinessOverviewProps) => {
       
       return data;
     },
-    enabled: !!user,
   });
 
   // Process project data for the chart

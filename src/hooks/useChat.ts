@@ -83,9 +83,9 @@ export const useChat = () => {
       const messagesWithSenders = await Promise.all(
         data?.map(async (msg) => {
           const { data: senderData } = await supabase
-            .from('profiles')
-            .select('full_name, avatar_url')
-            .eq('id', msg.sender_id)
+            .from('user_profiles')
+            .select('display_name as full_name')
+            .eq('user_id', msg.sender_id)
             .single();
           
           return {
@@ -227,9 +227,9 @@ export const useChat = () => {
           
           // Get sender details
           const { data: senderData } = await supabase
-            .from('profiles')
-            .select('full_name, avatar_url')
-            .eq('id', newMessage.sender_id)
+            .from('user_profiles')
+            .select('display_name as full_name')
+            .eq('user_id', newMessage.sender_id)
             .single();
           
           setMessages(prev => [

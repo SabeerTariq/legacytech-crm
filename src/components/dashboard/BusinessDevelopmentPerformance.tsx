@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+// Authentication removed - no user context needed
 import { useToast } from "@/hooks/use-toast";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 
@@ -151,7 +151,7 @@ const mockSalesDispositions: SalesDisposition[] = [
 ];
 
 const BusinessDevelopmentPerformance: React.FC = () => {
-  const { user } = useAuth();
+  // User context removed - no authentication needed
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [useMockData, setUseMockData] = React.useState(true);
@@ -187,7 +187,6 @@ const BusinessDevelopmentPerformance: React.FC = () => {
       
       return data as SalesDisposition[];
     },
-    enabled: !!user,
   });
 
   // Fetch Business Development employees
@@ -223,7 +222,6 @@ const BusinessDevelopmentPerformance: React.FC = () => {
         }
       })) as EmployeePerformance[];
     },
-    enabled: !!user,
   });
 
   // Mutation to generate sample sales dispositions
@@ -252,7 +250,7 @@ const BusinessDevelopmentPerformance: React.FC = () => {
           project_manager: "Mike Davis",
           assigned_to: "John Smith",
           assigned_by: "Manager",
-          user_id: user?.id
+          user_id: 'admin'
         },
         {
           sale_date: format(new Date(), 'yyyy-MM-dd'),
@@ -276,7 +274,7 @@ const BusinessDevelopmentPerformance: React.FC = () => {
           project_manager: "Emily Wilson",
           assigned_to: "Sarah Johnson",
           assigned_by: "Manager",
-          user_id: user?.id
+          user_id: 'admin'
         }
       ];
 

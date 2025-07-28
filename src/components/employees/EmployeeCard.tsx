@@ -104,8 +104,8 @@ const SalesPerformanceView = ({ performance }: { performance: SalesPerformance }
 const EmployeeCard = ({ employee, onEdit }: EmployeeCardProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const initials = employee.name.split(' ').map(n => n[0]).join('').toUpperCase();
-  const isProductionDepartment = ['Design', 'Development', 'Marketing', 'Content'].includes(employee.department);
+  const initials = (employee.full_name || '').split(' ').map(n => n[0]).join('').toUpperCase();
+  const isProductionDepartment = ['Development', 'Production'].includes(employee.department);
 
   const handleDelete = async () => {
     try {
@@ -135,8 +135,8 @@ const EmployeeCard = ({ employee, onEdit }: EmployeeCardProps) => {
     <Card className="w-full">
       <CardHeader className="flex flex-row items-start justify-between gap-4 p-4">
         <div className="flex flex-col w-full">
-          <CardTitle className="text-base sm:text-lg truncate">{employee.name}</CardTitle>
-          <p className="text-sm text-muted-foreground truncate">{employee.role}</p>
+          <CardTitle className="text-base sm:text-lg truncate">{employee.full_name}</CardTitle>
+          <p className="text-sm text-muted-foreground truncate">{employee.job_title}</p>
           <div className="flex items-center gap-2 text-sm text-muted-foreground truncate">
             <Mail className="h-4 w-4 flex-shrink-0" />
             <span className="truncate">{employee.email}</span>
@@ -145,7 +145,7 @@ const EmployeeCard = ({ employee, onEdit }: EmployeeCardProps) => {
         <div className="flex items-center gap-1 flex-shrink-0">
           <EmployeeHistory 
             employeeId={employee.id} 
-            name={employee.name} 
+            name={employee.full_name} 
             department={employee.department}
           />
           <DropdownMenu>

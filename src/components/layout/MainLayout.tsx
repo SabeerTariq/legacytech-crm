@@ -9,13 +9,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import NavigationMenu from "@/components/layout/NavigationMenu";
 import { useAuth } from "@/contexts/AuthContext";
 import { removeBackgroundFromImage } from "@/utils/imageUtils";
+import BrandSelector from "./BrandSelector";
 
 interface MainLayoutProps {
   children: React.ReactNode;
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
-  const { user, signOut } = useAuth();
+  const { user, logout } = useAuth();
   const [logoSrc, setLogoSrc] = useState("/lovable-uploads/7384a9eb-2ebd-4c5e-88fc-269cd741a97a.png");
 
   useEffect(() => {
@@ -33,8 +34,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const getUserInitials = () => {
     if (!user) return "US";
     
-    if (user.user_metadata?.full_name) {
-      return user.user_metadata.full_name
+    if (user.employee?.name) {
+      return user.employee.name
         .split(" ")
         .map((name: string) => name[0])
         .join("")
@@ -46,7 +47,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   };
 
   const handleSignOut = async () => {
-    await signOut();
+    await logout();
   };
 
   return (
@@ -72,11 +73,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Avatar>
-                  <AvatarImage src={user?.user_metadata?.avatar_url || ""} />
+                  <AvatarImage src="" />
                   <AvatarFallback>{getUserInitials()}</AvatarFallback>
                 </Avatar>
                 <div className="text-sm font-medium">
-                  {user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User"}
+                  {user?.employee?.name || user?.email?.split('@')[0] || "User"}
                 </div>
               </div>
               <Tooltip>
@@ -96,9 +97,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <SidebarTrigger>
                 <Menu className="h-5 w-5" />
               </SidebarTrigger>
-              <div className="ml-4 text-lg font-medium">Command Center</div>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-4">
+              <BrandSelector />
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative">
@@ -117,10 +118,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 </TooltipTrigger>
                 <TooltipContent>Notifications</TooltipContent>
               </Tooltip>
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.user_metadata?.avatar_url || ""} />
-                <AvatarFallback>{getUserInitials()}</AvatarFallback>
-              </Avatar>
             </div>
           </header>
           <main className="flex-1 overflow-auto p-6">

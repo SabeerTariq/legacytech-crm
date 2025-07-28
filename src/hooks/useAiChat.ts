@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+// Authentication removed - no user context needed
 import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
@@ -19,7 +19,7 @@ export const useAiChat = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
+  // User context removed - no authentication needed
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -42,8 +41,7 @@ const CalendarPage = () => {
   };
 
   return (
-    <MainLayout>
-      <div className="space-y-4">
+    <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Calendar</h1>
           <div className="flex space-x-2">
@@ -115,7 +113,6 @@ const CalendarPage = () => {
           </div>
         </div>
       </div>
-    </MainLayout>
   );
 };
 

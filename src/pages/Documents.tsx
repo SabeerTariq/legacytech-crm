@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -112,8 +111,7 @@ const DocumentsPage = () => {
   };
 
   return (
-    <MainLayout>
-      <div className="space-y-4">
+    <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Documents</h1>
           <div className="flex space-x-2">
@@ -222,7 +220,6 @@ const DocumentsPage = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </MainLayout>
   );
 };
 

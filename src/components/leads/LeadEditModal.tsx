@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -11,341 +12,335 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import {
+  User,
+  Mail,
+  Phone,
+  Building,
+  MapPin,
+  Target,
+  Trash2,
+} from "lucide-react";
 import { Lead } from "./LeadsList";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2 } from "lucide-react";
 
 interface LeadEditModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   lead: Lead | null;
-  onLeadUpdated: (updatedLead: Omit<Lead, 'id' | 'assignedTo'>) => void;
-  onLeadDeleted?: (leadId: string) => void;
+  onLeadUpdated: (lead: Omit<Lead, 'id'>) => void;
+  onLeadDeleted: (leadId: string) => void;
 }
 
-const LeadEditModal: React.FC<LeadEditModalProps> = ({
-  open,
-  onOpenChange,
-  lead,
-  onLeadUpdated,
-  onLeadDeleted,
-}) => {
-  const { toast } = useToast();
+const LeadEditModal = ({ 
+  open, 
+  onOpenChange, 
+  lead, 
+  onLeadUpdated, 
+  onLeadDeleted 
+}: LeadEditModalProps) => {
   const [formData, setFormData] = useState({
     client_name: "",
-    business_description: "",
     email_address: "",
     contact_number: "",
-    status: "new" as Lead["status"],
-    source: "",
-    price: 0,
+    business_description: "",
     city_state: "",
+    source: "website",
+    status: "new" as Lead["status"],
     services_required: "",
     budget: "",
+    price: 0,
     additional_info: "",
-    agent: "",
-    date: "",
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  // Update form data when lead changes or modal opens
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
   useEffect(() => {
-    if (lead && open) {
+    if (lead) {
       setFormData({
-        client_name: lead.client_name,
-        business_description: lead.business_description || lead.company || "",
-        email_address: lead.email_address,
+        client_name: lead.client_name || "",
+        email_address: lead.email_address || "",
         contact_number: lead.contact_number || "",
-        status: lead.status,
-        source: lead.source || "",
-        price: lead.price || 0,
+        business_description: lead.business_description || "",
         city_state: lead.city_state || "",
+        source: lead.source || "website",
+        status: lead.status || "new",
         services_required: lead.services_required || "",
         budget: lead.budget || "",
+        price: lead.price || 0,
         additional_info: lead.additional_info || "",
-        agent: lead.agent || "",
-        date: lead.date || "",
       });
-      // Reset submission state when modal opens
-      setIsSubmitting(false);
+      setErrors({});
     }
-  }, [lead, open]);
+  }, [lead]);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === "price" ? parseFloat(value) || 0 : value,
-    }));
+  const handleInputChange = (field: string, value: string | number) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: "" }));
+    }
   };
 
-  const handleStatusChange = (value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      status: value as Lead["status"],
-    }));
-  };
-
-  const handleSourceChange = (value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      source: value,
-    }));
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+    
+    if (!formData.client_name.trim()) {
+      newErrors.client_name = "Client name is required";
+    }
+    
+    if (!formData.email_address.trim()) {
+      newErrors.email_address = "Email address is required";
+    } else if (!/\S+@\S+\.\S+/.test(formData.email_address)) {
+      newErrors.email_address = "Please enter a valid email address";
+    }
+    
+    if (formData.contact_number && !/^[+]?[1-9][\d]{0,15}$/.test(formData.contact_number.replace(/\s/g, ''))) {
+      newErrors.contact_number = "Please enter a valid phone number";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
     
-    if (!formData.client_name) {
-      toast({
-        title: "Missing required field",
-        description: "Please fill in the name field.",
-        variant: "destructive",
-      });
-      setIsSubmitting(false);
+    if (!validateForm()) {
       return;
     }
-
-    console.log("Submitting updated lead:", formData);
-    onLeadUpdated({
-      ...formData,
-      company: formData.business_description,
-      date: formData.date
-    });
-    // We'll wait for the parent component to close the modal after successful update
+    
+    const updatedLead = {
+      client_name: formData.client_name,
+      email_address: formData.email_address,
+      contact_number: formData.contact_number,
+      business_description: formData.business_description,
+      city_state: formData.city_state,
+      source: formData.source,
+      status: formData.status,
+      services_required: formData.services_required,
+      budget: formData.budget,
+      price: formData.price,
+      additional_info: formData.additional_info,
+      date: lead?.date,
+    };
+    
+    onLeadUpdated(updatedLead);
   };
 
   const handleDelete = () => {
-    if (lead && onLeadDeleted) {
+    if (lead && confirm("Are you sure you want to delete this lead? This action cannot be undone.")) {
       onLeadDeleted(lead.id);
-      setIsDeleteDialogOpen(false);
     }
   };
 
-  // Reset submission state when modal closes
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
-      setIsSubmitting(false);
-    }
-    onOpenChange(open);
-  };
+  if (!lead) return null;
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Lead</DialogTitle>
-          <DialogDescription>
-            Make changes to the lead information below.
-          </DialogDescription>
+          <DialogTitle className="text-2xl font-bold">Edit Lead</DialogTitle>
         </DialogHeader>
+        
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Basic Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Basic Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="client_name" className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Client Name *
+                  </Label>
+                  <Input
+                    id="client_name"
+                    value={formData.client_name}
+                    onChange={(e) => handleInputChange("client_name", e.target.value)}
+                    className={errors.client_name ? "border-red-500" : ""}
+                    placeholder="Enter client name"
+                  />
+                  {errors.client_name && (
+                    <p className="text-sm text-red-500">{errors.client_name}</p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="business_description" className="flex items-center gap-2">
+                    <Building className="h-4 w-4" />
+                    Company/Business
+                  </Label>
+                  <Input
+                    id="business_description"
+                    value={formData.business_description}
+                    onChange={(e) => handleInputChange("business_description", e.target.value)}
+                    placeholder="Enter company name"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email_address" className="flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    Email Address *
+                  </Label>
+                  <Input
+                    id="email_address"
+                    type="email"
+                    value={formData.email_address}
+                    onChange={(e) => handleInputChange("email_address", e.target.value)}
+                    className={errors.email_address ? "border-red-500" : ""}
+                    placeholder="Enter email address"
+                  />
+                  {errors.email_address && (
+                    <p className="text-sm text-red-500">{errors.email_address}</p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="contact_number" className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Phone Number
+                  </Label>
+                  <Input
+                    id="contact_number"
+                    value={formData.contact_number}
+                    onChange={(e) => handleInputChange("contact_number", e.target.value)}
+                    className={errors.contact_number ? "border-red-500" : ""}
+                    placeholder="Enter phone number"
+                  />
+                  {errors.contact_number && (
+                    <p className="text-sm text-red-500">{errors.contact_number}</p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="city_state" className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  City/State
+                </Label>
+                <Input
+                  id="city_state"
+                  value={formData.city_state}
+                  onChange={(e) => handleInputChange("city_state", e.target.value)}
+                  placeholder="Enter city and state"
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="date">Date</Label>
-              <Input
-                id="date"
-                name="date"
-                type="date"
-                value={formData.date}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
+          {/* Lead Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5" />
+                Lead Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="source">Source</Label>
+                  <Select value={formData.source} onValueChange={(value) => handleInputChange("source", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select source" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Website Contact Form">Website Contact Form</SelectItem>
+                      <SelectItem value="Referral">Referral</SelectItem>
+                      <SelectItem value="LinkedIn">LinkedIn</SelectItem>
+                      <SelectItem value="Google Search">Google Search</SelectItem>
+                      <SelectItem value="Trade Show">Trade Show</SelectItem>
+                      <SelectItem value="Email Campaign">Email Campaign</SelectItem>
+                      <SelectItem value="Cold Call">Cold Call</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select value={formData.status} onValueChange={(value) => handleInputChange("status", value as Lead["status"])}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="new">New</SelectItem>
+                      <SelectItem value="converted">Converted</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="price">Price ($)</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.price}
+                    onChange={(e) => handleInputChange("price", parseFloat(e.target.value) || 0)}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="services_required">Services Required</Label>
+                <Textarea
+                  id="services_required"
+                  value={formData.services_required}
+                  onChange={(e) => handleInputChange("services_required", e.target.value)}
+                  placeholder="Describe the services the client is looking for"
+                  rows={3}
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="budget">Budget</Label>
+                  <Input
+                    id="budget"
+                    value={formData.budget}
+                    onChange={(e) => handleInputChange("budget", e.target.value)}
+                    placeholder="e.g., $5,000 - $10,000"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="additional_info">Additional Information</Label>
+                <Textarea
+                  id="additional_info"
+                  value={formData.additional_info}
+                  onChange={(e) => handleInputChange("additional_info", e.target.value)}
+                  placeholder="Any additional notes or information"
+                  rows={3}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="client_name">Client Name</Label>
-              <Input
-                id="client_name"
-                name="client_name"
-                value={formData.client_name}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="business_description">Business/Company</Label>
-              <Input
-                id="business_description"
-                name="business_description"
-                value={formData.business_description}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="email_address">Email</Label>
-              <Input
-                id="email_address"
-                name="email_address"
-                type="email"
-                value={formData.email_address}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="contact_number">Phone</Label>
-              <Input
-                id="contact_number"
-                name="contact_number"
-                value={formData.contact_number}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={handleStatusChange}
-              >
-                <SelectTrigger id="status">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="new">New</SelectItem>
-                  <SelectItem value="contacted">Contacted</SelectItem>
-                  <SelectItem value="won">Won</SelectItem>
-                  <SelectItem value="lost">Lost</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="source">Source</Label>
-              <Select
-                value={formData.source || ""}
-                onValueChange={handleSourceChange}
-              >
-                <SelectTrigger id="source">
-                  <SelectValue placeholder="Select source" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Website Contact Form">Website Contact Form</SelectItem>
-                  <SelectItem value="Referral">Referral</SelectItem>
-                  <SelectItem value="LinkedIn">LinkedIn</SelectItem>
-                  <SelectItem value="Google Search">Google Search</SelectItem>
-                  <SelectItem value="Trade Show">Trade Show</SelectItem>
-                  <SelectItem value="Email Campaign">Email Campaign</SelectItem>
-                  <SelectItem value="Cold Call">Cold Call</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="price">Price ($)</Label>
-              <Input
-                id="price"
-                name="price"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.price}
-                onChange={handleChange}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="city_state">City/State</Label>
-              <Input
-                id="city_state"
-                name="city_state"
-                value={formData.city_state}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="services_required">Services Required</Label>
-            <Textarea
-              id="services_required"
-              name="services_required"
-              value={formData.services_required}
-              onChange={handleChange}
-              className="resize-none"
-            />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="budget">Budget</Label>
-              <Input
-                id="budget"
-                name="budget"
-                value={formData.budget}
-                onChange={handleChange}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="agent">Agent</Label>
-              <Input
-                id="agent"
-                name="agent"
-                value={formData.agent}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="additional_info">Additional Information</Label>
-            <Textarea
-              id="additional_info"
-              name="additional_info"
-              value={formData.additional_info}
-              onChange={handleChange}
-              className="resize-none"
-            />
-          </div>
-
-          <DialogFooter className="flex items-center justify-between pt-4">
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-              <AlertDialogTrigger asChild>
-                <Button type="button" variant="destructive" className="mr-auto">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Lead
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete this lead and remove it from our database.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-            
-            <div>
-              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} className="mr-2">
+          <div className="flex justify-between">
+            <Button type="button" variant="destructive" onClick={handleDelete}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Lead
+            </Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : "Save Changes"}
+              <Button type="submit">
+                Update Lead
               </Button>
             </div>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

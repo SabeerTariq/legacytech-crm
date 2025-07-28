@@ -1,6 +1,5 @@
 
 import React from 'react';
-import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,8 +17,7 @@ const BetterAskSaul = () => {
   } = useAiChat();
 
   return (
-    <MainLayout>
-      <div className="container mx-auto p-4 max-w-4xl">
+    <div className="container mx-auto p-4 max-w-4xl">
         <Card className="min-h-[600px] flex flex-col">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -47,7 +45,6 @@ const BetterAskSaul = () => {
           </CardContent>
         </Card>
       </div>
-    </MainLayout>
   );
 };
 

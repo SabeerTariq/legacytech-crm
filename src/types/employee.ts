@@ -18,13 +18,51 @@ export interface SalesPerformance {
 
 export type EmployeePerformance = SalesPerformance | ProductionPerformance;
 
+export interface Dependent {
+  id?: string;
+  full_name: string;
+  relationship: string;
+  gender: string;
+  date_of_birth: string;
+  cnic_bform_number: string;
+}
+
+export interface EmergencyContact {
+  id?: string;
+  name: string;
+  relationship: string;
+  contact_number: string;
+  type: 'primary' | 'secondary';
+}
+
 export interface EmployeeProfile {
   id: string;
-  name: string;
-  role: string;
+  full_name?: string;
+  father_name?: string;
+  date_of_birth?: string;
+  gender?: string;
+  marital_status?: string;
+  cnic_number?: string;
+  current_residential_address?: string;
+  permanent_address?: string;
+  contact_number?: string;
+  personal_email_address?: string;
+  total_dependents_covered?: number;
+  job_title?: string;
   department: string;
+  date_of_joining?: string;
+  reporting_manager?: string;
+  work_module?: string;
+  work_hours?: string;
+  bank_name?: string;
+  account_holder_name?: string;
+  account_number?: string;
+  iban_number?: string;
   email: string;
   avatar?: string;
-  joinDate: string;
   performance: EmployeePerformance;
+  created_at?: string;
+  updated_at?: string;
+  dependents?: Dependent[];
+  contacts?: EmergencyContact[];
 }

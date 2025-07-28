@@ -1,21 +1,20 @@
 import React, { useState } from "react";
-import MainLayout from "@/components/layout/MainLayout";
 import StatCard from "@/components/dashboard/StatCard";
 import RecentActivity from "@/components/dashboard/RecentActivity";
-import ProjectsOverview from "@/components/dashboard/ProjectsOverview";
 import BusinessDevelopmentPerformance from "@/components/dashboard/BusinessDevelopmentPerformance";
 import ProjectManagementPerformance from "@/components/dashboard/ProjectManagementPerformance";
 import ProductionTeamPerformance from "@/components/dashboard/ProductionTeamPerformance";
 import { AreaChart, BarChart, Calendar, DollarSign, Users, Zap, Mail, MessageSquare, TrendingUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+// Authentication removed - no user context needed
 import { useToast } from "@/hooks/use-toast";
 import TeamPerformance from "@/components/dashboard/team/TeamPerformance";
 import BusinessOverview from "@/components/dashboard/BusinessOverview";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { useNavigate } from "react-router-dom";
+
 
 interface Task {
   id: string;
@@ -31,7 +30,7 @@ interface Task {
 
 interface Employee {
   id: string;
-  name: string;
+  full_name: string;
 }
 
 interface Activity {
@@ -45,18 +44,8 @@ interface Activity {
   time: string;
 }
 
-interface Project {
-  id: string;
-  name: string;
-  client: string;
-  description: string;
-  dueDate: string;
-  status: "new" | "in-progress" | "completed" | "review" | "approved" | "on-hold";
-  progress: number;
-}
-
 const Dashboard = () => {
-  const { user } = useAuth();
+  // User context removed - no authentication needed
   const { toast } = useToast();
   const navigate = useNavigate();
   const [selectedMonth, setSelectedMonth] = useState<number>(0);
@@ -100,81 +89,53 @@ const Dashboard = () => {
         return [];
       }
       
-      return data;
+      return data || [];
     },
-    enabled: !!user,
   });
 
-  // Fetch projects data for all months
-  const { data: projects = [] } = useQuery({
-    queryKey: ['dashboard-projects'],
+  // Fetch employees for task assignment
+  const { data: employees = [] } = useQuery({
+    queryKey: ['dashboard-employees'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('user_id', user?.id);
+        .from('employees')
+        .select('id, full_name')
+        .order('full_name');
       
       if (error) {
         toast({
-          title: "Error fetching projects",
+          title: "Error fetching employees",
           description: error.message,
           variant: "destructive",
         });
         return [];
       }
       
-      return data.map(project => ({
-        id: project.id,
-        name: project.name,
-        client: project.client,
-        description: project.description || '',
-        dueDate: new Date(project.due_date).toLocaleDateString(),
-        status: project.status as Project['status'],
-        progress: project.progress || 0,
-      }));
+      return data || [];
     },
-    enabled: !!user,
   });
 
-  // Fetch activities data
-  const { data: activities = [] } = useQuery({
-    queryKey: ['dashboard-activities', selectedMonth],
+  // Fetch recent tasks
+  const { data: tasks = [] } = useQuery({
+    queryKey: ['dashboard-tasks'],
     queryFn: async () => {
-      const currentDate = new Date();
-      const targetDate = subMonths(currentDate, selectedMonth);
-      const startDate = format(startOfMonth(targetDate), 'yyyy-MM-dd');
-      const endDate = format(endOfMonth(targetDate), 'yyyy-MM-dd');
-      
-      // Fetch recent tasks
-      const { data: tasks, error: tasksError } = await supabase
+      const { data, error } = await supabase
         .from('project_tasks')
         .select(`
-          *,
+          id,
+          title,
+          status,
+          created_at,
+          assigned_to_id,
           project:projects(name)
         `)
-        .gte('created_at', startDate)
-        .lte('created_at', endDate)
         .order('created_at', { ascending: false })
         .limit(5);
-
-      if (tasksError) {
+      
+      if (error) {
         toast({
           title: "Error fetching tasks",
-          description: tasksError.message,
-          variant: "destructive",
-        });
-        return [];
-      }
-
-      // Fetch employees for task assignments
-      const { data: employees, error: employeesError } = await supabase
-        .from('employees')
-        .select('id, name');
-
-      if (employeesError) {
-        toast({
-          title: "Error fetching employees",
-          description: employeesError.message,
+          description: error.message,
           variant: "destructive",
         });
         return [];
@@ -185,8 +146,8 @@ const Dashboard = () => {
         return {
           id: task.id,
           user: {
-            name: employee?.name || 'Unassigned',
-            initials: employee?.name?.split(' ').map(n => n[0]).join('') || 'UA',
+            name: employee?.full_name || 'Unassigned',
+            initials: employee?.full_name?.split(' ').map(n => n[0]).join('') || 'UA',
           },
           action: `task ${task.status}`,
           target: `${task.project?.name || 'Project'}: ${task.title}`,
@@ -194,7 +155,6 @@ const Dashboard = () => {
         };
       });
     },
-    enabled: !!user,
   });
 
   // Calculate dashboard metrics for the selected month
@@ -205,28 +165,6 @@ const Dashboard = () => {
   const lastMonthDate = subMonths(targetDate, 1);
   const lastMonthStart = startOfMonth(lastMonthDate);
   const lastMonthEnd = endOfMonth(lastMonthDate);
-
-  // Calculate metrics for current month
-  const monthProjects = React.useMemo(() => {
-    return projects.filter(project => {
-      const projectDate = new Date(project.dueDate);
-      return projectDate >= startDate && projectDate <= endDate;
-    });
-  }, [projects, startDate, endDate]);
-
-  const totalProjects = monthProjects.length;
-  const activeProjects = monthProjects.filter(p => p.status !== 'completed').length;
-  
-  // Calculate metrics for last month
-  const lastMonthProjects = React.useMemo(() => {
-    return projects.filter(project => {
-      const projectDate = new Date(project.dueDate);
-      return projectDate >= lastMonthStart && projectDate <= lastMonthEnd;
-    });
-  }, [projects, lastMonthStart, lastMonthEnd]);
-
-  const lastMonthTotalProjects = lastMonthProjects.length;
-  const lastMonthActiveProjects = lastMonthProjects.filter(p => p.status !== 'completed').length;
 
   // Calculate leads for current month
   const monthLeads = React.useMemo(() => {
@@ -263,93 +201,56 @@ const Dashboard = () => {
 
   const lastMonthActiveLeads = lastMonthLeads.filter(lead => lead.status === 'won').length;
   
-  // Calculate total revenue from converted and won leads for the selected month
-  const convertedLeads = monthLeads.filter(lead => 
-    lead.status === 'converted' || lead.status === 'won'
-  );
-  const lastMonthConvertedLeads = lastMonthLeads.filter(lead => 
-    lead.status === 'converted' || lead.status === 'won'
-  );
+      // Calculate total revenue from won leads for the selected month
+    const wonLeads = monthLeads.filter(lead =>
+      lead.status === 'won'
+    );
+    const lastMonthWonLeads = lastMonthLeads.filter(lead =>
+      lead.status === 'won'
+    );
 
-  const totalRevenue = convertedLeads.reduce((sum, lead) => sum + (Number(lead.price) || 0), 0);
-  const lastMonthRevenue = lastMonthConvertedLeads.reduce((sum, lead) => sum + (Number(lead.price) || 0), 0);
+      const totalRevenue = wonLeads.reduce((sum, lead) => sum + (Number(lead.price) || 0), 0);
+    const lastMonthRevenue = lastMonthWonLeads.reduce((sum, lead) => sum + (Number(lead.price) || 0), 0);
   
-  // Calculate conversion rate for the selected month
-  const conversionRate = monthLeads.length > 0 
-    ? ((convertedLeads.length / monthLeads.length) * 100).toFixed(1)
-    : "0.0";
-  
-  const lastMonthConversionRate = lastMonthLeads.length > 0
-    ? ((lastMonthConvertedLeads.length / lastMonthLeads.length) * 100).toFixed(1)
+  // Calculate win rate for the selected month
+  const winRate = monthLeads.length > 0 
+    ? ((wonLeads.length / monthLeads.length) * 100).toFixed(1)
     : "0.0";
 
-  // Calculate percentage changes
+  const lastMonthWinRate = lastMonthLeads.length > 0 
+    ? ((lastMonthWonLeads.length / lastMonthLeads.length) * 100).toFixed(1)
+    : "0.0";
+
   const calculatePercentageChange = (current: number, previous: number) => {
-    console.log('Calculating percentage change:', { current, previous });
-    if (previous === 0) {
-      // If previous was 0 and current is positive, show 100% increase
-      return current > 0 ? 100 : 0;
-    }
-    const change = ((current - previous) / previous) * 100;
-    return Math.round(change);
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return Math.round(((current - previous) / previous) * 100);
   };
-
-  const stats = [
-    {
-      title: "Total Projects",
-      value: totalProjects.toString(),
-      icon: <BarChart />,
-      trend: { 
-        value: calculatePercentageChange(totalProjects, lastMonthTotalProjects),
-        positive: totalProjects >= lastMonthTotalProjects
-      },
-    },
-    {
-      title: "Active Leads",
-      value: activeLeads.toString(),
-      icon: <Users />,
-      trend: { 
-        value: calculatePercentageChange(activeLeads, lastMonthActiveLeads),
-        positive: activeLeads >= lastMonthActiveLeads
-      },
-    },
-    {
-      title: "Revenue",
-      value: `$${totalRevenue.toLocaleString()}`,
-      icon: <DollarSign />,
-      trend: { 
-        value: calculatePercentageChange(totalRevenue, lastMonthRevenue),
-        positive: totalRevenue >= lastMonthRevenue
-      },
-    },
-    {
-      title: "Conversion Rate",
-      value: `${conversionRate}%`,
-      icon: <TrendingUp />,
-      trend: { 
-        value: calculatePercentageChange(Number(conversionRate), Number(lastMonthConversionRate)),
-        positive: Number(conversionRate) >= Number(lastMonthConversionRate)
-      },
-    },
-  ];
 
   const handleMonthChange = (value: string) => {
-    const monthValue = Number(value);
-    setSelectedMonth(monthValue);
-    // Update URL without causing a navigation
-    const newUrl = new URL(window.location.href);
-    newUrl.searchParams.set('month', monthValue.toString());
-    window.history.pushState({}, '', newUrl.toString());
+    const monthIndex = parseInt(value, 10);
+    setSelectedMonth(monthIndex);
+    
+    // Update URL with new month
+    const params = new URLSearchParams(window.location.search);
+    params.set('month', monthIndex.toString());
+    navigate(`?${params.toString()}`, { replace: true });
   };
 
+  const activities = tasks as unknown as Activity[];
+
   return (
-    <MainLayout>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Dashboard</h1>
+    <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Dashboard</h1>
+            <p className="text-muted-foreground">
+              Welcome back! Here's what's happening with your business.
+            </p>
+          </div>
           <Select value={selectedMonth.toString()} onValueChange={handleMonthChange}>
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select month" />
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {monthOptions.map((option) => (
@@ -360,29 +261,71 @@ const Dashboard = () => {
             </SelectContent>
           </Select>
         </div>
-        
+
+
+
+        {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat, index) => (
-            <StatCard key={index} {...stat} />
-          ))}
+          <StatCard
+            title="Total Leads"
+            value={monthLeads.length.toString()}
+            icon={<Users className="h-4 w-4" />}
+            description={`${calculatePercentageChange(monthLeads.length, lastMonthLeads.length)}% from last month`}
+            trend={{
+              value: calculatePercentageChange(monthLeads.length, lastMonthLeads.length),
+              positive: monthLeads.length >= lastMonthLeads.length
+            }}
+          />
+          <StatCard
+            title="Active Leads"
+            value={activeLeads.toString()}
+            icon={<TrendingUp className="h-4 w-4" />}
+            description={`${calculatePercentageChange(activeLeads, lastMonthActiveLeads)}% from last month`}
+            trend={{
+              value: calculatePercentageChange(activeLeads, lastMonthActiveLeads),
+              positive: activeLeads >= lastMonthActiveLeads
+            }}
+          />
+          <StatCard
+                          title="Win Rate"
+            value={`${winRate}%`}
+            icon={<BarChart className="h-4 w-4" />}
+            description={`${calculatePercentageChange(parseFloat(winRate), parseFloat(lastMonthWinRate))}% from last month`}
+            trend={{
+              value: calculatePercentageChange(parseFloat(winRate), parseFloat(lastMonthWinRate)),
+              positive: parseFloat(winRate) >= parseFloat(lastMonthWinRate)
+            }}
+          />
+          <StatCard
+            title="Total Revenue"
+            value={`$${totalRevenue.toLocaleString()}`}
+            icon={<DollarSign className="h-4 w-4" />}
+            description={`${calculatePercentageChange(totalRevenue, lastMonthRevenue)}% from last month`}
+            trend={{
+              value: calculatePercentageChange(totalRevenue, lastMonthRevenue),
+              positive: totalRevenue >= lastMonthRevenue
+            }}
+          />
         </div>
 
-        <BusinessOverview selectedMonth={selectedMonth} />
-
-        <BusinessDevelopmentPerformance />
-
-        <ProjectManagementPerformance />
-
-        <ProductionTeamPerformance />
-
+        {/* Performance Components */}
         <div className="grid gap-6 md:grid-cols-2">
-          <ProjectsOverview projects={monthProjects} />
           <RecentActivity activities={activities} />
         </div>
 
+        {/* Team Performance */}
         <TeamPerformance />
+
+        {/* Business Overview */}
+        <BusinessOverview selectedMonth={selectedMonth} />
+
+        {/* Department Performance */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <BusinessDevelopmentPerformance />
+          <ProjectManagementPerformance />
+          <ProductionTeamPerformance />
+        </div>
       </div>
-    </MainLayout>
   );
 };
 
