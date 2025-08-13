@@ -501,9 +501,12 @@ const UpsellerManagement: React.FC = () => {
         return;
       }
 
+      // Convert currentMonth (YYYY-MM) to proper date format (YYYY-MM-DD) for database
+      const monthDate = new Date(currentMonth + '-01').toISOString().split('T')[0];
+      
       const targetData = {
         seller_id: targetForm.seller_id,
-        month: currentMonth, // Always use current month for target
+        month: monthDate, // Use proper date format for database
         target_cash_in: targetForm.target_cash_in // Use the single target_amount field
       };
 

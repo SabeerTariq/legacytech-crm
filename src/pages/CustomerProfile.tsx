@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, ArrowLeft, UploadCloud, Tag, ListChecks } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-// Authentication removed - no user context needed
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
 interface Customer {
@@ -32,7 +33,8 @@ interface Note {
 const CustomerProfile = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  // User context removed - no authentication needed
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,13 +61,81 @@ const CustomerProfile = () => {
 
   const fetchCustomer = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("sales_dispositions")
-      .select("*")
-      .eq("id", id)
-      .single();
-    if (!error) setCustomer(data);
-    setLoading(false);
+    
+    try {
+      // Check if user is authenticated
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to access customer profiles.",
+          variant: "destructive",
+        });
+        navigate('/login');
+        return;
+      }
+
+      // First, check if the user has permission to access this customer
+      if (user?.employee?.department === 'Upseller') {
+        // For upsellers, check if this customer is assigned to them through projects
+        const { data: assignedProjects, error: projectsError } = await supabase
+          .from('projects')
+          .select('sales_disposition_id')
+          .eq('assigned_pm_id', user.employee.id)
+          .eq('sales_disposition_id', id);
+
+        if (projectsError) throw projectsError;
+
+        if (!assignedProjects || assignedProjects.length === 0) {
+          // Customer not assigned to this upseller
+          toast({
+            title: "Access Denied",
+            description: "You can only access customers assigned to your projects.",
+            variant: "destructive",
+          });
+          navigate('/customers');
+          return;
+        }
+      } else if (user?.employee?.department === 'Front Sales') {
+        // For front sales users, check if this customer was created by them
+        const { data: customerData, error: customerError } = await supabase
+          .from('sales_dispositions')
+          .select('user_id')
+          .eq('id', id)
+          .single();
+
+        if (customerError) throw customerError;
+
+        if (customerData.user_id !== user.id) {
+          // Customer not created by this front sales user
+          toast({
+            title: "Access Denied",
+            description: "You can only access customers you converted from leads.",
+            variant: "destructive",
+          });
+          navigate('/customers');
+          return;
+        }
+      }
+
+      const { data, error } = await supabase
+        .from("sales_dispositions")
+        .select("*")
+        .eq("id", id)
+        .single();
+        
+      if (error) throw error;
+      setCustomer(data);
+    } catch (error) {
+      console.error('Error fetching customer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load customer profile",
+        variant: "destructive",
+      });
+      navigate('/customers');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchNotes = async () => {

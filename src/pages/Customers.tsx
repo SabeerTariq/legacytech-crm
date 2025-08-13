@@ -64,8 +64,35 @@ const Customers = () => {
       if (user?.employee?.department === 'Front Sales') {
         console.log('Filtering customers for front_sales user:', user.id);
         query = query.eq('user_id', user.id);
+      } 
+      // Filter by assigned projects if they are an upseller
+      else if (user?.employee?.department === 'Upseller') {
+        console.log('Filtering customers for upseller - only showing assigned customers:', user.employee.id);
+        
+        // Get projects assigned to this upseller
+        const { data: assignedProjects, error: projectsError } = await supabase
+          .from('projects')
+          .select('sales_disposition_id')
+          .eq('assigned_pm_id', user.employee.id)
+          .not('sales_disposition_id', 'is', null);
+
+        if (projectsError) throw projectsError;
+
+        if (assignedProjects && assignedProjects.length > 0) {
+          const salesDispositionIds = assignedProjects
+            .map(p => p.sales_disposition_id)
+            .filter(id => id !== null);
+          
+          query = query.in('id', salesDispositionIds);
+        } else {
+          // No assigned projects, return empty array
+          console.log('No projects assigned to upseller, showing no customers');
+          setCustomers([]);
+          setLoading(false);
+          return;
+        }
       } else {
-        console.log('Showing all customers for non-front_sales user:', user?.employee?.department);
+        console.log('Showing all customers for non-front_sales/upseller user:', user?.employee?.department);
       }
 
       const { data: allSales, error: salesError } = await query;
@@ -169,6 +196,8 @@ const Customers = () => {
             <p className="text-muted-foreground">
               {user?.employee?.department === 'Front Sales' 
                 ? "View customers you converted from leads"
+                : user?.employee?.department === 'Upseller'
+                ? "View customers assigned to your projects"
                 : "Manage your customers and view their project details"
               }
             </p>
@@ -254,6 +283,8 @@ const Customers = () => {
                   {customers.length === 0 
                     ? user?.employee?.department === 'Front Sales'
                       ? "Convert leads to customers using the sales form to see them here."
+                      : user?.employee?.department === 'Upseller'
+                      ? "You'll see customers here once projects are assigned to you."
                       : "Create customers by filling out the sales disposition form to see them here."
                     : "Try adjusting your search terms."
                   }

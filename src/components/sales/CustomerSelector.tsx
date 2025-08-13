@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +40,7 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
   onCustomerSelect, 
   selectedCustomer 
 }) => {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
@@ -62,6 +64,39 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
           created_at
         `)
         .order("created_at", { ascending: false });
+
+      // Filter by user if they are a front_sales user
+      if (user?.employee?.department === 'Front Sales') {
+        console.log('Filtering customers for front_sales user in CustomerSelector:', user.id);
+        query = query.eq('user_id', user.id);
+      }
+      // Filter by assigned projects if they are an upseller
+      else if (user?.employee?.department === 'Upseller') {
+        console.log('Filtering customers for upseller in CustomerSelector - only showing assigned customers:', user.employee.id);
+        
+        // Get projects assigned to this upseller
+        const { data: assignedProjects, error: projectsError } = await supabase
+          .from('projects')
+          .select('sales_disposition_id')
+          .eq('assigned_pm_id', user.employee.id)
+          .not('sales_disposition_id', 'is', null);
+
+        if (projectsError) throw projectsError;
+
+        if (assignedProjects && assignedProjects.length > 0) {
+          const salesDispositionIds = assignedProjects
+            .map(p => p.sales_disposition_id)
+            .filter(id => id !== null);
+          
+          query = query.in('id', salesDispositionIds);
+        } else {
+          // No assigned projects, return empty array
+          console.log('No projects assigned to upseller in CustomerSelector, showing no customers');
+          setCustomers([]);
+          setLoading(false);
+          return;
+        }
+      }
 
       if (search.trim()) {
         query = query.or(`
