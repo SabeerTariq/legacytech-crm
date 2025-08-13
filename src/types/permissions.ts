@@ -61,7 +61,17 @@ export const MODULES = {
   upseller_management: 'upseller_management',
   settings: 'settings',
   front_sales_management: 'front_sales_management',
-  my_dashboard: 'my_dashboard'
+  my_dashboard: 'my_dashboard',
+  // Department modules
+  development: 'development',
+  front_sales: 'front_sales',
+  hr: 'hr',
+  marketing: 'marketing',
+  other: 'other',
+  production: 'production',
+  upseller: 'upseller',
+  // Additional modules
+  better_ask_saul: 'better_ask_saul'
 } as const;
 
 export type ModuleName = keyof typeof MODULES;

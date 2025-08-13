@@ -80,9 +80,9 @@ const NavigationMenu = () => {
       { icon: TrendingUp, label: "Admin Dashboard", path: "/admin-dashboard", module: "dashboard" }
     ] : []),
     { icon: Users2, label: "Front Sales Management", path: "/front-sales-management", module: "front_sales_management" },
-    { icon: Briefcase, label: "All Projects", path: "/projects", module: "all_projects" },
-    { icon: FolderKanban, label: "Project Assignment", path: "/projects/assignment", module: "project_assignment" },
-    { icon: FolderKanban, label: "My Projects", path: "/projects/my-projects", module: "my_projects" },
+    { icon: Briefcase, label: "All Projects", path: "/projects", module: "projects" },
+    { icon: FolderKanban, label: "Project Assignment", path: "/projects/assignment", module: "projects" },
+    { icon: FolderKanban, label: "My Projects", path: "/projects/my-projects", module: "projects" },
     { icon: FolderKanban, label: "Kanban Board", path: "/kanban", module: "kanban" },
     { icon: DollarSign, label: "Payments", path: "/payments", module: "payments" },
     { icon: Repeat, label: "Recurring Services", path: "/recurring-services", module: "recurring_services" },
