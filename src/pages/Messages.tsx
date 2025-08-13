@@ -37,6 +37,16 @@ const Messages: React.FC = () => {
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [showConversationList, setShowConversationList] = useState(true);
 
+  // Debug: Log users state changes
+  useEffect(() => {
+    console.log('Users state changed:', users);
+  }, [users]);
+
+  // Debug: Log selectedParticipants state changes
+  useEffect(() => {
+    console.log('Selected participants changed:', selectedParticipants);
+  }, [selectedParticipants]);
+
   useEffect(() => {
     if (selectedConversation) {
       fetchMessagesForConversation(selectedConversation.id);
@@ -62,6 +72,14 @@ const Messages: React.FC = () => {
     }
   }, [isNewConversationDialogOpen, user]);
 
+  // Reset users when dialog closes to prevent stale data
+  useEffect(() => {
+    if (!isNewConversationDialogOpen) {
+      setUsers([]);
+      setSelectedParticipants([]);
+    }
+  }, [isNewConversationDialogOpen]);
+
   const fetchUsers = async () => {
     if (!user) return;
 
@@ -71,7 +89,7 @@ const Messages: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('user_id as id, display_name as full_name')
+        .select('user_id, display_name')
         .neq('user_id', user.id); // Exclude current user
 
       if (error) {
@@ -81,16 +99,20 @@ const Messages: React.FC = () => {
           description: error.message,
           variant: "destructive"
         });
+        setUsers([]); // Ensure we set an empty array on error
         return;
       }
 
-      if (data) {
+      if (data && Array.isArray(data)) {
         const formattedUsers = data.map(u => ({
-          value: u.id,
-          label: u.full_name || u.id
+          value: u.user_id,
+          label: u.display_name || u.user_id
         }));
         
         setUsers(formattedUsers);
+      } else {
+        console.warn('No user data received or invalid format:', data);
+        setUsers([]); // Ensure we set an empty array if no data
       }
     } catch (err) {
       console.error('Exception fetching users:', err);
@@ -99,6 +121,7 @@ const Messages: React.FC = () => {
         description: "Could not load users. Please try again.",
         variant: "destructive"
       });
+      setUsers([]); // Ensure we set an empty array on exception
     } finally {
       setIsLoadingUsers(false);
     }
@@ -191,12 +214,20 @@ const Messages: React.FC = () => {
                   Select users to start a conversation with.
                 </DialogDescription>
               </DialogHeader>
-              <MultiSelect 
-                options={users} 
-                value={selectedParticipants}
-                onChange={setSelectedParticipants}
-                placeholder={isLoadingUsers ? "Loading users..." : "Select participants"}
-              />
+              {isNewConversationDialogOpen && users && Array.isArray(users) && !isLoadingUsers && (
+                <MultiSelect 
+                  options={users} 
+                  value={selectedParticipants || []}
+                  onChange={(value) => setSelectedParticipants(Array.isArray(value) ? value : [])}
+                  placeholder="Select participants"
+                />
+              )}
+              {isNewConversationDialogOpen && isLoadingUsers && (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Loading users...
+                </div>
+              )}
               <Button 
                 onClick={handleCreateConversation} 
                 className="mt-4"

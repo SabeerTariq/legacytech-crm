@@ -10,6 +10,7 @@ interface LeadsHeaderProps {
   isLeadScraper?: boolean;
   selectedMonth: number;
   onMonthChange: (value: string) => void;
+  canCreate?: boolean;
 }
 
 const LeadsHeader: React.FC<LeadsHeaderProps> = ({
@@ -18,6 +19,7 @@ const LeadsHeader: React.FC<LeadsHeaderProps> = ({
   isLeadScraper = false,
   selectedMonth,
   onMonthChange,
+  canCreate = true,
 }) => {
   const monthOptions = [
     { value: "0", label: "All Time" },
@@ -56,10 +58,12 @@ const LeadsHeader: React.FC<LeadsHeaderProps> = ({
           </Button>
         )}
         
-        <Button onClick={onAddClick}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Lead
-        </Button>
+        {canCreate && (
+          <Button onClick={onAddClick}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Lead
+          </Button>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +48,7 @@ interface ServiceSelection {
 
 const EnhancedSalesForm: React.FC = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -287,7 +289,7 @@ const EnhancedSalesForm: React.FC = () => {
           sale_type: formData.saleType,
           seller: "", // Will be assigned from Project Assignment module
           account_manager: "", // Will be assigned from Project Assignment module
-          assigned_by: (await supabase.auth.getUser()).data.user?.id || "",
+          assigned_by: user?.id || "",
           assigned_to: "", // Will be assigned from Project Assignment module
           project_manager: "", // Will be assigned from Project Assignment module
           gross_value: formData.grossValue,
@@ -297,7 +299,7 @@ const EnhancedSalesForm: React.FC = () => {
           sale_date: formData.saleDate,
           service_tenure: formData.serviceTenure,
           turnaround_time: formData.turnaroundTime,
-          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_id: user?.id || "",
         })
         .select()
         .single();
@@ -314,7 +316,7 @@ const EnhancedSalesForm: React.FC = () => {
             description: service.details,
             due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
             status: "unassigned",
-            user_id: (await supabase.auth.getUser()).data.user?.id,
+            user_id: user?.id || "",
             sales_disposition_id: salesData.id,
             lead_id: selectedLead?.id || null,
             project_type: "one-time",

@@ -4,18 +4,61 @@ import { useAuth } from '@/contexts/AuthContext';
 import LoginForm from '@/components/auth/LoginForm';
 
 const Login: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect to dashboard if already logged in
+  console.log('Login component - User:', user?.email, 'Loading:', loading);
+
+  // Redirect to appropriate dashboard based on role if already logged in
   useEffect(() => {
+    console.log('Login useEffect - User:', user?.email, 'Role:', user?.role?.name);
+    
     if (user) {
-      navigate('/');
+      console.log('User is logged in, checking role for redirect...');
+      // Redirect based on user role
+      if (user.role) {
+        switch (user.role.name) {
+          case 'front_sales':
+            console.log('Redirecting front_sales user to /front-seller-dashboard');
+            navigate('/front-seller-dashboard');
+            break;
+          case 'upseller':
+            console.log('Redirecting upseller user to /upseller-dashboard');
+            navigate('/upseller-dashboard');
+            break;
+          case 'admin':
+            console.log('Redirecting admin user to /');
+            navigate('/');
+            break;
+          default:
+            console.log('Redirecting default user to /');
+            navigate('/');
+            break;
+        }
+      } else {
+        console.log('User has no role, redirecting to /');
+        navigate('/');
+      }
+    } else {
+      console.log('No user, showing login form');
     }
   }, [user, navigate]);
 
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex items-center space-x-2">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          <span>Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
   // Show login form if not logged in
   if (!user) {
+    console.log('Rendering login form');
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="max-w-md w-full space-y-8">
@@ -34,6 +77,7 @@ const Login: React.FC = () => {
   }
 
   // This should not be reached due to the redirect above
+  console.log('Login component - unexpected state, user:', user?.email);
   return null;
 };
 

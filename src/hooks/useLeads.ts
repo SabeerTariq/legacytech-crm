@@ -1,11 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-// Authentication removed - no user context needed
+import { useAuth } from "@/contexts/AuthContext";
 import { Lead } from "@/components/leads/LeadsList";
 import { useToast } from "@/hooks/use-toast";
 
 export const useLeads = () => {
-  // User context removed - no authentication needed
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 

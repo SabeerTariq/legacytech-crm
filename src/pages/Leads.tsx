@@ -3,11 +3,13 @@ import React, { useState } from "react";
 import { Lead } from "@/components/leads/LeadsList";
 import LeadAddModal from "@/components/leads/LeadAddModal";
 import LeadEditModal from "@/components/leads/LeadEditModal";
+import LeadViewModal from "@/components/leads/LeadViewModal"; // Added
 import LeadScraper from "@/components/leads/LeadScraper";
 
 import LeadsHeader from "@/components/leads/LeadsHeader";
 import LeadsContent from "@/components/leads/LeadsContent";
 import { useLeads } from "@/hooks/useLeads";
+import { usePermissions } from "@/contexts/PermissionContext";
 import { subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 // Authentication removed - no user context needed
@@ -16,6 +18,7 @@ import type { Database } from "@/integrations/supabase/types";
 const Leads = () => {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [viewModalOpen, setViewModalOpen] = useState(false); // Added view modal state
   const [scraperModalOpen, setScraperModalOpen] = useState(false);
 
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -26,6 +29,7 @@ const Leads = () => {
   // Role checking removed - no authentication needed
   const isLeadScraper = false; // Default to false since no user context
 
+  const { canCreate, canDelete } = usePermissions();
   const { toast } = useToast();
   const {
     leads,
@@ -57,50 +61,78 @@ const Leads = () => {
       onSuccess: () => {
         setAddModalOpen(false);
         toast({
-          title: "Lead added successfully",
-          description: "The new lead has been added to your list.",
+          title: "Success",
+          description: "Lead added successfully",
         });
-      }
+      },
+      onError: (error) => {
+        toast({
+          title: "Error",
+          description: "Failed to add lead",
+          variant: "destructive",
+        });
+      },
     });
   };
 
-  const handleUpdateLead = (updatedLead: Omit<Lead, 'id'>) => {
-    if (selectedLead) {
-      updateLeadMutation.mutate({
-        id: selectedLead.id,
-        leadData: {
-          ...updatedLead,
-          date: updatedLead.date
-        }
-      }, {
+  const handleEditLead = (lead: Lead) => {
+    setSelectedLead(lead);
+    setEditModalOpen(true);
+  };
+
+  const handleViewLead = (lead: Lead) => {
+    setSelectedLead(lead);
+    setViewModalOpen(true);
+  };
+
+  const handleUpdateLead = (updatedLead: Omit<Lead, 'id' | 'date'>) => {
+    if (!selectedLead) return;
+    
+    updateLeadMutation.mutate(
+      { 
+        id: selectedLead.id, 
+        leadData: updatedLead 
+      },
+      {
         onSuccess: () => {
           setEditModalOpen(false);
           setSelectedLead(null);
           toast({
-            title: "Lead updated successfully",
-            description: "The lead has been updated.",
+            title: "Success",
+            description: "Lead updated successfully",
           });
-        }
-      });
-    }
+        },
+        onError: (error) => {
+          toast({
+            title: "Error",
+            description: "Failed to update lead",
+            variant: "destructive",
+          });
+        },
+      }
+    );
   };
 
   const handleDeleteLead = (leadId: string) => {
     deleteLeadMutation.mutate(leadId, {
       onSuccess: () => {
-        setEditModalOpen(false);
-        setSelectedLead(null);
         toast({
-          title: "Lead deleted successfully",
-          description: "The lead has been removed from your list.",
+          title: "Success",
+          description: "Lead deleted successfully",
         });
-      }
+      },
+      onError: (error) => {
+        toast({
+          title: "Error",
+          description: "Failed to delete lead",
+          variant: "destructive",
+        });
+      },
     });
   };
 
   const handleLeadClick = (lead: Lead) => {
-    setSelectedLead(lead);
-    setEditModalOpen(true);
+    handleViewLead(lead); // Changed to open view modal instead of edit
   };
 
 
@@ -149,6 +181,7 @@ const Leads = () => {
           isLeadScraper={isLeadScraper}
           selectedMonth={selectedMonth}
           onMonthChange={handleMonthChange}
+          canCreate={canCreate('leads')}
         />
 
         <LeadsContent 
@@ -156,7 +189,10 @@ const Leads = () => {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onLeadClick={handleLeadClick}
+          onLeadEdit={handleEditLead}
           onUpdateStatus={handleUpdateStatus}
+          onDeleteLead={handleDeleteLead}
+          canDelete={canDelete('leads')}
         />
 
         {/* Modals */}
@@ -164,6 +200,12 @@ const Leads = () => {
           open={addModalOpen}
           onOpenChange={setAddModalOpen}
           onLeadAdded={handleAddLead}
+        />
+
+        <LeadViewModal
+          open={viewModalOpen}
+          onOpenChange={setViewModalOpen}
+          lead={selectedLead}
         />
 
         <LeadEditModal

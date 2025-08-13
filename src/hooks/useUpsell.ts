@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import type { UpsellFormData, ServiceSelection, Customer } from '@/types/upsell';
 
 export const useUpsell = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const createUpsell = async (formData: UpsellFormData) => {
@@ -29,7 +31,7 @@ export const useUpsell = () => {
           sale_type: "UPSELL",
           seller: "",
           account_manager: "",
-          assigned_by: (await supabase.auth.getUser()).data.user?.id || "",
+          assigned_by: user?.id || "",
           assigned_to: "",
           project_manager: "",
           gross_value: formData.grossValue,
@@ -39,7 +41,7 @@ export const useUpsell = () => {
           sale_date: formData.saleDate,
           service_tenure: "",
           turnaround_time: "",
-          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_id: user?.id || "",
           is_upsell: true,
           original_sales_disposition_id: formData.originalSalesDispositionId,
           service_types: formData.serviceTypes
@@ -49,87 +51,70 @@ export const useUpsell = () => {
 
       if (salesError) throw salesError;
 
-      // Categorize services by type
-      const projects = formData.selectedServices.filter(s => s.serviceType === 'project');
-      const recurring = formData.selectedServices.filter(s => s.serviceType === 'recurring');
-      const oneTime = formData.selectedServices.filter(s => s.serviceType === 'one-time');
-
       // Create projects for project-based services
-      if (projects.length > 0) {
-        const projectPromises = projects.map(async (service) => {
-          const { error: projectError } = await supabase
-            .from("projects")
-            .insert({
-              name: `${formData.customerName} - ${service.serviceName} (Upsell)`,
-              client: formData.customerName,
-              description: service.details,
-              due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-              status: "unassigned",
-              user_id: (await supabase.auth.getUser()).data.user?.id,
-              sales_disposition_id: salesData.id,
-              project_type: "upsell",
-              services: [service.serviceName],
-              is_upsell: true
-            });
+      const { projects, recurring, oneTime } = categorizeServices(formData.selectedServices);
 
-          if (projectError) throw projectError;
-        });
-
-        await Promise.all(projectPromises);
+      // Create projects for each project-based service
+      for (const service of projects) {
+        await supabase
+          .from("projects")
+          .insert({
+            name: `${service.serviceName} - ${formData.customerName}`,
+            client: formData.customerName,
+            description: `Project created from upsell for service: ${service.serviceName}`,
+            status: "new",
+            due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
+            sales_disposition_id: salesData.id,
+            budget: service.price || 0,
+            services: [service.serviceName],
+            user_id: user?.id || "",
+            is_upsell: true
+          });
       }
 
-      // Create recurring service records
-      if (recurring.length > 0) {
-        const recurringPromises = recurring.map(async (service) => {
-          const nextBillingDate = new Date();
-          if (service.billingFrequency === 'monthly') {
-            nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
-          } else if (service.billingFrequency === 'yearly') {
-            nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1);
-          }
-
-          const { error: recurringError } = await supabase
-            .from("recurring_services")
-            .insert({
-              customer_id: salesData.id,
-              service_name: service.serviceName,
-              service_type: service.category,
-              billing_frequency: service.billingFrequency || 'monthly',
-              amount: service.price,
-              next_billing_date: nextBillingDate.toISOString().split('T')[0],
-              status: 'active',
-              auto_renew: true
-            });
-
-          if (recurringError) throw recurringError;
-        });
-
-        await Promise.all(recurringPromises);
+      // Create recurring services
+      for (const service of recurring) {
+        await supabase
+          .from("recurring_services")
+          .insert({
+            customer_id: salesData.id,
+            service_name: service.serviceName,
+            service_type: service.serviceType || "hosting",
+            billing_frequency: service.billingFrequency || "monthly",
+            amount: service.price || 0,
+            next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
+            status: "active",
+            auto_renew: true
+          });
       }
 
-      // Create one-time service records
-      if (oneTime.length > 0) {
-        const oneTimePromises = oneTime.map(async (service) => {
-          const { error: oneTimeError } = await supabase
-            .from("one_time_services")
-            .insert({
-              customer_id: salesData.id,
-              service_name: service.serviceName,
-              service_type: service.category,
-              amount: service.price,
-              delivery_date: new Date().toISOString().split('T')[0],
-              status: 'pending'
-            });
-
-          if (oneTimeError) throw oneTimeError;
-        });
-
-        await Promise.all(oneTimePromises);
+      // Create one-time services
+      for (const service of oneTime) {
+        await supabase
+          .from("one_time_services")
+          .insert({
+            customer_id: salesData.id,
+            service_name: service.serviceName,
+            service_type: service.serviceType || "development",
+            amount: service.price || 0,
+            delivery_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 14 days from now
+            status: "pending"
+          });
       }
+
+      toast({
+        title: "Upsell Created",
+        description: `Successfully created upsell for ${formData.customerName}`,
+      });
 
       return salesData;
     } catch (error) {
       console.error("Error creating upsell:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create upsell",
+        variant: "destructive",
+      });
       throw error;
     } finally {
       setLoading(false);
@@ -138,10 +123,41 @@ export const useUpsell = () => {
 
   const getCustomersWithActiveProjects = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('sales_dispositions')
         .select('*')
         .order('sale_date', { ascending: false });
+
+      // Filter by user if they are a front_sales user
+      if (user?.employee?.department === 'Front Sales') {
+        console.log('Filtering customers for front_sales user in useUpsell:', user.id);
+        query = query.eq('user_id', user.id);
+      }
+      // Filter by assigned upseller if they are an upseller
+      else if (user?.employee?.department === 'Upseller') {
+        console.log('Filtering customers for upseller in useUpsell:', user.employee.id);
+        // Get customers from projects assigned to this upseller
+        const { data: assignedProjects, error: projectsError } = await supabase
+          .from('projects')
+          .select('sales_disposition_id')
+          .eq('assigned_pm_id', user.employee.id)
+          .not('sales_disposition_id', 'is', null);
+
+        if (projectsError) throw projectsError;
+
+        if (assignedProjects && assignedProjects.length > 0) {
+          const salesDispositionIds = assignedProjects
+            .map(p => p.sales_disposition_id)
+            .filter(id => id !== null);
+          
+          query = query.in('id', salesDispositionIds);
+        } else {
+          // No assigned projects, return empty array
+          return [];
+        }
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -189,12 +205,19 @@ export const useUpsell = () => {
         return date.toISOString().split('T')[0];
       };
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('sales_dispositions')
         .select('*')
         .eq('is_upsell', true)
         .gte('sale_date', getDateFromRange(timeRange))
         .order('sale_date', { ascending: false });
+
+      // Filter by user if they are a front_sales user
+      if (user?.employee?.department === 'Front Sales') {
+        query = query.eq('user_id', user.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -203,6 +226,15 @@ export const useUpsell = () => {
       console.error("Error loading upsell analytics:", error);
       throw error;
     }
+  };
+
+  // Helper function to categorize services
+  const categorizeServices = (services: ServiceSelection[]) => {
+    const projects = services.filter(s => s.serviceType === 'project');
+    const recurring = services.filter(s => s.serviceType === 'recurring');
+    const oneTime = services.filter(s => s.serviceType === 'one-time');
+    
+    return { projects, recurring, oneTime };
   };
 
   return {

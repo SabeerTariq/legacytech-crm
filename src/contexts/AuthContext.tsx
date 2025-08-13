@@ -36,50 +36,87 @@ const initialState: AuthState = {
 
 // Reducer
 const authReducer = (state: AuthState, action: AuthAction): AuthState => {
+  const payload = 'payload' in action ? action.payload : undefined;
+  console.log('AuthReducer:', action.type, payload);
+  
+  let newState: AuthState;
+  
   switch (action.type) {
     case 'SET_LOADING':
-      return { ...state, loading: action.payload };
+      newState = { ...state, loading: action.payload };
+      break;
     case 'SET_USER':
-      return { ...state, user: action.payload, loading: false, error: null };
+      newState = { ...state, user: action.payload, loading: false, error: null };
+      // Store user in localStorage for persistence
+      if (action.payload) {
+        localStorage.setItem('crm_user', JSON.stringify(action.payload));
+      } else {
+        localStorage.removeItem('crm_user');
+      }
+      break;
     case 'SET_ERROR':
-      return { ...state, error: action.payload, loading: false };
+      newState = { ...state, error: action.payload, loading: false };
+      break;
     case 'CLEAR_ERROR':
-      return { ...state, error: null };
+      newState = { ...state, error: null };
+      break;
     case 'LOGOUT':
-      return { ...state, user: null, loading: false, error: null };
+      newState = { ...state, user: null, loading: false, error: null };
+      localStorage.removeItem('crm_user');
+      break;
     default:
-      return state;
+      newState = state;
   }
+  
+  return newState;
 };
 
 // Context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Helper functions for localStorage
-const saveUserToStorage = (user: User) => {
-  try {
-    localStorage.setItem('crm_user', JSON.stringify(user));
-  } catch (error) {
-    console.error('Error saving user to localStorage:', error);
-  }
-};
+// Helper function to create user object from profile
+const createUserFromProfile = (userProfile: any, roleData?: any): User => {
+  console.log('Creating user from profile:', userProfile);
+  console.log('Role data:', roleData);
+  
+  const user: User = {
+    id: userProfile.user_id,
+    email: userProfile.email,
+    display_name: userProfile.employees?.full_name || userProfile.email,
+    is_admin: false,
+    status: 'active',
+    created_at: userProfile.created_at,
+    employee: userProfile.employees ? {
+      id: userProfile.employees.id,
+      full_name: userProfile.employees.full_name,
+      department: userProfile.employees.department,
+      job_title: userProfile.employees.job_title,
+    } : undefined,
+  };
 
-const getUserFromStorage = (): User | null => {
-  try {
-    const userStr = localStorage.getItem('crm_user');
-    return userStr ? JSON.parse(userStr) : null;
-  } catch (error) {
-    console.error('Error reading user from localStorage:', error);
-    return null;
+  // Set role if available
+  if (roleData && roleData.length > 0 && roleData[0]?.roles) {
+    const role = roleData[0].roles as any;
+    user.role = {
+      id: role.id,
+      name: role.name,
+      display_name: role.display_name,
+      description: role.description
+    };
+    console.log('User role set:', user.role);
+  } else {
+    // Default role for users without assigned role
+    user.role = {
+      id: userProfile.user_id,
+      name: 'user',
+      display_name: 'User',
+      description: 'Regular user'
+    };
+    console.log('Default role set:', user.role);
   }
-};
 
-const removeUserFromStorage = () => {
-  try {
-    localStorage.removeItem('crm_user');
-  } catch (error) {
-    console.error('Error removing user from localStorage:', error);
-  }
+  console.log('Final user object:', user);
+  return user;
 };
 
 // Provider component
@@ -90,57 +127,100 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const checkExistingSession = async () => {
       try {
+        console.log('Checking existing session...');
         dispatch({ type: 'SET_LOADING', payload: true });
         
-        // Check if user exists in localStorage
-        const savedUser = getUserFromStorage();
+        // First, try to get user from localStorage
+        const storedUser = localStorage.getItem('crm_user');
+        if (storedUser) {
+          try {
+            const user = JSON.parse(storedUser);
+            console.log('Found stored user:', user.email);
+            
+            // Verify user still exists in database
+            const { data: userProfile, error: profileError } = await supabase
+              .from('user_profiles')
+              .select(`
+                *,
+                employees:employees(*)
+              `)
+              .eq('email', user.email)
+              .single();
+
+            if (!profileError && userProfile) {
+              console.log('Stored user verified, restoring session');
+              dispatch({ type: 'SET_USER', payload: user });
+              return;
+            } else {
+              console.log('Stored user no longer exists in database, clearing');
+              localStorage.removeItem('crm_user');
+            }
+          } catch (error) {
+            console.error('Error parsing stored user:', error);
+            localStorage.removeItem('crm_user');
+          }
+        }
+
+        // If no stored user, check Supabase session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
-        if (savedUser) {
-          console.log('Found existing session for:', savedUser.email);
+        if (sessionError) {
+          console.error('Error getting session:', sessionError);
+          dispatch({ type: 'SET_LOADING', payload: false });
+          return;
+        }
+
+        if (session?.user) {
+          console.log('Found existing Supabase session for:', session.user.email);
           
-          // Verify the user still exists in the database
+          // Get user profile from database
           const { data: userProfile, error: profileError } = await supabase
             .from('user_profiles')
             .select(`
               *,
               employees:employees(*)
             `)
-            .eq('email', savedUser.email)
+            .eq('user_id', session.user.id)
             .single();
 
           if (profileError || !userProfile) {
-            console.log('Saved user no longer exists in database, clearing session');
-            removeUserFromStorage();
+            console.log('User profile not found, logging out');
+            await supabase.auth.signOut();
             dispatch({ type: 'SET_LOADING', payload: false });
             return;
           }
 
-          // User still exists, restore the session
-          const user: User = {
-            id: userProfile.user_id,
-            email: userProfile.email,
-            display_name: userProfile.employees?.full_name || userProfile.email,
-            is_admin: true, // For now, give all users admin access
-            status: 'active', // Set default status
-            created_at: userProfile.created_at,
-            employee: userProfile.employees ? {
-              id: userProfile.employees.id,
-              full_name: userProfile.employees.full_name,
-              department: userProfile.employees.department,
-              job_title: userProfile.employees.job_title,
-            } : undefined,
-          };
-          
+          // Load user role
+          let roleData = null;
+          try {
+            const { data: userRoleData, error: roleError } = await supabase
+              .from('user_roles')
+              .select(`
+                roles (
+                  id,
+                  name,
+                  display_name,
+                  description
+                )
+              `)
+              .eq('user_id', userProfile.user_id);
+
+            if (!roleError && userRoleData && userRoleData.length > 0) {
+              roleData = userRoleData;
+            }
+          } catch (error) {
+            console.error('Error loading user role:', error);
+          }
+
+          const user = createUserFromProfile(userProfile, roleData);
           dispatch({ type: 'SET_USER', payload: user });
           console.log('Session restored for:', user.email);
         } else {
           console.log('No existing session found');
+          dispatch({ type: 'SET_LOADING', payload: false });
         }
       } catch (error) {
         console.error('Error checking existing session:', error);
-        // Clear any corrupted session data
-        removeUserFromStorage();
-      } finally {
         dispatch({ type: 'SET_LOADING', payload: false });
       }
     };
@@ -148,15 +228,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     checkExistingSession();
   }, []);
 
-  // Login function - authenticate against real users in database
+  // Login function - authenticate with database users
   const login = async (credentials: LoginCredentials) => {
     try {
+      console.log('Login attempt for:', credentials.email);
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'CLEAR_ERROR' });
 
-      console.log('Attempting login for:', credentials.email);
-
-      // First, try to find the user in user_profiles table
+      // First, check if user exists in user_profiles
       const { data: userProfile, error: profileError } = await supabase
         .from('user_profiles')
         .select(`
@@ -166,60 +245,74 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .eq('email', credentials.email)
         .single();
 
-      if (profileError) {
-        console.error('Profile lookup error:', profileError);
-        throw new Error('User not found. Please check your email address.');
-      }
-
-      if (!userProfile) {
+      if (profileError || !userProfile) {
         throw new Error('User not found. Please check your email address.');
       }
 
       console.log('Found user profile:', userProfile);
 
-      // For now, we'll accept any password since we don't have password hashing set up
-      // In a real application, you would verify the password hash here
-      console.log('Login successful for:', userProfile.email);
+      // Load user role from database
+      let roleData = null;
+      try {
+        const { data: userRoleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select(`
+            roles (
+              id,
+              name,
+              display_name,
+              description
+            )
+          `)
+          .eq('user_id', userProfile.user_id);
+
+        if (!roleError && userRoleData && userRoleData.length > 0) {
+          roleData = userRoleData;
+        }
+      } catch (error) {
+        console.error('Error loading user role:', error);
+      }
+
+      // Create user object
+      const user = createUserFromProfile(userProfile, roleData);
       
-      // Create user object with profile data
-      const user: User = {
-        id: userProfile.user_id,
-        email: userProfile.email,
-        display_name: userProfile.employees?.full_name || userProfile.email,
-        is_admin: true, // For now, give all users admin access to avoid permission issues
-        status: 'active', // Set default status
-        created_at: userProfile.created_at,
-        employee: userProfile.employees ? {
-          id: userProfile.employees.id,
-          full_name: userProfile.employees.full_name,
-          department: userProfile.employees.department,
-          job_title: userProfile.employees.job_title,
-        } : undefined,
-      };
+      // Set up Supabase session for RLS policies
+      try {
+        // Create a custom session for the user
+        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+          access_token: 'custom_token_' + user.id, // Custom token for RLS
+          refresh_token: 'custom_refresh_' + user.id,
+        });
+        
+        if (sessionError) {
+          console.warn('Failed to set Supabase session:', sessionError);
+        } else {
+          console.log('Supabase session set successfully');
+        }
+      } catch (sessionError) {
+        console.warn('Error setting Supabase session:', sessionError);
+      }
       
-      // Save user to localStorage for session persistence
-      saveUserToStorage(user);
-      
+      console.log('Login successful, setting user:', user);
       dispatch({ type: 'SET_USER', payload: user });
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
+      console.error('Login error:', errorMessage);
       dispatch({ type: 'SET_ERROR', payload: errorMessage });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
   };
 
-  // Logout function - clear session and localStorage
+  // Logout function
   const logout = async () => {
     try {
       console.log('Logging out user');
-      // Clear localStorage
-      removeUserFromStorage();
+      await supabase.auth.signOut();
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      // Always clear local state
       dispatch({ type: 'LOGOUT' });
     }
   };
@@ -228,6 +321,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const clearError = () => {
     dispatch({ type: 'CLEAR_ERROR' });
   };
+
+  console.log('AuthContext state:', state);
 
   const value: AuthContextType = {
     ...state,

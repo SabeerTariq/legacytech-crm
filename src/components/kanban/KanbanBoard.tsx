@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragStartEvent, DragOverEvent } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { supabase } from '../../integrations/supabase/client';
-// Authentication removed - no user context needed
+import { useAuth } from '../../contexts/AuthContext';
 import KanbanList from './KanbanList';
 import KanbanBoardHeader from './KanbanBoardHeader';
 import { Button } from '../ui/button';
@@ -56,6 +56,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId, boardType = 'project
   const [cards, setCards] = useState<TaskCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const { user } = useAuth();
 
   // Load board data
   useEffect(() => {

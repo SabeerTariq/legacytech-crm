@@ -17,10 +17,10 @@ CREATE INDEX IF NOT EXISTS idx_employees_department ON employees (department);
 CREATE INDEX IF NOT EXISTS idx_employees_email ON employees (email);
 CREATE INDEX IF NOT EXISTS idx_employees_work_module ON employees (work_module);
 
--- Index for profiles table - role and username filtering
-CREATE INDEX IF NOT EXISTS idx_profiles_role ON profiles (role);
-CREATE INDEX IF NOT EXISTS idx_profiles_username ON profiles (username);
-CREATE INDEX IF NOT EXISTS idx_profiles_full_name ON profiles (full_name);
+-- Index for user_profiles table - role and username filtering
+CREATE INDEX IF NOT EXISTS idx_user_profiles_role ON user_profiles (role);
+CREATE INDEX IF NOT EXISTS idx_user_profiles_username ON user_profiles (username);
+CREATE INDEX IF NOT EXISTS idx_user_profiles_full_name ON user_profiles (full_name);
 
 -- Composite indexes for common query patterns
 CREATE INDEX IF NOT EXISTS idx_leads_status_assigned ON leads (status, assigned_to_id);
@@ -30,16 +30,16 @@ CREATE INDEX IF NOT EXISTS idx_employees_dept_module ON employees (department, w
 -- =====================================================
 
 -- Add proper foreign key constraint for leads.assigned_to_id
--- This ensures data integrity between leads and profiles
+-- This ensures data integrity between leads and user_profiles
 ALTER TABLE leads 
 ADD CONSTRAINT IF NOT EXISTS fk_leads_assigned_to 
-FOREIGN KEY (assigned_to_id) REFERENCES profiles(id) 
+FOREIGN KEY (assigned_to_id) REFERENCES user_profiles(id) 
 ON DELETE SET NULL;
 
--- Add foreign key for employees to profiles (if not exists)
+-- Add foreign key for employees to user_profiles (if not exists)
 -- This creates a proper relationship between employees and users
 ALTER TABLE employees 
-ADD COLUMN IF NOT EXISTS profile_id UUID REFERENCES profiles(id);
+ADD COLUMN IF NOT EXISTS profile_id UUID REFERENCES user_profiles(id);
 
 -- 3. PERFORMANCE OPTIMIZATIONS
 -- =====================================================
@@ -56,7 +56,7 @@ SELECT
     COUNT(CASE WHEN l.status = 'contacted' THEN 1 END) as contacted_leads,
     COUNT(CASE WHEN l.status = 'qualified' THEN 1 END) as qualified_leads,
     AVG(EXTRACT(EPOCH FROM (l.updated_at - l.created_at))/86400) as avg_lead_age_days
-FROM profiles p
+FROM user_profiles p
 LEFT JOIN employees e ON e.email = p.username || '@example.com'
 LEFT JOIN leads l ON l.assigned_to_id = p.id
 WHERE e.department = 'Front Sales'
@@ -73,8 +73,8 @@ ALTER TABLE leads
 ADD CONSTRAINT IF NOT EXISTS chk_leads_status 
 CHECK (status IN ('new', 'contacted', 'qualified', 'converted', 'lost'));
 
-ALTER TABLE profiles 
-ADD CONSTRAINT IF NOT EXISTS chk_profiles_role 
+ALTER TABLE user_profiles 
+ADD CONSTRAINT IF NOT EXISTS chk_user_profiles_role 
 CHECK (role IN ('user', 'front_seller', 'manager', 'employee', 'assistant', 'lead_generator', 'specialist', 'junior'));
 
 -- 5. ROW LEVEL SECURITY (RLS) POLICIES
@@ -82,7 +82,7 @@ CHECK (role IN ('user', 'front_seller', 'manager', 'employee', 'assistant', 'lea
 
 -- Enable RLS on critical tables
 ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
 
 -- Policy for leads - users can only see leads assigned to them or unassigned leads
@@ -91,16 +91,16 @@ CREATE POLICY IF NOT EXISTS "Users can view assigned and unassigned leads" ON le
         assigned_to_id = auth.uid() OR 
         assigned_to_id IS NULL OR
         auth.uid() IN (
-            SELECT id FROM profiles WHERE role IN ('manager', 'admin')
+            SELECT id FROM user_profiles WHERE role IN ('manager', 'admin')
         )
     );
 
--- Policy for profiles - users can view their own profile and team members
-CREATE POLICY IF NOT EXISTS "Users can view team profiles" ON profiles
+-- Policy for user_profiles - users can view their own profile and team members
+CREATE POLICY IF NOT EXISTS "Users can view team user_profiles" ON user_profiles
     FOR SELECT USING (
         id = auth.uid() OR
         auth.uid() IN (
-            SELECT id FROM profiles WHERE role IN ('manager', 'admin')
+            SELECT id FROM user_profiles WHERE role IN ('manager', 'admin')
         )
     );
 
@@ -134,7 +134,7 @@ BEGIN
             WHEN las.total_leads <= 15 THEN 70
             ELSE 60
         END as performance_score
-    FROM profiles p
+    FROM user_profiles p
     INNER JOIN employees e ON e.email = p.username || '@example.com'
     LEFT JOIN lead_assignment_stats las ON las.profile_id = p.id
     WHERE e.department = 'Front Sales'
@@ -156,7 +156,7 @@ BEGIN
     -- Check if agent is from Front Sales department
     SELECT department INTO agent_dept
     FROM employees e
-    INNER JOIN profiles p ON e.email = p.username || '@example.com'
+    INNER JOIN user_profiles p ON e.email = p.username || '@example.com'
     WHERE p.id = agent_id;
     
     IF agent_dept != 'Front Sales' THEN
@@ -210,7 +210,7 @@ SELECT
         NULLIF(COUNT(l.id), 0) * 100, 2
     ) as conversion_rate,
     AVG(EXTRACT(EPOCH FROM (l.updated_at - l.created_at))/86400) as avg_lead_age_days
-FROM profiles p
+FROM user_profiles p
 LEFT JOIN employees e ON e.email = p.username || '@example.com'
 LEFT JOIN leads l ON l.assigned_to_id = p.id
 WHERE e.department = 'Front Sales'
@@ -226,7 +226,7 @@ BEGIN
     -- Remove leads assigned to non-existent profiles
     UPDATE leads 
     SET assigned_to_id = NULL 
-    WHERE assigned_to_id NOT IN (SELECT id FROM profiles);
+    WHERE assigned_to_id NOT IN (SELECT id FROM user_profiles);
     
     -- Log cleanup activity
     INSERT INTO audit_log (action, table_name, details)

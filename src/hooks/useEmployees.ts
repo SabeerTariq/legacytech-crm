@@ -7,6 +7,7 @@ export interface Employee {
   id: string;
   full_name: string;
   email: string;
+  personal_email?: string;
   department: string;
   job_title: string;
   date_of_joining: string;

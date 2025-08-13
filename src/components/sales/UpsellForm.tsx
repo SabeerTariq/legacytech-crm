@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,13 +24,14 @@ import {
 } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 import CustomerSelector from "./CustomerSelector";
-import type { Customer, ServiceSelection, UpsellFormData } from "@/types/upsell";
+import type { Customer, ServiceSelection, UpsellFormData, ServiceType, BillingFrequency, ServiceCategory } from "@/types/upsell";
 
 type Service = Database["public"]["Tables"]["services"]["Row"];
 type SalesDisposition = Database["public"]["Tables"]["sales_dispositions"]["Row"];
 
 const UpsellForm: React.FC = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -57,6 +59,15 @@ const UpsellForm: React.FC = () => {
   useEffect(() => {
     loadServices();
   }, []);
+
+  // Debug: Log user info when component mounts
+  useEffect(() => {
+    console.log('🔍 UpsellForm: User info:', {
+      userId: user?.id,
+      department: user?.employee?.department,
+      employeeId: user?.employee?.id
+    });
+  }, [user]);
 
   const loadServices = async () => {
     try {
@@ -103,20 +114,26 @@ const UpsellForm: React.FC = () => {
 
   // Calculate remaining amount when cash in changes
   useEffect(() => {
-    const remaining = Math.max(0, formData.grossValue - formData.cashIn);
-    setFormData(prev => ({ ...prev, remaining }));
-  }, [formData.grossValue, formData.cashIn]);
+    const totalGross = selectedServices.reduce((sum, service) => sum + (service.customPrice || 0), 0);
+    const remaining = Math.max(0, totalGross - formData.cashIn);
+    
+    setFormData(prev => ({
+      ...prev,
+      grossValue: totalGross,
+      remaining
+    }));
+  }, [selectedServices, formData.cashIn]);
 
   // Service selection handlers
   const addService = () => {
     setSelectedServices(prev => [...prev, { 
-      serviceId: "", 
+      serviceId: "",
       serviceName: "", 
-      details: "", 
-      customPrice: 0,
-      billingFrequency: "monthly",
+      serviceType: "project", 
       category: "development",
-      serviceType: "project"
+      customPrice: 0, 
+      details: "", 
+      billingFrequency: "monthly"
     }]);
   };
 
@@ -134,10 +151,10 @@ const UpsellForm: React.FC = () => {
           const selectedService = services.find(s => s.id === value);
           if (selectedService) {
             updatedService.serviceName = selectedService.name;
-            updatedService.customPrice = (selectedService as any).price || 0; // Use as starting point
-            updatedService.billingFrequency = (selectedService as any).billing_frequency || 'monthly';
-            updatedService.category = (selectedService as any).category || 'development';
-            updatedService.serviceType = (selectedService as any).service_type || 'project';
+            updatedService.customPrice = selectedService.price || 0;
+            updatedService.billingFrequency = (selectedService.billing_frequency as BillingFrequency) || 'monthly';
+            updatedService.serviceType = (selectedService.service_type as ServiceType) || 'project';
+            updatedService.category = (selectedService.category as ServiceCategory) || 'development';
           }
         }
         
@@ -199,7 +216,7 @@ const UpsellForm: React.FC = () => {
           sale_type: "UPSELL" as SalesDisposition["sale_type"],
           seller: "",
           account_manager: "",
-          assigned_by: (await supabase.auth.getUser()).data.user?.id || "",
+          assigned_by: user?.id || "",
           assigned_to: "",
           project_manager: "",
           gross_value: formData.grossValue,
@@ -209,7 +226,7 @@ const UpsellForm: React.FC = () => {
           sale_date: formData.saleDate,
           service_tenure: "",
           turnaround_time: "",
-          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_id: user?.id || "",
           is_upsell: true,
           original_sales_disposition_id: selectedCustomer.id,
           service_types: formData.serviceTypes
@@ -230,7 +247,7 @@ const UpsellForm: React.FC = () => {
               description: service.details,
               due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
               status: "unassigned",
-              user_id: (await supabase.auth.getUser()).data.user?.id,
+              user_id: user?.id || "",
               sales_disposition_id: salesData.id,
               project_type: "upsell",
               services: [service.serviceName],

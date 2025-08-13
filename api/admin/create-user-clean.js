@@ -3,25 +3,10 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const SUPABASE_URL = process.env.SUPABASE_URL || "https://yipyteszzyycbqgzpfrf.supabase.com";
+const SUPABASE_URL = "https://yipyteszzyycbqgzpfrf.supabase.co";
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Validate environment variables
-if (!SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('❌ SUPABASE_SERVICE_ROLE_KEY is not set in environment variables');
-  throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable');
-}
-
-if (!SUPABASE_URL) {
-  console.error('❌ SUPABASE_URL is not set in environment variables');
-  throw new Error('Missing SUPABASE_URL environment variable');
-}
-
-console.log('✅ Environment variables loaded successfully');
-console.log('📍 SUPABASE_URL:', SUPABASE_URL);
-console.log('🔑 SUPABASE_SERVICE_ROLE_KEY length:', SUPABASE_SERVICE_ROLE_KEY.length);
-
-// Supabase Admin Client (following the guide)
+// Create admin client with service role key
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: {
     autoRefreshToken: false,
@@ -35,187 +20,253 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { employee_id, email, password, permissions } = req.body;
+    const { employee_id, password, permissions } = req.body;
 
-    // Validate inputs (from guide)
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Missing fields' });
+    // Validate required fields
+    if (!employee_id || !password) {
+      return res.status(400).json({ error: 'Missing required fields: employee_id and password' });
     }
 
-    if (!employee_id || !permissions) {
-      return res.status(400).json({ error: 'Missing employee_id or permissions' });
+    console.log('Creating user for employee:', employee_id);
+
+    // Get employee data first
+    const { data: employeeData, error: employeeError } = await supabaseAdmin
+      .from('employees')
+      .select('*')
+      .eq('id', employee_id)
+      .single();
+
+    if (employeeError || !employeeData) {
+      console.error('Employee fetch error:', employeeError);
+      return res.status(400).json({ error: 'Employee not found' });
     }
 
-    console.log('Creating user following guide approach:', { employee_id, email, permissions: permissions.length });
+    console.log('Employee found:', employeeData.full_name);
 
-    // Step 1: Prevent duplicates (from guide)
-    const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-    if (!listError && existingUsers?.users) {
-      const existing = existingUsers.users.find(user => user.email === email);
-      if (existing) {
-        return res.status(409).json({ error: 'User already exists' });
+    // Generate or get user management email
+    let userManagementEmail = employeeData.user_management_email;
+    
+    if (!userManagementEmail) {
+      // Generate user management email using the database function
+      const { data: emailResult, error: emailError } = await supabaseAdmin.rpc(
+        'generate_employee_user_email',
+        {
+          employee_full_name: employeeData.full_name,
+          employee_department: employeeData.department
+        }
+      );
+
+      if (emailError) {
+        console.error('Email generation error:', emailError);
+        return res.status(400).json({ error: 'Failed to generate user management email' });
+      }
+
+      userManagementEmail = emailResult;
+
+      // Update employee with the generated email
+      const { error: updateError } = await supabaseAdmin
+        .from('employees')
+        .update({ user_management_email: userManagementEmail })
+        .eq('id', employee_id);
+
+      if (updateError) {
+        console.error('Employee update error:', updateError);
+        // Continue anyway as the email was generated
       }
     }
 
-    // Step 2: Create user in Supabase Auth (modified from guide to avoid metadata issues)
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true
-      // Removed user_metadata to avoid database conflicts
+    console.log('Using user management email:', userManagementEmail);
+
+    // Clean up any existing data that might cause conflicts
+    console.log('Cleaning up any existing data for employee:', employee_id);
+    
+    // Check if user profile already exists for this employee
+    const { data: existingProfile, error: profileCheckError } = await supabaseAdmin
+      .from('user_profiles')
+      .select('user_id, email')
+      .eq('employee_id', employee_id)
+      .single();
+
+    if (existingProfile) {
+      console.log('Found existing profile for employee, deleting auth user:', existingProfile.user_id);
+      await supabaseAdmin.auth.admin.deleteUser(existingProfile.user_id);
+    }
+
+    // Remove any existing user profile for this employee
+    const { error: profileDeleteError } = await supabaseAdmin
+      .from('user_profiles')
+      .delete()
+      .eq('employee_id', employee_id);
+    
+    if (profileDeleteError) {
+      console.log('Profile deletion error (might not exist):', profileDeleteError.message);
+    }
+
+    console.log('Cleanup completed, now creating new user...');
+
+    // Create user in Supabase Auth with user management email
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: userManagementEmail,
+      password: password,
+      email_confirm: true,
+      user_metadata: {
+        employee_id: employee_id,
+        full_name: employeeData.full_name,
+        department: employeeData.department,
+        job_title: employeeData.job_title,
+        personal_email: employeeData.personal_email || employeeData.email,
+        user_management_email: userManagementEmail
+      }
     });
 
-    if (error) {
-      console.error('Auth creation error:', error);
-      return res.status(500).json({ error: error.message });
+    if (authError) {
+      console.error('Auth creation error:', authError);
+      return res.status(400).json({ error: `Auth creation failed: ${authError.message}` });
     }
 
-    const user_id = data.user.id;
-    console.log('✅ User created in Supabase Auth:', user_id);
-
-    // Step 3: Insert into CRM users table (following guide structure)
-    try {
-      // Validate employee_id exists in database
-      let validEmployeeId = null;
-      if (employee_id && employee_id.length === 36 && employee_id.includes('-')) {
-        // Check if employee actually exists
-        const { data: existingEmployee } = await supabaseAdmin
-          .from('employees')
-          .select('id')
-          .eq('id', employee_id)
-          .single();
-          
-        if (existingEmployee) {
-          validEmployeeId = employee_id;
-          console.log('✅ Employee found, linking to user');
-        } else {
-          console.log('⚠️  Employee not found, creating user without employee link');
-        }
-      } else {
-        console.log('⚠️  Invalid employee_id format, creating user without employee link');
-      }
-
-      const { error: profileError } = await supabaseAdmin
-        .from('user_profiles')
-        .insert({
-          user_id: user_id,      // Fix: Use user_id field, not id
-          employee_id: validEmployeeId, // Only set if employee exists
-          email: email,
-          display_name: email,   // Default display name
-          is_active: true,
-          created_at: new Date().toISOString()
-        });
-
-      if (profileError) {
-        console.error('Profile creation error:', profileError);
-        // Don't fail the entire request - user was created successfully
-      } else {
-        console.log('✅ User profile created in CRM');
-      }
-    } catch (profileErr) {
-      console.error('Profile creation failed:', profileErr);
+    if (!authData.user) {
+      return res.status(400).json({ error: 'Failed to create user account' });
     }
 
-    // Step 4: Insert permissions (following guide approach)
-    try {
-      if (permissions && permissions.length > 0) {
-        // First, get module IDs from module names
-        const moduleNames = permissions.map(p => p.module_id || p.module);
-        const { data: modules, error: moduleError } = await supabaseAdmin
-          .from('modules')
-          .select('id, name')
-          .in('name', moduleNames);
+    console.log('User created in Auth:', authData.user.id);
 
-        if (moduleError) {
-          console.error('Error fetching modules:', moduleError);
-        } else {
-          // Create a map of module names to IDs
-          const moduleMap = {};
-          modules.forEach(mod => {
-            moduleMap[mod.name] = mod.id;
-          });
-
-          // Format permissions with correct module IDs
-          const formattedPermissions = permissions
-            .map(permission => {
-              const moduleName = permission.module_id || permission.module;
-              const moduleId = moduleMap[moduleName];
-              
-              if (!moduleId) {
-                console.log(`⚠️  Module '${moduleName}' not found, skipping`);
-                return null;
-              }
-
-              return {
-                user_id: user_id,
-                module_id: moduleId,  // Use the numeric ID from database
-                can_create: permission.can_create || false,
-                can_read: permission.can_read || false,
-                can_update: permission.can_update || false,
-                can_delete: permission.can_delete || false,
-                screen_visible: permission.screen_visible || false
-              };
-            })
-            .filter(p => p !== null);  // Remove null entries
-
-          if (formattedPermissions.length > 0) {
-            const { error: permError } = await supabaseAdmin
-              .from('user_permissions')
-              .insert(formattedPermissions);
-
-            if (permError) {
-              console.error('Permissions creation error:', permError);
-              // Don't fail - user was created successfully
-            } else {
-              console.log('✅ User permissions created');
-            }
-          } else {
-            console.log('⚠️  No valid permissions to create');
-          }
-        }
-      }
-    } catch (permErr) {
-      console.error('Permissions creation failed:', permErr);
-    }
-
-    // Step 5: Get employee data for response
-    let employeeData = null;
-    try {
-      const { data: emp, error: empError } = await supabaseAdmin
-        .from('employees')
-        .select('*')
-        .eq('id', employee_id)
-        .single();
-
-      if (!empError && emp) {
-        employeeData = emp;
-      }
-    } catch (empErr) {
-      console.log('Employee data not found, continuing...');
-    }
-
-    // Return success response (following guide format)
-    const responseUser = {
-      id: user_id,
+    // Create user profile with employee linking (manually instead of relying on trigger)
+    const profileData = {
+      user_id: authData.user.id,
       employee_id: employee_id,
-      email: email,
-      status: 'active',
-      created_by_admin_id: '1', // TODO: Get from current admin user
-      created_at: new Date().toISOString(),
-      employee: employeeData ? {
-        id: employeeData.id,
-        name: employeeData.name || employeeData.full_name,
-        email: employeeData.email,
+      email: userManagementEmail,
+      display_name: employeeData.full_name,
+      is_active: true,
+      attributes: {
         department: employeeData.department,
-        position: employeeData.position || employeeData.job_title
-      } : null
+        position: employeeData.job_title || employeeData.position,
+        phone: employeeData.contact_number || employeeData.phone,
+        personal_email: employeeData.personal_email || employeeData.email,
+        user_management_email: userManagementEmail,
+        permissions: {} // Initialize empty permissions object
+      }
     };
 
-    console.log('🎉 User creation completed following guide:', responseUser.id);
-    res.status(201).json({ 
-      message: 'User created', 
-      user_id: user_id,
-      user: responseUser 
+    console.log('Creating user profile with data:', profileData);
+
+    const { error: profileError } = await supabaseAdmin
+      .from('user_profiles')
+      .insert(profileData);
+
+    if (profileError) {
+      console.error('Profile creation error:', profileError);
+      // Don't fail here as the user was created successfully
+      console.log('Profile creation failed, but user was created in Auth');
+    } else {
+      console.log('User profile created successfully');
+    }
+
+    // Create permissions for the user if provided
+    if (permissions && permissions.length > 0) {
+      const permissionsJson = permissions.map(permission => ({
+        module: permission.module,
+        can_create: permission.can_create,
+        can_read: permission.can_read,
+        can_update: permission.can_update,
+        can_delete: permission.can_delete,
+        screen_visible: permission.screen_visible
+      }));
+
+      console.log('Creating permissions:', permissionsJson);
+
+      // Create permissions object for user profile
+      const permissionsObject = {};
+      permissionsJson.forEach(perm => {
+        permissionsObject[perm.module] = {
+          can_create: perm.can_create,
+          can_read: perm.can_read,
+          can_update: perm.can_update,
+          can_delete: perm.can_delete,
+          screen_visible: perm.screen_visible
+        };
+      });
+
+      console.log('Updating user profile with permissions:', permissionsObject);
+
+      // Update user profile with permissions
+      const { error: updateError } = await supabaseAdmin
+        .from('user_profiles')
+        .update({
+          attributes: {
+            ...profileData.attributes,
+            permissions: permissionsObject
+          }
+        })
+        .eq('user_id', authData.user.id);
+
+      if (updateError) {
+        console.error('Profile update error:', updateError);
+        console.log('Permissions creation failed, but user was created');
+      } else {
+        console.log('User permissions created successfully via profile update');
+      }
+
+      // Also try to create permissions using the function as backup
+      const { error: functionError } = await supabaseAdmin.rpc(
+        'create_user_permissions_from_template',
+        {
+          p_user_id: authData.user.id,
+          p_role_template: permissionsJson
+        }
+      );
+
+      if (functionError) {
+        console.error('Function permissions creation error:', functionError);
+      } else {
+        console.log('User permissions also created successfully via function');
+      }
+    }
+
+    // Assign role to user if role template was selected
+    if (req.body.role_id) {
+      console.log('Assigning role to user:', req.body.role_id);
+      
+      const { error: roleAssignmentError } = await supabaseAdmin
+        .from('user_roles')
+        .insert({
+          user_id: authData.user.id,
+          role_id: req.body.role_id
+        });
+
+      if (roleAssignmentError) {
+        console.error('Role assignment error:', roleAssignmentError);
+        console.log('Role assignment failed, but user was created successfully');
+      } else {
+        console.log('Role assigned successfully to user');
+      }
+    }
+
+    // Return the created user with both email types
+    const createdUser = {
+      id: authData.user.id,
+      employee_id: employee_id,
+      user_management_email: userManagementEmail,
+      personal_email: employeeData.personal_email || employeeData.email,
+      status: 'active',
+      created_at: new Date().toISOString(),
+      employee: {
+        id: employeeData.id,
+        full_name: employeeData.full_name,
+        department: employeeData.department,
+        job_title: employeeData.job_title || employeeData.position,
+        date_of_joining: employeeData.date_of_joining || '',
+        personal_email: employeeData.personal_email || employeeData.email,
+        user_management_email: userManagementEmail
+      }
+    };
+
+    console.log('User creation completed successfully:', createdUser.id);
+    console.log('User Management Email:', userManagementEmail);
+    console.log('Personal Email:', employeeData.personal_email || employeeData.email);
+
+    res.status(200).json({ 
+      user: createdUser,
+      message: 'User created successfully with user management email system'
     });
 
   } catch (error) {

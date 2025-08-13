@@ -33,7 +33,7 @@ export const MessageList = ({ messages, isLoading }: MessageListProps) => {
   }
 
   return (
-    <ScrollArea className="flex-1 min-h-[400px] mb-4 p-4 border rounded-md">
+    <div className="space-y-4">
       {messages.map((msg, i) => (
         <ChatMessage key={i} message={msg} />
       ))}
@@ -42,7 +42,7 @@ export const MessageList = ({ messages, isLoading }: MessageListProps) => {
           <Spinner size="md" />
         </div>
       )}
-    </ScrollArea>
+    </div>
   );
 };
 

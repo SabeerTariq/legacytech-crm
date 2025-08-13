@@ -97,6 +97,10 @@ const FrontSalesManagement: React.FC = () => {
   const [employees, setEmployees] = useState<FrontSalesEmployee[]>([]);
   const [currentMonth, setCurrentMonth] = useState('');
   
+  // Add state for raw data
+  const [rawPerformanceData, setRawPerformanceData] = useState<any[]>([]);
+  const [userProfilesData, setUserProfilesData] = useState<any[]>([]);
+  
   // Dialog states
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [isMemberDialogOpen, setIsMemberDialogOpen] = useState(false);
@@ -204,7 +208,17 @@ const FrontSalesManagement: React.FC = () => {
 
       if (targetsError) throw targetsError;
 
-      // Load Front Sales employees
+      // Load Front Sales employees with front_sales role
+      // Use backend API to avoid RLS recursion issues
+      const response = await fetch('/api/admin/get-user-roles');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch user roles from API');
+      }
+      
+      const userData = await response.json();
+      
+      // Get all employees in Front Sales department
       const { data: employeesData, error: employeesError } = await supabase
         .from('employees')
         .select('*')
@@ -213,33 +227,87 @@ const FrontSalesManagement: React.FC = () => {
 
       if (employeesError) throw employeesError;
 
+      // Get user profiles for the employees
+      const { data: userProfilesData, error: userProfilesError } = await supabase
+        .from('user_profiles')
+        .select('user_id, email, display_name, employee_id')
+        .in('employee_id', employeesData?.map(e => e.id) || []);
+
+      if (userProfilesError) throw userProfilesError;
+
+      // Filter employees who have front_sales role using the API data
+      // Since the API now returns user profiles instead of roles, we'll include all front sales employees
+      const frontSalesUserIds = Object.keys(userData);
+      
+      const frontSalesEmployeeIds = userProfilesData
+        ?.filter(up => frontSalesUserIds.includes(up.user_id))
+        ?.map(up => up.employee_id) || [];
+
+      const filteredEmployees = employeesData?.filter(emp => 
+        frontSalesEmployeeIds.includes(emp.id)
+      ) || [];
+
       // Data loaded successfully
       
-      setTeams(teamsData?.map(t => ({
+      const processedTeams = teamsData?.map(t => ({
         ...t,
         team_leader_name: t.team_leader?.full_name || 'Unassigned'
-      })) || []);
+      })) || [];
+      
+      setTeams(processedTeams);
       
       // Map team members with employee names
-      setTeamMembers(membersData?.map(m => {
-        const employee = employeesData?.find(e => e.id === m.member_id);
+      const processedTeamMembers = membersData?.map(m => {
+        const employee = filteredEmployees.find(e => e.id === m.member_id);
         return {
           ...m,
           member_name: employee?.full_name || 'Unknown Employee'
         };
-      }) || []);
+      }) || [];
       
-      setTeamPerformance(performanceData || []);
+      setTeamMembers(processedTeamMembers);
       
+      // Aggregate team performance from individual member performance
+      const aggregatedTeamPerformance = aggregateTeamPerformance(
+        performanceData || [], 
+        processedTeams, 
+        processedTeamMembers,
+        userProfilesData || [],
+        targetsData || []
+      );
+      
+      setTeamPerformance(aggregatedTeamPerformance);
+      
+      // Store raw data for member performance display
+      setRawPerformanceData(performanceData || []);
+      setUserProfilesData(userProfilesData || []);
+
       // Map member targets with employee names
       setMemberTargets(targetsData?.map(t => {
-        const employee = employeesData?.find(e => e.id === t.seller_id);
+        const employee = filteredEmployees.find(e => e.id === t.seller_id);
         return {
           ...t,
           seller_name: employee?.full_name || 'Unknown Employee'
         };
       }) || []);
-      setEmployees(employeesData || []);
+
+      // Transform employees data to match FrontSalesEmployee interface
+      const transformedEmployees = filteredEmployees.map(employee => {
+        // Find the corresponding user profile for email
+        const userProfile = userProfilesData?.find(up => up.employee_id === employee.id);
+        return {
+          id: employee.id,
+          email: userProfile?.email || employee.email || '',
+          full_name: employee.full_name,
+          department: employee.department,
+          role: 'front_sales', // Assuming all front sales employees have this role
+          hire_date: new Date().toISOString().split('T')[0], // Default to today
+          status: 'active'
+        };
+      })
+      .sort((a, b) => a.full_name.localeCompare(b.full_name));
+
+      setEmployees(transformedEmployees);
 
     } catch (error) {
       console.error('Error loading data:', error);
@@ -275,7 +343,7 @@ const FrontSalesManagement: React.FC = () => {
       const teamData = {
         name: teamForm.name,
         description: teamForm.description,
-        team_leader_id: teamForm.team_leader_id || null,
+        team_leader_id: teamForm.team_leader_id === 'no-leader' ? null : teamForm.team_leader_id,
         department: 'Front Sales'
       };
 
@@ -332,6 +400,27 @@ const FrontSalesManagement: React.FC = () => {
         toast({
           title: "Error",
           description: "Please select both team and member",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if member is already in this team
+      const { data: existingMember, error: checkError } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('team_id', memberForm.team_id)
+        .eq('member_id', memberForm.member_id)
+        .maybeSingle();
+
+      if (checkError) {
+        throw checkError;
+      }
+
+      if (existingMember) {
+        toast({
+          title: "Error",
+          description: "This member is already part of this team",
           variant: "destructive",
         });
         return;
@@ -446,7 +535,7 @@ const FrontSalesManagement: React.FC = () => {
     setTeamForm({
       name: team.name,
       description: team.description,
-      team_leader_id: team.team_leader_id || ''
+      team_leader_id: team.team_leader_id || 'no-leader'
     });
     setIsTeamDialogOpen(true);
   };
@@ -567,6 +656,89 @@ const FrontSalesManagement: React.FC = () => {
   // Get team performance for current month
   const getTeamPerformance = (teamId: string) => {
     return teamPerformance.find(perf => perf.team_id === teamId);
+  };
+
+  // Aggregate team performance from individual member performance
+  const aggregateTeamPerformance = (memberPerformance: any[], teams: Team[], teamMembers: TeamMember[], userProfiles: any[], memberTargets: MemberTarget[]) => {
+    const teamPerformanceMap = new Map();
+
+    // Initialize team performance for each team
+    teams.forEach(team => {
+      teamPerformanceMap.set(team.id, {
+        team_id: team.id,
+        team_name: team.name,
+        team_leader_name: team.team_leader_name,
+        member_count: 0,
+        total_accounts_achieved: 0,
+        total_gross: 0,
+        total_cash_in: 0,
+        total_remaining: 0,
+        target_accounts: 0,
+        target_gross: 0,
+        target_cash_in: 0,
+        performance_rank: 0,
+        completion_rate: 0
+      });
+    });
+
+    // Aggregate member performance by team
+    memberPerformance.forEach(member => {
+      // Find which team this member belongs to by matching user_id with employee_id
+      const userProfile = userProfiles.find(up => up.user_id === member.seller_id);
+      if (userProfile) {
+        const teamMember = teamMembers.find(tm => tm.member_id === userProfile.employee_id);
+        if (teamMember) {
+          const teamId = teamMember.team_id;
+          const teamData = teamPerformanceMap.get(teamId);
+          
+          if (teamData) {
+            teamData.member_count += 1;
+            teamData.total_accounts_achieved += member.accounts_achieved || 0;
+            teamData.total_gross += parseFloat(member.total_gross) || 0;
+            teamData.total_cash_in += parseFloat(member.total_cash_in) || 0;
+            teamData.total_remaining += parseFloat(member.total_remaining) || 0;
+            teamData.target_accounts += member.target_accounts || 0;
+          }
+        }
+      }
+    });
+
+    // Add target data to the aggregation
+    memberTargets.forEach(target => {
+      // Find which team this target belongs to by matching seller_id with employee_id
+      const teamMember = teamMembers.find(tm => tm.member_id === target.seller_id);
+      if (teamMember) {
+        const teamId = teamMember.team_id;
+        const teamData = teamPerformanceMap.get(teamId);
+        
+        if (teamData) {
+          // Add target values (these might already be included from performance data, but we ensure they're set)
+          teamData.target_accounts += target.target_accounts || 0;
+          teamData.target_gross += target.target_gross || 0;
+          teamData.target_cash_in += target.target_cash_in || 0;
+        }
+      }
+    });
+
+    // Calculate completion rates and sort by performance
+    const aggregatedTeams = Array.from(teamPerformanceMap.values()).map(team => {
+      const completionRate = team.target_accounts > 0 
+        ? (team.total_accounts_achieved / team.target_accounts) * 100 
+        : 0;
+      
+      return {
+        ...team,
+        completion_rate: completionRate
+      };
+    });
+
+    // Sort by completion rate and assign ranks
+    aggregatedTeams.sort((a, b) => b.completion_rate - a.completion_rate);
+    aggregatedTeams.forEach((team, index) => {
+      team.performance_rank = index + 1;
+    });
+
+    return aggregatedTeams;
   };
 
   // Permission check removed - all authenticated users can access
@@ -736,58 +908,108 @@ const FrontSalesManagement: React.FC = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Rank</TableHead>
-                      <TableHead>Team</TableHead>
-                      <TableHead>Leader</TableHead>
-                      <TableHead>Members</TableHead>
-                      <TableHead>Accounts</TableHead>
-                      <TableHead>Gross</TableHead>
-                      <TableHead>Cash In</TableHead>
-                      <TableHead>Completion</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {teamPerformance.map((team) => {
-                      const performanceRank = Number(team.performance_rank);
-                      const completionRate = Number(team.completion_rate);
-                      
-                      return (
-                        <TableRow key={team.team_id}>
-                          <TableCell>
-                            <Badge variant={performanceRank <= 3 ? "default" : "secondary"}>
-                              #{performanceRank}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {team.team_name}
-                          </TableCell>
-                          <TableCell>{team.team_leader_name}</TableCell>
-                                                     <TableCell>{Number(team.member_count)}</TableCell>
-                          <TableCell>
-                            {team.total_accounts_achieved} / {team.target_accounts}
-                          </TableCell>
-                          <TableCell>${team.total_gross.toLocaleString()}</TableCell>
-                          <TableCell>${team.total_cash_in.toLocaleString()}</TableCell>
-                          <TableCell>
-                            <Badge variant={completionRate >= 100 ? "default" : "secondary"}>
-                              {completionRate.toFixed(1)}%
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                    {teamPerformance.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                          No performance data available
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                {teamPerformance.map((team) => {
+                  const performanceRank = Number(team.performance_rank);
+                  const completionRate = Number(team.completion_rate);
+                  
+                  // Get team members for this team
+                  const teamMembers = getTeamMembers(team.team_id);
+                  
+                  // Get individual member performance for this team
+                  const memberPerformance = teamMembers.map(member => {
+                    // Find the user profile for this member
+                    const userProfile = userProfilesData?.find(up => up.employee_id === member.member_id);
+                    // Find the performance data for this member
+                    const memberPerf = rawPerformanceData?.find(p => p.seller_id === userProfile?.user_id);
+                    // Find the target data for this member
+                    const memberTarget = memberTargets?.find(t => t.seller_id === member.member_id);
+                    
+                    return {
+                      ...member,
+                      performance: {
+                        accounts_achieved: memberPerf?.accounts_achieved || 0,
+                        total_gross: memberPerf?.total_gross || 0,
+                        total_cash_in: memberPerf?.total_cash_in || 0,
+                        total_remaining: memberPerf?.total_remaining || 0,
+                        target_accounts: memberTarget?.target_accounts || 0,
+                        target_gross: memberTarget?.target_gross || 0,
+                        target_cash_in: memberTarget?.target_cash_in || 0
+                      }
+                    };
+                  });
+
+                  return (
+                    <div key={team.team_id} className="mb-8">
+                      {/* Team Performance Summary */}
+                      <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-lg font-semibold">{team.team_name}</h3>
+                          <Badge variant={performanceRank <= 3 ? "default" : "secondary"}>
+                            Rank #{performanceRank}
+                          </Badge>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-blue-600">{team.total_accounts_achieved}</div>
+                            <div className="text-sm text-muted-foreground">Accounts Achieved</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-green-600">${team.total_gross.toLocaleString()}</div>
+                            <div className="text-sm text-muted-foreground">Total Gross</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-purple-600">${team.total_cash_in.toLocaleString()}</div>
+                            <div className="text-sm text-muted-foreground">Cash In</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-orange-600">{completionRate.toFixed(1)}%</div>
+                            <div className="text-sm text-muted-foreground">Completion Rate</div>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-3 text-sm text-muted-foreground">
+                          <span className="font-medium">Team Leader:</span> {team.team_leader_name} | 
+                          <span className="font-medium ml-2">Members:</span> {team.member_count}
+                        </div>
+                      </div>
+
+                      {/* Individual Member Performance */}
+                      <div className="ml-4">
+                        <h4 className="font-medium text-md mb-3 text-gray-700">Team Members Performance</h4>
+                        <div className="space-y-3">
+                          {memberPerformance.map((member) => (
+                            <div key={member.id} className="border rounded-lg p-3 bg-white">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="font-medium">{member.member_name}</div>
+                                  <div className="text-sm text-muted-foreground capitalize">{member.role}</div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-medium">
+                                    {member.performance.accounts_achieved} / {member.performance.target_accounts} accounts
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
+                                    ${member.performance.total_gross.toLocaleString()} gross | ${member.performance.total_cash_in.toLocaleString()} cash in
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    Target: ${member.performance.target_gross.toLocaleString()} gross | ${member.performance.target_cash_in.toLocaleString()} cash in
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {teamPerformance.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No team performance data available
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -937,7 +1159,8 @@ const FrontSalesManagement: React.FC = () => {
                     <SelectValue placeholder="Select team leader" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No leader</SelectItem>
+                    <SelectItem value="no-leader">No leader</SelectItem>
+                    {/* Only shows employees with 'front_sales' role */}
                     {employees.map((employee) => (
                       <SelectItem key={employee.id} value={employee.id}>
                         {employee.full_name}
@@ -993,13 +1216,14 @@ const FrontSalesManagement: React.FC = () => {
                     <SelectValue placeholder="Select employee" />
                   </SelectTrigger>
                   <SelectContent>
+                    {/* Only shows employees with 'front_sales' role */}
                     {employees
                       .filter(employee => {
-                        // Filter out employees who are already members of any team
-                        const isAlreadyMember = teamMembers.some(member => 
-                          member.member_id === employee.id
+                        // Filter out employees who are already members of the selected team
+                        const isAlreadyMemberOfThisTeam = teamMembers.some(member => 
+                          member.member_id === employee.id && member.team_id === memberForm.team_id
                         );
-                        return !isAlreadyMember;
+                        return !isAlreadyMemberOfThisTeam;
                       })
                       .map((employee) => (
                         <SelectItem key={employee.id} value={employee.id}>
@@ -1007,13 +1231,13 @@ const FrontSalesManagement: React.FC = () => {
                         </SelectItem>
                       ))}
                     {employees.filter(employee => {
-                      const isAlreadyMember = teamMembers.some(member => 
-                        member.member_id === employee.id
+                      const isAlreadyMemberOfThisTeam = teamMembers.some(member => 
+                        member.member_id === employee.id && member.team_id === memberForm.team_id
                       );
-                      return !isAlreadyMember;
+                      return !isAlreadyMemberOfThisTeam;
                     }).length === 0 && (
-                      <SelectItem value="" disabled>
-                        No available employees to add
+                      <SelectItem value="no-available-employees" disabled>
+                        {memberForm.team_id ? 'All employees are already in this team' : 'Select a team first'}
                       </SelectItem>
                     )}
                   </SelectContent>
@@ -1084,7 +1308,7 @@ const FrontSalesManagement: React.FC = () => {
                       );
                       return isTeamMember;
                     }).length === 0 && (
-                      <SelectItem value="" disabled>
+                      <SelectItem value="no-team-members" disabled>
                         No team members available
                       </SelectItem>
                     )}
@@ -1097,7 +1321,17 @@ const FrontSalesManagement: React.FC = () => {
                   id="targetMonth"
                   type="month"
                   value={targetForm.month.substring(0, 7)}
-                  onChange={(e) => setTargetForm(prev => ({ ...prev, month: e.target.value + '-01' }))}
+                  onChange={(e) => {
+                    // Ensure the date format matches the database DATE column
+                    const selectedDate = new Date(e.target.value + '-01');
+                    const formattedMonth = selectedDate.toISOString().split('T')[0];
+                    console.log('📅 Setting target month:', {
+                      input: e.target.value,
+                      selectedDate: selectedDate.toISOString(),
+                      formattedMonth: formattedMonth
+                    });
+                    setTargetForm(prev => ({ ...prev, month: formattedMonth }));
+                  }}
                 />
               </div>
               <div>

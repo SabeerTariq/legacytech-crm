@@ -22,7 +22,7 @@ BEGIN
     -- Check if the seller is from Front Sales department
     SELECT department INTO seller_department
     FROM employees e
-    INNER JOIN profiles p ON e.email = p.username || '@example.com'
+    INNER JOIN user_profiles p ON e.email = p.username || '@example.com'
     WHERE p.id = seller_id;
     
     -- Only update performance for Front Sales employees
@@ -192,7 +192,7 @@ BEGIN
     -- Get all Front Sales employees
     FOR seller_record IN 
         SELECT p.id as user_id
-        FROM profiles p
+        FROM user_profiles p
         INNER JOIN employees e ON e.email = p.username || '@example.com'
         WHERE e.department = 'Front Sales'
     LOOP
@@ -243,7 +243,7 @@ BEGIN
         COALESCE(fst.target_cash_in, 0) as target_cash_in,
         0 as performance_rank -- Will be calculated below
     FROM front_seller_performance fsp
-    INNER JOIN profiles p ON p.id = fsp.seller_id
+    INNER JOIN user_profiles p ON p.id = fsp.seller_id
     LEFT JOIN front_seller_targets fst ON fst.seller_id = fsp.seller_id AND fst.month = fsp.month
     WHERE fsp.seller_id = p_seller_id AND fsp.month = month_to_check::TEXT;
     
@@ -287,7 +287,7 @@ DECLARE
 BEGIN
     -- Get a Front Sales employee for testing
     SELECT p.id INTO test_user_id
-    FROM profiles p
+    FROM user_profiles p
     INNER JOIN employees e ON e.email = p.username || '@example.com'
     WHERE e.department = 'Front Sales'
     LIMIT 1;

@@ -1,280 +1,259 @@
 import React, { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { 
   Search, 
   User, 
   Building, 
-  Phone, 
   Mail, 
-  DollarSign,
+  Phone, 
   Calendar,
+  DollarSign,
   CheckCircle,
-  AlertCircle,
-  Users,
-  FileText,
-  CreditCard
+  X,
+  FileText
 } from "lucide-react";
-import type { Customer } from "@/types/upsell";
 
-interface CustomerSelectorProps {
-  onCustomerSelect: (customer: Customer) => void;
-  selectedCustomer: Customer | null;
-  showOnlyActiveProjects?: boolean;
+interface Customer {
+  id: string;
+  customer_name: string;
+  email: string;
+  phone_number: string;
+  business_name?: string;
+  service_sold?: string;
+  gross_value?: number;
+  sale_date?: string;
+  created_at?: string;
 }
 
-const CustomerSelector: React.FC<CustomerSelectorProps> = ({
-  onCustomerSelect,
-  selectedCustomer,
-  showOnlyActiveProjects = true
+interface CustomerSelectorProps {
+  onCustomerSelect: (customer: Customer | null) => void;
+  selectedCustomer: Customer | null;
+}
+
+const CustomerSelector: React.FC<CustomerSelectorProps> = ({ 
+  onCustomerSelect, 
+  selectedCustomer 
 }) => {
-  const { toast } = useToast();
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showResults, setShowResults] = useState(false);
 
-  // Load customers with active projects
-  useEffect(() => {
-    loadCustomers();
-  }, []);
-
-  const loadCustomers = async () => {
+  // Load customers from sales_dispositions table
+  const loadCustomers = async (search: string = "") => {
     setLoading(true);
     try {
-      // Load customers from sales_dispositions table
-      const { data, error } = await supabase
-        .from('sales_dispositions')
-        .select('*')
-        .order('sale_date', { ascending: false });
+      let query = supabase
+        .from("sales_dispositions")
+        .select(`
+          id,
+          customer_name,
+          email,
+          phone_number,
+          business_name,
+          service_sold,
+          gross_value,
+          sale_date,
+          created_at
+        `)
+        .order("created_at", { ascending: false });
+
+      if (search.trim()) {
+        query = query.or(`
+          customer_name.ilike.%${search}%,
+          email.ilike.%${search}%,
+          business_name.ilike.%${search}%
+        `);
+      }
+
+      const { data, error } = await query.limit(20);
 
       if (error) throw error;
-
-      // Transform data to match Customer interface
-      const transformedCustomers: Customer[] = (data || []).map((sd: any) => ({
-        id: sd.id,
-        customer_name: sd.customer_name,
-        email: sd.email,
-        phone_number: sd.phone_number,
-        business_name: sd.business_name,
-        total_projects: 0, // Will be calculated later
-        active_projects: 0,
-        completed_projects: 0,
-        total_recurring_services: 0,
-        active_recurring_services: 0,
-        monthly_recurring_revenue: 0,
-        total_one_time_services: 0,
-        total_sales: 1,
-        total_lifetime_value: sd.gross_value || 0,
-        last_purchase_date: sd.sale_date
-      }));
-
-      setCustomers(transformedCustomers);
-      setFilteredCustomers(transformedCustomers);
+      setCustomers(data || []);
     } catch (error) {
       console.error("Error loading customers:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load customers",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter customers based on search term
-  useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredCustomers(customers);
-      return;
+  // Search customers
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    if (value.trim().length >= 2) {
+      loadCustomers(value);
+      setShowResults(true);
+    } else {
+      setCustomers([]);
+      setShowResults(false);
     }
+  };
 
-    const filtered = customers.filter(customer =>
-      customer.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.phone_number.includes(searchTerm)
-    );
-
-    setFilteredCustomers(filtered);
-  }, [searchTerm, customers]);
-
+  // Select a customer
   const handleCustomerSelect = (customer: Customer) => {
     onCustomerSelect(customer);
-    toast({
-      title: "Customer Selected",
-      description: `Selected customer: ${customer.customer_name}`,
-    });
+    setShowResults(false);
+    setSearchTerm(customer.customer_name);
   };
 
-  const clearSelection = () => {
-    onCustomerSelect(null as Customer);
+  // Clear selection
+  const handleClearSelection = () => {
+    onCustomerSelect(null);
     setSearchTerm("");
+    setCustomers([]);
+    setShowResults(false);
   };
+
+  // Load initial customers on mount
+  useEffect(() => {
+    if (selectedCustomer) {
+      setSearchTerm(selectedCustomer.customer_name);
+    }
+  }, [selectedCustomer]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Users className="h-5 w-5" />
-          Select Existing Customer
-          {showOnlyActiveProjects && (
-            <Badge variant="secondary" className="ml-2">
-              Active Projects Only
-            </Badge>
-          )}
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Search for existing customers with active projects to create an upsell
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Search Input */}
-        <div className="space-y-2">
-          <Label htmlFor="customerSearch">Search Customers</Label>
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+    <div className="relative">
+      <div className="space-y-2">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              id="customerSearch"
-              placeholder="Search by name, email, or phone..."
+              placeholder="Search customers by name, email, or business..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearch(e.target.value)}
               className="pl-10"
+              onFocus={() => {
+                if (customers.length > 0) setShowResults(true);
+              }}
             />
           </div>
+          {selectedCustomer && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleClearSelection}
+              className="text-red-600 hover:text-red-700"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
 
-        {/* Selected Customer Display */}
-        {selectedCustomer && (
-          <div className="p-4 border rounded-lg bg-green-50 border-green-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <span className="font-medium text-green-800">Customer Selected</span>
-              </div>
-              <Button variant="outline" size="sm" onClick={clearSelection}>
-                Change
-              </Button>
-            </div>
-            <div className="mt-2 space-y-1">
-              <div className="font-medium">{selectedCustomer.customer_name}</div>
-              <div className="text-sm text-green-700">{selectedCustomer.email}</div>
-              <div className="text-sm text-green-700">{selectedCustomer.phone_number}</div>
-            </div>
-          </div>
-        )}
+        {/* Search Results */}
+        {showResults && (
+          <Card className="absolute top-full left-0 right-0 z-50 max-h-96 overflow-y-auto">
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="p-4 text-center text-gray-500">
+                  Searching customers...
+                </div>
+              ) : customers.length === 0 ? (
+                <div className="p-4 text-center text-gray-500">
+                  {searchTerm.trim() ? "No customers found" : "Start typing to search customers"}
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {customers.map((customer) => (
+                    <div
+                      key={customer.id}
+                      className="p-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => handleCustomerSelect(customer)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <User className="h-4 w-4 text-gray-500" />
+                            <span className="font-medium text-gray-900 truncate">
+                              {customer.customer_name}
+                            </span>
+                            {customer.business_name && (
+                              <Badge variant="secondary" className="text-xs">
+                                <Building className="h-3 w-3 mr-1" />
+                                {customer.business_name}
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          <div className="space-y-1 text-sm text-gray-600">
+                            {customer.email && (
+                              <div className="flex items-center gap-2">
+                                <Mail className="h-3 w-3" />
+                                <span className="truncate">{customer.email}</span>
+                              </div>
+                            )}
+                            {customer.phone_number && (
+                              <div className="flex items-center gap-2">
+                                <Phone className="h-3 w-3" />
+                                <span>{customer.phone_number}</span>
+                              </div>
+                            )}
+                          </div>
 
-        {/* Customer List */}
-        {!selectedCustomer && (
-          <div className="space-y-2">
-            <Label>Available Customers</Label>
-            {loading ? (
-              <div className="text-center py-4">Loading customers...</div>
-            ) : filteredCustomers.length === 0 ? (
-              <div className="text-center py-4 text-muted-foreground">
-                {searchTerm ? "No customers found matching your search" : "No customers available"}
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {filteredCustomers.map((customer) => (
-                                     <div
-                     key={customer.id}
-                     className="p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                     onClick={() => handleCustomerSelect(customer)}
-                   >
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <div className="font-medium">{customer.customer_name}</div>
-                        <div className="text-sm text-muted-foreground flex items-center gap-4">
-                          <span className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {customer.email}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            {customer.phone_number}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-right space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs">
-                            {customer.active_projects} Active Projects
-                          </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            {customer.active_recurring_services} Services
-                          </Badge>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          ${customer.total_lifetime_value.toLocaleString()} Total Value
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Customer Portfolio Summary */}
-                    <div className="mt-3 pt-3 border-t">
-                      <div className="grid grid-cols-3 gap-4 text-xs">
-                        <div>
-                          <div className="text-muted-foreground">Projects</div>
-                          <div className="font-medium">{customer.total_projects}</div>
-                        </div>
-                        <div>
-                          <div className="text-muted-foreground">Recurring Revenue</div>
-                          <div className="font-medium">${customer.monthly_recurring_revenue}/mo</div>
-                        </div>
-                        <div>
-                          <div className="text-muted-foreground">Last Purchase</div>
-                          <div className="font-medium">
-                            {customer.last_purchase_date 
-                              ? new Date(customer.last_purchase_date).toLocaleDateString()
-                              : 'N/A'
-                            }
+                          <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                            {customer.service_sold && (
+                              <div className="flex items-center gap-1">
+                                <FileText className="h-3 w-3" />
+                                <span>{customer.service_sold}</span>
+                              </div>
+                            )}
+                            {customer.gross_value && (
+                              <div className="flex items-center gap-1">
+                                <DollarSign className="h-3 w-3" />
+                                <span>${customer.gross_value.toLocaleString()}</span>
+                              </div>
+                            )}
+                            {customer.sale_date && (
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                <span>{new Date(customer.sale_date).toLocaleDateString()}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
+
+                        {selectedCustomer?.id === customer.id && (
+                          <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                        )}
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Selected Customer Display */}
+      {selectedCustomer && (
+        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center gap-2 text-blue-700 mb-2">
+            <CheckCircle className="h-4 w-4" />
+            <span className="font-medium">Selected Customer</span>
+          </div>
+          <div className="text-sm text-blue-600">
+            <p><strong>Name:</strong> {selectedCustomer.customer_name}</p>
+            <p><strong>Email:</strong> {selectedCustomer.email}</p>
+            <p><strong>Phone:</strong> {selectedCustomer.phone_number}</p>
+            {selectedCustomer.business_name && (
+              <p><strong>Business:</strong> {selectedCustomer.business_name}</p>
+            )}
+            {selectedCustomer.service_sold && (
+              <p><strong>Previous Service:</strong> {selectedCustomer.service_sold}</p>
+            )}
+            {selectedCustomer.gross_value && (
+              <p><strong>Previous Value:</strong> ${selectedCustomer.gross_value.toLocaleString()}</p>
             )}
           </div>
-        )}
-
-        {/* Customer Portfolio Details */}
-        {selectedCustomer && (
-          <div className="space-y-4">
-            <Separator />
-            <div>
-              <h4 className="font-medium mb-3">Customer Portfolio</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-3 border rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">{selectedCustomer.active_projects}</div>
-                  <div className="text-xs text-muted-foreground">Active Projects</div>
-                </div>
-                <div className="text-center p-3 border rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">{selectedCustomer.active_recurring_services}</div>
-                  <div className="text-xs text-muted-foreground">Active Services</div>
-                </div>
-                <div className="text-center p-3 border rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600">${selectedCustomer.monthly_recurring_revenue}</div>
-                  <div className="text-xs text-muted-foreground">Monthly Revenue</div>
-                </div>
-                <div className="text-center p-3 border rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600">${selectedCustomer.total_lifetime_value.toLocaleString()}</div>
-                  <div className="text-xs text-muted-foreground">Total Value</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      )}
+    </div>
   );
 };
 

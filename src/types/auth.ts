@@ -5,6 +5,12 @@ export interface User {
   is_admin: boolean;
   created_at: string;
   status?: 'active' | 'disabled';
+  role?: {
+    id: string;
+    name: string;
+    display_name: string;
+    description: string;
+  };
   employee?: {
     id: string;
     full_name: string;

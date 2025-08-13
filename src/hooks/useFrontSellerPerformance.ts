@@ -22,8 +22,30 @@ export const useFrontSellerPerformance = () => {
 
   // Check if user has My Dashboard access
   const checkDashboardAccess = async (userId: string): Promise<boolean> => {
-    // Authentication removed - default to true for now
-    return true;
+    try {
+      // Use backend API to check if user has front_sales role
+      const response = await fetch('/api/admin/check-user-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          roleName: 'front_sales'
+        }),
+      });
+
+      if (!response.ok) {
+        console.warn('Failed to check user role, defaulting to true');
+        return true; // Default to true if API fails
+      }
+
+      const { hasRole } = await response.json();
+      return hasRole;
+    } catch (error) {
+      console.error('Error checking dashboard access:', error);
+      return true; // Default to true if there's an error
+    }
   };
 
   const calculatePerformanceMetrics = (
@@ -50,35 +72,55 @@ export const useFrontSellerPerformance = () => {
   };
 
   const fetchCurrentMonthData = async () => {
-    if (!user) return null;
+    if (!user || !user.employee) return null;
 
     // Use UTC dates to match database trigger format
     const now = new Date();
     const currentYear = now.getUTCFullYear();
     const currentMonth = now.getUTCMonth();
     const monthStart = new Date(Date.UTC(currentYear, currentMonth, 1));
-    const monthString = monthStart.toISOString().split('T')[0];
+    const monthDate = monthStart.toISOString().split('T')[0]; // For DATE comparison
+
+    console.log('🔍 Front Sales Dashboard Debug:', {
+      userId: user.id,
+      employeeId: user.employee.id,
+      currentMonthDate: monthDate,
+      currentDate: now.toISOString(),
+      monthStart: monthStart.toISOString()
+    });
 
     try {
-      // Fetch target for current month - use proper date format
+      // Fetch target for current month - use DATE format and employee ID
       const { data: targetData, error: targetError } = await supabase
         .from('front_seller_targets')
         .select('*')
-        .eq('seller_id', user.id)
-        .eq('month', monthString)
+        .eq('seller_id', user.employee.id)
+        .eq('month', monthDate)
         .single();
+
+      console.log('🎯 Target fetch result:', {
+        targetData,
+        targetError,
+        monthDate
+      });
 
       if (targetError && targetError.code !== 'PGRST116') {
         throw targetError;
       }
 
-      // Fetch performance for current month - use proper date format
+      // Fetch performance for current month - use DATE format and auth user ID
       const { data: performanceData, error: performanceError } = await supabase
         .from('front_seller_performance')
         .select('*')
-        .eq('seller_id', user.id)
-        .eq('month', monthString)
+        .eq('seller_id', user.id) // Use auth user ID for performance data
+        .eq('month', monthDate)
         .single();
+
+      console.log('📊 Performance fetch result:', {
+        performanceData,
+        performanceError,
+        monthDate
+      });
 
       if (performanceError && performanceError.code !== 'PGRST116') {
         throw performanceError;
@@ -86,6 +128,8 @@ export const useFrontSellerPerformance = () => {
 
       // Calculate performance metrics
       const metrics = calculatePerformanceMetrics(targetData, performanceData);
+
+      console.log('📈 Calculated metrics:', metrics);
 
       return metrics;
     } catch (error) {
@@ -95,7 +139,7 @@ export const useFrontSellerPerformance = () => {
   };
 
   const fetchPreviousMonthsData = async (): Promise<MonthlyPerformanceData[]> => {
-    if (!user) return [];
+    if (!user || !user.employee) return [];
 
     try {
       // Calculate current month to exclude it from previous months
@@ -103,24 +147,24 @@ export const useFrontSellerPerformance = () => {
       const currentYear = now.getUTCFullYear();
       const currentMonth = now.getUTCMonth();
       const currentMonthStart = new Date(Date.UTC(currentYear, currentMonth, 1));
-      const currentMonthString = currentMonthStart.toISOString().split('T')[0];
+      const currentMonthDate = currentMonthStart.toISOString().split('T')[0];
 
-      // Fetch performance data for previous months (excluding current month)
+      // Fetch performance data for previous months (excluding current month) - use auth user ID
       const { data: performanceData, error: performanceError } = await supabase
         .from('front_seller_performance')
         .select('*')
-        .eq('seller_id', user.id)
-        .lt('month', currentMonthString) // Only get months before current month
+        .eq('seller_id', user.id) // Use auth user ID for performance data
+        .lt('month', currentMonthDate) // Only get months before current month
         .order('month', { ascending: false })
         .limit(6);
 
       if (performanceError) throw performanceError;
 
-      // Fetch targets for the same months
+      // Fetch targets for the same months - use employee ID
       const { data: targetData, error: targetError } = await supabase
         .from('front_seller_targets')
         .select('*')
-        .eq('seller_id', user.id)
+        .eq('seller_id', user.employee.id) // Use employee ID for target data
         .in('month', performanceData?.map(p => p.month) || []);
 
       if (targetError) throw targetError;
@@ -150,7 +194,7 @@ export const useFrontSellerPerformance = () => {
     personalRank: number;
     teamAverage: { accountsAchieved: number; totalGross: number; totalCashIn: number };
   }> => {
-    if (!user) return { teamPerformance: [], personalRank: 0, teamAverage: { accountsAchieved: 0, totalGross: 0, totalCashIn: 0 } };
+    if (!user || !user.employee) return { teamPerformance: [], personalRank: 0, teamAverage: { accountsAchieved: 0, totalGross: 0, totalCashIn: 0 } };
 
     try {
       // Use UTC dates to match database trigger format
@@ -166,7 +210,7 @@ export const useFrontSellerPerformance = () => {
       if (error) throw error;
 
       const teamPerformance = data || [];
-      const personalRank = teamPerformance.find(p => p.seller_id === user.id)?.performance_rank || 0;
+      const personalRank = teamPerformance.find(p => p.seller_id === user.id)?.performance_rank || 0; // Use auth user ID
 
       // Calculate team averages
       const totalAccounts = teamPerformance.reduce((sum, p) => sum + p.accounts_achieved, 0);
@@ -188,7 +232,7 @@ export const useFrontSellerPerformance = () => {
   };
 
   const loadDashboardData = async () => {
-    if (!user) {
+    if (!user || !user.employee) {
       setLoading(false);
       return;
     }
@@ -230,7 +274,7 @@ export const useFrontSellerPerformance = () => {
   };
 
   const updateTarget = async (targetData: Partial<FrontSellerTarget>) => {
-    if (!user) return;
+    if (!user || !user.employee) return;
 
     try {
       // Check dashboard access before allowing target updates
@@ -249,7 +293,7 @@ export const useFrontSellerPerformance = () => {
       const { error } = await supabase
         .from('front_seller_targets')
         .upsert({
-          seller_id: user.id,
+          seller_id: user.employee.id,
           month: monthString,
           ...targetData
         });

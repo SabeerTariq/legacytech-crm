@@ -133,7 +133,7 @@ const RoleManagement: React.FC = () => {
     createRoleMutation.mutate(formData);
   };
 
-  const handleEditRole = (role: Role) => {
+  const handleEditRole = (role: RoleWithPermissions) => {
     // Fetch role with permissions
     getRoleById(role.id).then((roleWithPermissions) => {
       setSelectedRole(roleWithPermissions);
@@ -163,7 +163,7 @@ const RoleManagement: React.FC = () => {
     });
   };
 
-  const handleDeleteRole = (role: Role) => {
+  const handleDeleteRole = (role: RoleWithPermissions) => {
     deleteRoleMutation.mutate(role.id);
   };
 
@@ -204,9 +204,8 @@ const RoleManagement: React.FC = () => {
     return perm ? perm[permission as keyof typeof perm] : false;
   };
 
-  const getPermissionCount = (role: Role): number => {
-    // This would need to be fetched from the backend
-    return 0; // Placeholder
+  const getPermissionCount = (role: RoleWithPermissions): number => {
+    return role.permissions ? role.permissions.length : 0;
   };
 
   if (rolesLoading || modulesLoading) {

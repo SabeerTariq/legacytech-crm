@@ -1,23 +1,48 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Database } from "@/integrations/supabase/types";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Calendar, Clock, DollarSign, User, FileText, CheckCircle, AlertCircle, PlayCircle, PauseCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-type Project = Database["public"]["Tables"]["projects"]["Row"] & {
-  sales_disposition: Database["public"]["Tables"]["sales_dispositions"]["Row"];
-  assigned_pm: Database["public"]["Tables"]["employees"]["Row"];
-};
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { FileText, Calendar, User, DollarSign, Clock, CheckCircle, AlertCircle, PlayCircle, PauseCircle } from "lucide-react";
+
+interface Project {
+  id: string;
+  name: string;
+  client: string;
+  description: string;
+  due_date: string;
+  status: string;
+  progress: number;
+  budget: number;
+  assigned_pm_id: string;
+  services?: string[];
+  sales_disposition?: {
+    id: string;
+    customer_name: string;
+    gross_value: number;
+    cash_in: number;
+    remaining: number;
+  };
+  assigned_pm?: {
+    id: string;
+    full_name: string;
+    job_title: string;
+  };
+}
 
 const MyProjects = () => {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [employeeProfile, setEmployeeProfile] = useState<{
+    id: string;
+    full_name: string;
+    department: string;
+    job_title: string;
+  } | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -29,28 +54,157 @@ const MyProjects = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get current user's employee profile
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", user.id)
+      console.log('🔍 MyProjects: Loading projects for user:', {
+        userId: user.id,
+        userEmail: user.email
+      });
+
+      // Get current user's employee profile through user_profiles table
+      const { data: userProfile } = await supabase
+        .from("user_profiles")
+        .select("employee_id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
         .single();
 
-      if (!profile) return;
+      if (!userProfile || !userProfile.employee_id) {
+        console.log('🔍 MyProjects: No active user profile or employee ID found for user:', user.id);
+        return;
+      }
 
-      // Get projects assigned to this PM
-      const { data, error } = await supabase
+      console.log('🔍 MyProjects: User profile found:', userProfile);
+
+      // Get employee details using the employee_id from user_profile
+      const { data: employeeProfile } = await supabase
+        .from("employees")
+        .select("id, full_name, department, job_title")
+        .eq("id", userProfile.employee_id)
+        .single();
+
+      if (!employeeProfile) {
+        console.log('🔍 MyProjects: No employee profile found for employee ID:', userProfile.employee_id);
+        return;
+      }
+
+      console.log('🔍 MyProjects: Employee profile:', employeeProfile);
+
+      // Store employee profile in state for use in UI
+      setEmployeeProfile(employeeProfile);
+
+      // Debug: Check if there are any projects at all for this employee ID
+      const { count: projectCount, error: countError } = await supabase
+        .from("projects")
+        .select("*", { count: "exact", head: true })
+        .eq("assigned_pm_id", employeeProfile.id);
+      
+      console.log('🔍 MyProjects: Total projects count for employee ID', employeeProfile.id, ':', projectCount);
+      if (countError) {
+        console.error('🔍 MyProjects: Count query error:', countError);
+      }
+
+      // Get projects assigned to this user - check all possible assignment fields
+      const query = supabase
         .from("projects")
         .select(`
           *,
           sales_disposition:sales_dispositions(*),
           assigned_pm:employees!assigned_pm_id(*)
         `)
-        .eq("assigned_pm_id", profile.id)
-        .not("status", "eq", "unassigned")
+        .or(`assigned_pm_id.eq.${employeeProfile.id},assigned_to_id.eq.${employeeProfile.id},user_id.eq.${user.id}`)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      console.log('🔍 MyProjects: Executing query with employee ID:', employeeProfile.id);
+      console.log('🔍 MyProjects: Query OR condition:', `assigned_pm_id.eq.${employeeProfile.id},assigned_to_id.eq.${employeeProfile.id},user_id.eq.${user.id}`);
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('🔍 MyProjects: Error loading projects:', error);
+        throw error;
+      }
+
+      console.log('🔍 MyProjects: Projects found:', data?.length || 0);
+      
+      // If no projects found with the main query, try the same logic as the dashboard
+      if (!data || data.length === 0) {
+        console.log('🔍 MyProjects: No projects found with main query, trying dashboard logic...');
+        
+        // Use the same logic as the dashboard: projects where assigned_pm_id = employee.id
+        const { data: dashboardProjects, error: dashboardError } = await supabase
+          .from("projects")
+          .select(`
+            *,
+            sales_disposition:sales_dispositions(*),
+            assigned_pm:employees!assigned_pm_id(*)
+          `)
+          .eq("assigned_pm_id", employeeProfile.id)
+          .in("status", ["assigned", "in_progress", "review"])
+          .order("created_at", { ascending: false });
+        
+        if (dashboardError) {
+          console.error('🔍 MyProjects: Dashboard query error:', dashboardError);
+        } else {
+          console.log('🔍 MyProjects: Dashboard query found projects:', dashboardProjects?.length || 0);
+          if (dashboardProjects && dashboardProjects.length > 0) {
+            console.log('🔍 MyProjects: Dashboard projects:', dashboardProjects);
+            // Use the dashboard projects instead
+            setProjects(dashboardProjects);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
+      if (data && data.length > 0) {
+        console.log('🔍 MyProjects: Sample project:', data[0]);
+        console.log('🔍 MyProjects: Assignment fields in found projects:');
+        data.forEach((project, index) => {
+          console.log(`  Project ${index + 1}:`, {
+            name: project.name,
+            assigned_pm_id: project.assigned_pm_id,
+            assigned_to_id: project.assigned_to_id,
+            user_id: project.user_id,
+            status: project.status
+          });
+        });
+      } else {
+        console.log('🔍 MyProjects: No projects found for employee ID:', employeeProfile.id);
+        console.log('🔍 MyProjects: User ID:', user.id);
+        
+        // Debug: Check if there are any projects at all
+        const { data: allProjects } = await supabase
+          .from("projects")
+          .select("id, name, assigned_pm_id, assigned_to_id, user_id, status")
+          .limit(5);
+        
+        console.log('🔍 MyProjects: Sample of all projects in system:', allProjects);
+        
+        // Debug: Check specifically for projects assigned to this employee
+        const { data: assignedProjects } = await supabase
+          .from("projects")
+          .select("id, name, status, assigned_pm_id")
+          .eq("assigned_pm_id", employeeProfile.id);
+        
+        console.log('🔍 MyProjects: Projects with assigned_pm_id =', employeeProfile.id, ':', assignedProjects);
+        
+        // Debug: Check for projects created by this user
+        const { data: userCreatedProjects } = await supabase
+          .from("projects")
+          .select("id, name, status, user_id")
+          .eq("user_id", user.id);
+        
+        console.log('🔍 MyProjects: Projects with user_id =', user.id, ':', userCreatedProjects);
+        
+        // Debug: Check for upsell sales by this user that might have created projects
+        const { data: upsellSales } = await supabase
+          .from("sales_dispositions")
+          .select("id, customer_name, service_sold, gross_value, is_upsell")
+          .eq("user_id", user.id)
+          .eq("is_upsell", true);
+        
+        console.log('🔍 MyProjects: Upsell sales by this user:', upsellSales);
+      }
+
       setProjects(data || []);
     } catch (error) {
       console.error("Error loading projects:", error);
@@ -187,9 +341,32 @@ const MyProjects = () => {
             <CardContent className="flex flex-col items-center justify-center py-12">
               <FileText className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">No Projects Assigned</h3>
-              <p className="text-muted-foreground text-center">
+              <p className="text-muted-foreground text-center mb-4">
                 You don't have any projects assigned yet. Projects will appear here once they are assigned to you.
               </p>
+              
+              {/* Show additional options for upseller users */}
+              {employeeProfile?.department === 'Upseller' && (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground text-center">
+                    As an upseller, you can also:
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate('/projects')}
+                    >
+                      View All Projects
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate('/projects/assignment')}
+                    >
+                      View Unassigned Projects
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -200,9 +377,9 @@ const MyProjects = () => {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <CardTitle className="text-lg mb-2">{project.name}</CardTitle>
-                      <CardDescription className="mb-3">
+                      <p className="text-muted-foreground text-sm mb-2">
                         {project.description || "No description provided"}
-                      </CardDescription>
+                      </p>
                     </div>
                     <Badge className={getStatusColor(project.status)}>
                       <div className="flex items-center gap-1">
@@ -220,7 +397,12 @@ const MyProjects = () => {
                       <span>Progress</span>
                       <span>{calculateProgress(project)}%</span>
                     </div>
-                    <Progress value={calculateProgress(project)} className="h-2" />
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-primary h-2 rounded-full"
+                        style={{ width: `${calculateProgress(project)}%` }}
+                      ></div>
+                    </div>
                   </div>
 
                   {/* Project Details */}

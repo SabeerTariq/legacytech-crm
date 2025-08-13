@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { adminService, CreateUserData, AdminUser } from '@/lib/admin/adminService';
+import adminService, { CreateUserData, AdminUser } from '@/lib/admin/adminService';
 import { useToast } from '@/hooks/use-toast';
 
 export const useAdminUsers = () => {
@@ -11,10 +11,11 @@ export const useAdminUsers = () => {
     isLoading,
     error,
     refetch
-  } = useQuery({
+  } = useQuery<AdminUser[]>({
     queryKey: ['admin-users'],
     queryFn: adminService.getUsers,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0, // Force immediate refresh
+    refetchOnWindowFocus: true,
   });
 
   const createUserMutation = useMutation({

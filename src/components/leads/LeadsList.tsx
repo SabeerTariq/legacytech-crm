@@ -35,6 +35,7 @@ import {
   MapPin,
   User,
 } from "lucide-react";
+import { usePermissions } from "@/contexts/PermissionContext"; // Added
 
 export interface Lead {
   id: string;
@@ -67,14 +68,22 @@ export interface Lead {
 interface LeadsListProps {
   leads: Lead[];
   onLeadClick?: (lead: Lead) => void;
+  onLeadEdit?: (lead: Lead) => void; // Added edit handler
   onUpdateStatus?: (leadId: string, status: Lead['status']) => void;
+  onDeleteLead?: (leadId: string) => void;
+  canDelete?: boolean;
 }
 
 const LeadsList: React.FC<LeadsListProps> = ({ 
   leads, 
   onLeadClick, 
+  onLeadEdit, // Added
   onUpdateStatus,
+  onDeleteLead,
+  canDelete = true,
 }) => {
+  const { canRead, canUpdate, canDelete: canDeletePermission } = usePermissions(); // Added permission hooks
+
   const statusColors: { [key: string]: string } = {
     new: "bg-blue-100 text-blue-800 border-blue-200",
     converted: "bg-emerald-100 text-emerald-800 border-emerald-200",
@@ -119,6 +128,47 @@ const LeadsList: React.FC<LeadsListProps> = ({
     return new Date(dateString).toLocaleString();
   };
 
+  // Dynamic actions based on permissions
+  const getAvailableActions = (lead: Lead) => {
+    const actions = [];
+
+    // View action - always available if user has read permission
+    if (canRead('leads')) {
+      actions.push({
+        label: 'View Details',
+        icon: <Eye className="mr-2 h-4 w-4" />,
+        onClick: () => onLeadClick && onLeadClick(lead),
+        className: ''
+      });
+    }
+
+    // Edit action - only if user has update permission
+    if (canUpdate('leads') && onLeadEdit) {
+      actions.push({
+        label: 'Edit Lead',
+        icon: <Edit className="mr-2 h-4 w-4" />,
+        onClick: () => onLeadEdit(lead),
+        className: ''
+      });
+    }
+
+    // Delete action - only if user has delete permission
+    if (canDeletePermission('leads') && onDeleteLead) {
+      actions.push({
+        label: 'Delete Lead',
+        icon: <Trash2 className="mr-2 h-4 w-4" />,
+        onClick: () => {
+          if (confirm('Are you sure you want to delete this lead? This action cannot be undone.')) {
+            onDeleteLead(lead.id);
+          }
+        },
+        className: 'text-red-600 focus:text-red-600'
+      });
+    }
+
+    return actions;
+  };
+
   return (
     <div className="space-y-4">
       <div className="rounded-md border overflow-x-auto">
@@ -145,146 +195,160 @@ const LeadsList: React.FC<LeadsListProps> = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {leads.map((lead) => (
-              <TableRow key={lead.id}>
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
-                        {getInitials(lead.client_name)}
-                    </div>
-                    <div>
-                      <div className="font-medium">{lead.client_name}</div>
-                      <div className="text-xs text-muted-foreground">ID: {lead.id.slice(0, 8)}...</div>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-sm">{lead.email_address}</span>
-                    </div>
-                    {lead.contact_number && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-sm">{formatPhoneNumber(lead.contact_number)}</span>
+            {leads.map((lead) => {
+              const availableActions = getAvailableActions(lead);
+              
+              return (
+                <TableRow key={lead.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
+                          {getInitials(lead.client_name)}
                       </div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="max-w-[200px]">
-                    <span className="text-sm text-muted-foreground truncate block">
-                      {lead.services_required || '-'}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <span className="text-sm text-muted-foreground">{lead.budget || '-'}</span>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      {formatDate(lead.date)}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <User className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-sm font-medium">{lead.agent || '-'}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Building className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-sm">{lead.business_description || '-'}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-sm">{lead.city_state || '-'}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge className={statusColors[lead.status] || "bg-gray-100 text-gray-800"}>
-                    {lead.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {lead.priority ? (
-                    <Badge className={priorityColors[lead.priority]} variant="outline">
-                      <span className="mr-1">{priorityIcons[lead.priority]}</span>
-                      {lead.priority}
-                    </Badge>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">-</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {lead.lead_score ? (
-                    <div className={`text-sm font-medium ${getLeadScoreColor(lead.lead_score)}`}>
-                      {lead.lead_score}/100
+                      <div>
+                        <div className="font-medium">{lead.client_name}</div>
+                        <div className="text-xs text-muted-foreground">ID: {lead.id.slice(0, 8)}...</div>
+                      </div>
                     </div>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">-</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <span className="text-sm text-muted-foreground">{lead.source || '-'}</span>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1">
-                    <DollarSign className="h-3 w-3 text-muted-foreground" />
-                    <span className="font-medium">
-                      {lead.price ? `$${lead.price.toLocaleString()}` : '-'}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {lead.last_contact ? (
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-sm">{lead.email_address}</span>
+                      </div>
+                      {lead.contact_number && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-sm">{formatPhoneNumber(lead.contact_number)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="max-w-[200px]">
+                      <span className="text-sm text-muted-foreground truncate block">
+                        {lead.services_required || '-'}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm text-muted-foreground">{lead.budget || '-'}</span>
+                  </TableCell>
+                  <TableCell>
                     <div className="flex items-center gap-1">
-                      <Clock className="h-3 w-3 text-muted-foreground" />
+                      <Calendar className="h-3 w-3 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">
-                        {formatDateTime(lead.last_contact)}
+                        {formatDate(lead.date)}
                       </span>
                     </div>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">-</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {lead.next_follow_up ? (
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <User className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-sm font-medium">{lead.agent || '-'}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Building className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-sm">{lead.business_description || '-'}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-sm">{lead.city_state || '-'}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={statusColors[lead.status] || "bg-gray-100 text-gray-800"}>
+                      {lead.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {lead.priority ? (
+                      <Badge className={priorityColors[lead.priority]} variant="outline">
+                        <span className="mr-1">{priorityIcons[lead.priority]}</span>
+                        {lead.priority}
+                      </Badge>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {lead.lead_score ? (
+                      <div className={`text-sm font-medium ${getLeadScoreColor(lead.lead_score)}`}>
+                        {lead.lead_score}/100
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm text-muted-foreground">{lead.source || '-'}</span>
+                  </TableCell>
+                  <TableCell>
                     <div className="flex items-center gap-1">
-                      <Clock className={`h-3 w-3 ${isOverdue(lead.next_follow_up) ? 'text-red-500' : 'text-muted-foreground'}`} />
-                      <span className={`text-sm ${isOverdue(lead.next_follow_up) ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
-                        {isOverdue(lead.next_follow_up) ? 'Overdue' : formatDate(lead.next_follow_up)}
+                      <DollarSign className="h-3 w-3 text-muted-foreground" />
+                      <span className="font-medium">
+                        {lead.price ? `$${lead.price.toLocaleString()}` : '-'}
                       </span>
                     </div>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">-</span>
-                  )}
-                </TableCell>
+                  </TableCell>
+                  <TableCell>
+                    {lead.last_contact ? (
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          {formatDateTime(lead.last_contact)}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {lead.next_follow_up ? (
+                      <div className="flex items-center gap-1">
+                        <Clock className={`h-3 w-3 ${isOverdue(lead.next_follow_up) ? 'text-red-500' : 'text-muted-foreground'}`} />
+                        <span className={`text-sm ${isOverdue(lead.next_follow_up) ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
+                          {isOverdue(lead.next_follow_up) ? 'Overdue' : formatDate(lead.next_follow_up)}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
 
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onLeadClick && onLeadClick(lead)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        View Details
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
+                  <TableCell className="text-right">
+                    {availableActions.length > 0 ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {availableActions.map((action, index) => (
+                            <DropdownMenuItem 
+                              key={index}
+                              onClick={action.onClick}
+                              className={action.className}
+                            >
+                              {action.icon}
+                              {action.label}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">No actions</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

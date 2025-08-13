@@ -133,7 +133,12 @@ const FrontSellerDashboardContent: React.FC = () => {
     );
   }
 
-  const formatCurrency = (amount: number) => `$${amount.toLocaleString()}`;
+  const formatCurrency = (amount: number | undefined | null) => {
+    if (amount === undefined || amount === null || isNaN(amount)) {
+      return '$0';
+    }
+    return `$${amount.toLocaleString()}`;
+  };
   const formatMonth = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
@@ -351,19 +356,19 @@ const FrontSellerDashboardContent: React.FC = () => {
                 <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <span className="font-medium">Target Accounts</span>
                   <span className="font-bold text-blue-600">
-                    {dashboardData.teamPerformance.reduce((sum, member) => sum + member.target_accounts, 0)}
+                    {dashboardData.teamPerformance.reduce((sum, member) => sum + (member.target_accounts || 0), 0)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                   <span className="font-medium">Accounts Achieved</span>
                   <span className="font-bold text-green-600">
-                    {dashboardData.teamPerformance.reduce((sum, member) => sum + member.accounts_achieved, 0)}
+                    {dashboardData.teamPerformance.reduce((sum, member) => sum + (member.accounts_achieved || 0), 0)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
                   <span className="font-medium">Accounts Remaining</span>
                   <span className="font-bold text-orange-600">
-                    {dashboardData.teamPerformance.reduce((sum, member) => sum + (member.target_accounts - member.accounts_achieved), 0)}
+                    {dashboardData.teamPerformance.reduce((sum, member) => sum + ((member.target_accounts || 0) - (member.accounts_achieved || 0)), 0)}
                   </span>
                 </div>
               </div>
@@ -376,19 +381,19 @@ const FrontSellerDashboardContent: React.FC = () => {
                 <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                   <span className="font-medium">Total Gross</span>
                   <span className="font-bold text-blue-600">
-                    {formatCurrency(dashboardData.teamPerformance.reduce((sum, member) => sum + member.total_gross, 0))}
+                    {formatCurrency(dashboardData.teamPerformance.reduce((sum, member) => sum + (member.total_gross || 0), 0))}
                   </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                   <span className="font-medium">Total Cash In</span>
                   <span className="font-bold text-green-600">
-                    {formatCurrency(dashboardData.teamPerformance.reduce((sum, member) => sum + member.total_cash_in, 0))}
+                    {formatCurrency(dashboardData.teamPerformance.reduce((sum, member) => sum + (member.total_cash_in || 0), 0))}
                   </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
                   <span className="font-medium">Total Remaining</span>
                   <span className="font-bold text-orange-600">
-                    {formatCurrency(dashboardData.teamPerformance.reduce((sum, member) => sum + member.total_remaining, 0))}
+                    {formatCurrency(dashboardData.teamPerformance.reduce((sum, member) => sum + (member.total_remaining || 0), 0))}
                   </span>
                 </div>
               </div>
@@ -435,8 +440,8 @@ const FrontSellerDashboardContent: React.FC = () => {
             {dashboardData.teamPerformance.map((member, index) => (
               <div key={member.seller_id} className="border rounded-lg p-4">
                 <div className="font-semibold text-lg mb-4 flex items-center justify-between">
-                  <span>{member.seller_name}</span>
-                  <span className="text-sm text-muted-foreground">Rank #{Number(member.performance_rank)}</span>
+                  <span>{member.seller_name || 'Unknown Member'}</span>
+                  <span className="text-sm text-muted-foreground">Rank #{Number(member.performance_rank || 0)}</span>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -446,15 +451,15 @@ const FrontSellerDashboardContent: React.FC = () => {
                     <div className="grid grid-cols-3 gap-2">
                       <div className="text-center p-2 bg-gray-50 rounded">
                         <div className="text-xs text-muted-foreground">Target</div>
-                        <div className="font-bold text-blue-600">{member.target_accounts}</div>
+                        <div className="font-bold text-blue-600">{member.target_accounts || 0}</div>
                       </div>
                       <div className="text-center p-2 bg-green-50 rounded">
                         <div className="text-xs text-muted-foreground">Achieved</div>
-                        <div className="font-bold text-green-600">{member.accounts_achieved}</div>
+                        <div className="font-bold text-green-600">{member.accounts_achieved || 0}</div>
                       </div>
                       <div className="text-center p-2 bg-orange-50 rounded">
                         <div className="text-xs text-muted-foreground">Remaining</div>
-                        <div className="font-bold text-orange-600">{member.target_accounts - member.accounts_achieved}</div>
+                        <div className="font-bold text-orange-600">{(member.target_accounts || 0) - (member.accounts_achieved || 0)}</div>
                       </div>
                     </div>
                   </div>

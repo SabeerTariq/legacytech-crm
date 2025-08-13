@@ -1,8 +1,8 @@
 import React from "react";
-import UpsellForm from "@/components/sales/UpsellForm";
+import EnhancedUpsellForm from "@/components/sales/EnhancedUpsellForm";
 
 const Upsell: React.FC = () => {
-  return <UpsellForm />;
+  return <EnhancedUpsellForm />;
 };
 
 export default Upsell; 

@@ -46,10 +46,10 @@ export interface UpdateRoleData extends Partial<CreateRoleData> {
   id: string;
 }
 
-const API_BASE_URL = 'http://localhost:3001/api/admin';
+const API_BASE_URL = '/api/admin';
 
 // Get all roles
-export const getRoles = async (): Promise<Role[]> => {
+export const getRoles = async (): Promise<RoleWithPermissions[]> => {
   try {
     const response = await fetch(`${API_BASE_URL}/roles`);
     if (!response.ok) {

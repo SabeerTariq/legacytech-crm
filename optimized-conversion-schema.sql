@@ -249,7 +249,7 @@ SELECT
     AVG(EXTRACT(EPOCH FROM (l.converted_at - l.updated_at))/86400) as avg_conversion_time_days,
     COUNT(DISTINCT pr.id) as total_projects,
     COUNT(CASE WHEN pr.status = 'completed' THEN 1 END) as completed_projects
-FROM profiles p
+FROM user_profiles p
 INNER JOIN employees e ON SPLIT_PART(e.email, '@', 1) = p.username
 LEFT JOIN leads l ON l.assigned_to_id = p.id
 LEFT JOIN sales_dispositions sd ON sd.lead_id = l.id

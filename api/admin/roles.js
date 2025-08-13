@@ -1,6 +1,8 @@
-const express = require('express');
-const { createClient } = require('@supabase/supabase-js');
-require('dotenv').config();
+import express from 'express';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const router = express.Router();
 
@@ -16,14 +18,31 @@ router.get('/', async (req, res) => {
     const { data: roles, error } = await supabase
       .from('roles')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('display_name', { ascending: true });
 
     if (error) {
       console.error('Error fetching roles:', error);
       return res.status(500).json({ error: 'Failed to fetch roles' });
     }
 
-    res.json(roles);
+    // Fetch permissions for each role
+    const rolesWithPermissions = await Promise.all(
+      roles.map(async (role) => {
+        const { data: permissions, error: permError } = await supabase
+          .from('role_permissions')
+          .select('*')
+          .eq('role_id', role.id);
+
+        if (permError) {
+          console.error('Error fetching permissions for role:', role.id, permError);
+          return { ...role, permissions: [] };
+        }
+
+        return { ...role, permissions: permissions || [] };
+      })
+    );
+
+    res.json(rolesWithPermissions);
   } catch (error) {
     console.error('Error in GET /roles:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -130,7 +149,31 @@ router.post('/', async (req, res) => {
       }
     }
 
-    res.status(201).json(role);
+    // Fetch the created role with permissions
+    const { data: createdRoleWithPermissions, error: fetchError } = await supabase
+      .from('roles')
+      .select('*')
+      .eq('id', role.id)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching created role:', fetchError);
+      res.status(201).json(role);
+      return;
+    }
+
+    // Fetch permissions for the created role
+    const { data: rolePermissions, error: permFetchError } = await supabase
+      .from('role_permissions')
+      .select('*')
+      .eq('role_id', role.id);
+
+    const roleWithPermissions = {
+      ...createdRoleWithPermissions,
+      permissions: rolePermissions || []
+    };
+
+    res.status(201).json(roleWithPermissions);
   } catch (error) {
     console.error('Error in POST /roles:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -295,4 +338,4 @@ router.get('/modules/list', async (req, res) => {
   }
 });
 
-module.exports = router; 
+export default router; 

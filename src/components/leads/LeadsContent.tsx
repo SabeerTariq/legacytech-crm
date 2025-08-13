@@ -10,7 +10,10 @@ interface LeadsContentProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onLeadClick?: (lead: Lead) => void;
+  onLeadEdit?: (lead: Lead) => void;
   onUpdateStatus?: (leadId: string, status: Lead['status']) => void;
+  onDeleteLead?: (leadId: string) => void;
+  canDelete?: boolean;
 }
 
 const LeadsContent: React.FC<LeadsContentProps> = ({
@@ -18,33 +21,43 @@ const LeadsContent: React.FC<LeadsContentProps> = ({
   searchQuery,
   onSearchChange,
   onLeadClick,
+  onLeadEdit,
   onUpdateStatus,
+  onDeleteLead,
+  canDelete = true,
 }) => {
   const filteredLeads = leads.filter((lead) =>
-          lead.client_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    lead.client_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     lead.email_address.toLowerCase().includes(searchQuery.toLowerCase()) ||
     lead.business_description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     lead.city_state?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    lead.source?.toLowerCase().includes(searchQuery.toLowerCase())
+    lead.source?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    lead.status.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    lead.agent?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-    return (
+  return (
     <div className="space-y-4">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-        <Input
-          placeholder="Search leads by name, email, company, location, or source..."
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-10"
-        />
+      <div className="flex items-center space-x-2">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            placeholder="Search leads..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
       </div>
-
-    <LeadsList 
-      leads={filteredLeads}
-      onLeadClick={onLeadClick}
-      onUpdateStatus={onUpdateStatus}
-    />
+      
+      <LeadsList 
+        leads={filteredLeads}
+        onLeadClick={onLeadClick}
+        onLeadEdit={onLeadEdit}
+        onUpdateStatus={onUpdateStatus}
+        onDeleteLead={onDeleteLead}
+        canDelete={canDelete}
+      />
     </div>
   );
 };

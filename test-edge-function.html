@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Edge Function</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Test Better Ask Saul Edge Function</h1>
+    <button onclick="testFunction()">Test Edge Function</button>
+    <div id="result"></div>
+
+    <script>
+        const supabase = createClient(
+            'https://yipyteszzyycbqgzpfrf.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpcHl0ZXN6enl5Y2JxZ3pwZnJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ4NzY5MjEsImV4cCI6MjA2MDQ1MjkyMX0._LhWMyPMXDdht_5y3iQnYX9AzDAh-qMv2xDjBRyan7s'
+        );
+
+        async function testFunction() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing...';
+
+            try {
+                console.log('Testing edge function...');
+                
+                const { data, error } = await supabase.functions.invoke('better-ask-saul', {
+                    body: {
+                        messages: [
+                            { role: 'user', content: 'Hello, this is a test message' }
+                        ],
+                        userId: 'test-user'
+                    }
+                });
+
+                console.log('Response:', { data, error });
+
+                if (error) {
+                    resultDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+                } else if (data?.error) {
+                    resultDiv.innerHTML = `<p style="color: red;">Data Error: ${data.error}</p>`;
+                } else {
+                    resultDiv.innerHTML = `<p style="color: green;">Success! Response: ${data?.response || 'No response'}</p>`;
+                }
+            } catch (err) {
+                console.error('Test error:', err);
+                resultDiv.innerHTML = `<p style="color: red;">Exception: ${err.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html> 

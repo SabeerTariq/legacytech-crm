@@ -22,6 +22,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Lead } from "./LeadsList";
+import { usePermissions } from "@/contexts/PermissionContext";
 
 interface LeadEditModalProps {
   open: boolean;
@@ -38,6 +39,7 @@ const LeadEditModal = ({
   onLeadUpdated, 
   onLeadDeleted 
 }: LeadEditModalProps) => {
+  const { canDelete } = usePermissions();
   const [formData, setFormData] = useState({
     client_name: "",
     email_address: "",
@@ -328,10 +330,12 @@ const LeadEditModal = ({
           </Card>
 
           <div className="flex justify-between">
-            <Button type="button" variant="destructive" onClick={handleDelete}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Lead
-            </Button>
+            {canDelete('leads') && (
+              <Button type="button" variant="destructive" onClick={handleDelete}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Lead
+              </Button>
+            )}
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel

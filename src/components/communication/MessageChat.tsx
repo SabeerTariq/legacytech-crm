@@ -70,39 +70,61 @@ const MessageChat: React.FC<MessageChatProps> = ({
             messages.map((message) => (
               <div
                 key={message.id}
-                className={cn("flex", message.isCurrentUser ? "justify-end" : "justify-start")}
+                className={cn(
+                  "flex w-full",
+                  message.isCurrentUser ? "justify-end" : "justify-start"
+                )}
               >
                 <div className={cn(
-                  "flex gap-2",
-                  isMobile ? "max-w-[90%]" : "max-w-[80%]",
+                  "flex gap-3 max-w-[75%]",
                   message.isCurrentUser ? "flex-row-reverse" : "flex-row"
                 )}>
-                  <Avatar className="h-8 w-8 flex-shrink-0">
-                    <AvatarImage src={message.sender.avatar} />
-                    <AvatarFallback>{message.sender.initials}</AvatarFallback>
-                  </Avatar>
+                  {/* Avatar - only show for other users */}
+                  {!message.isCurrentUser && (
+                    <Avatar className="h-8 w-8 flex-shrink-0">
+                      <AvatarImage src={message.sender.avatar} />
+                      <AvatarFallback>{message.sender.initials}</AvatarFallback>
+                    </Avatar>
+                  )}
+                  
+                  {/* Message content */}
                   <div className={cn(
-                    message.isCurrentUser ? "items-end" : "items-start",
-                    "flex flex-col"
+                    "flex flex-col",
+                    message.isCurrentUser ? "items-end" : "items-start"
                   )}>
+                    {/* Sender name and timestamp */}
                     <div className={cn(
                       "flex items-center gap-2 mb-1",
                       message.isCurrentUser ? "flex-row-reverse" : "flex-row"
                     )}>
-                      <span className="text-sm font-medium">{message.sender.name}</span>
-                      <span className="text-xs text-muted-foreground">{message.timestamp}</span>
+                      <span className="text-sm font-medium text-muted-foreground">
+                        {message.isCurrentUser ? "You" : message.sender.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {message.timestamp}
+                      </span>
                     </div>
+                    
+                    {/* Message bubble */}
                     <div
                       className={cn(
-                        "rounded-lg p-2.5",
+                        "rounded-2xl px-4 py-2.5 max-w-full break-words",
                         message.isCurrentUser
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
+                          ? "bg-primary text-primary-foreground rounded-br-md"
+                          : "bg-muted rounded-bl-md"
                       )}
                     >
-                      {message.content}
+                      <p className="text-sm">{message.content}</p>
                     </div>
                   </div>
+                  
+                  {/* Avatar for current user - only show for current user */}
+                  {message.isCurrentUser && (
+                    <Avatar className="h-8 w-8 flex-shrink-0">
+                      <AvatarImage src={message.sender.avatar} />
+                      <AvatarFallback>{message.sender.initials}</AvatarFallback>
+                    </Avatar>
+                  )}
                 </div>
               </div>
             ))

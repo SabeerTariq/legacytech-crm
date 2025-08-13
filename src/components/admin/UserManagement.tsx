@@ -10,10 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Plus, Edit, Trash2, Eye, EyeOff, User, Mail, Calendar, Building, Key, Copy } from 'lucide-react';
 import { Employee } from '@/hooks/useEmployees';
-import { ROLE_TEMPLATES } from '@/types/permissions';
 import { useAdminUsers } from '@/hooks/useAdminUsers';
 import { useEmployees } from '@/hooks/useEmployees';
-import { CreateUserData, AdminUser } from '@/lib/admin/adminService';
+import adminService, { CreateUserData, AdminUser } from '@/lib/admin/adminService';
+import { getRoles, type RoleWithPermissions } from '@/lib/admin/roleService';
+import { useQuery } from '@tanstack/react-query';
 
 interface UserManagementProps {
   onUserCreate?: (userData: CreateUserData) => void;
@@ -26,8 +27,14 @@ const UserManagement: React.FC<UserManagementProps> = ({
   onUserUpdate,
   onUserDelete
 }) => {
-  const { users, isLoading, error, createUser, deleteUser, updateUser, isCreating, isDeleting } = useAdminUsers();
+  const { users, isLoading, error, createUser, deleteUser, isCreating, isDeleting } = useAdminUsers();
   const { data: employees = [] } = useEmployees();
+
+  // Fetch roles from database
+  const { data: roles = [], isLoading: rolesLoading } = useQuery({
+    queryKey: ['roles'],
+    queryFn: getRoles,
+  });
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
@@ -82,7 +89,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
     
     try {
       // Update password in Supabase Auth
-      const response = await fetch(`http://localhost:3001/api/admin/update-user`, {
+      const response = await fetch(`/api/admin/update-user`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -120,8 +127,8 @@ const UserManagement: React.FC<UserManagementProps> = ({
        return;
      }
 
-     if (!formData.email || !formData.password) {
-       setFormError('Please select an employee to generate credentials');
+     if (!formData.password) {
+       setFormError('Please enter a password');
        return;
      }
 
@@ -131,45 +138,52 @@ const UserManagement: React.FC<UserManagementProps> = ({
      }
 
     try {
-      const roleTemplate = ROLE_TEMPLATES.find(role => role.id === selectedRoleTemplate);
+      const roleTemplate = roles.find(role => role.id === selectedRoleTemplate);
       if (!roleTemplate) {
-        setFormError('Invalid role template');
+        setFormError('Invalid role');
         return;
       }
 
       const userData: CreateUserData = {
         employee_id: formData.employee_id,
-        email: formData.email,
         password: formData.password,
-        permissions: roleTemplate.permissions
+        permissions: roleTemplate.permissions.map(p => ({
+          module: p.module_name,
+          can_create: p.can_create,
+          can_read: p.can_read,
+          can_update: p.can_update,
+          can_delete: p.can_delete,
+          screen_visible: p.screen_visible
+        })),
+        role_id: selectedRoleTemplate // Add role_id to the request
       };
 
-             // Use the admin service to create user
-       createUser(userData);
+      // Use the admin service to create user
+      const createdUser = await adminService.createUser(userData);
 
-       // Show success message with credentials
-       const employee = employees.find(emp => emp.id === formData.employee_id);
-       if (employee) {
-         alert(`User created successfully!\n\nCredentials:\nEmail: ${formData.email}\nPassword: ${formData.password}\n\nPlease save these credentials securely.`);
-         
-         // Store the password for later viewing (temporarily)
-         // Note: In a real app, you'd want to encrypt this or use a more secure method
-         setUserPasswords(prev => ({
-           ...prev,
-           [formData.email]: formData.password
-         }));
-       }
+      // Show success message with credentials
+      const employee = employees.find(emp => emp.id === formData.employee_id);
+      if (employee && createdUser) {
+        const userManagementEmail = createdUser.user_management_email || createdUser.email;
+        alert(`User created successfully!\n\nCredentials:\nEmail: ${userManagementEmail}\nPassword: ${formData.password}\n\nPlease save these credentials securely.`);
+        
+        // Store the password for later viewing (temporarily)
+        setUserPasswords(prev => ({
+          ...prev,
+          [userManagementEmail]: formData.password
+        }));
+      }
 
-       // Reset form
-       setFormData({
-         employee_id: '',
-         email: '',
-         password: '',
-         confirmPassword: ''
-       });
-       setSelectedRoleTemplate('');
-       setIsCreateDialogOpen(false);
-       setFormError(null);
+      // Reset form
+      setFormData({
+        employee_id: '',
+        email: '',
+        password: '',
+        confirmPassword: ''
+      });
+      setSelectedRoleTemplate('');
+      setIsCreateDialogOpen(false);
+      setFormError(null);
     } catch (error) {
       setFormError('Failed to create user');
       console.error('Error creating user:', error);
@@ -182,7 +196,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
     }
 
     try {
-      deleteUser(userId);
+      await adminService.deleteUser(userId);
     } catch (error) {
       console.error('Error deleting user:', error);
     }
@@ -199,7 +213,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
     return employee?.full_name || 'Unknown';
   };
 
-  if (isLoading) {
+  if (isLoading || rolesLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -237,24 +251,14 @@ const UserManagement: React.FC<UserManagementProps> = ({
               
               <div className="space-y-2">
                 <Label htmlFor="employee">Employee</Label>
-                                 <Select
-                   value={formData.employee_id}
-                   onValueChange={(value) => {
-                     setFormData(prev => ({ ...prev, employee_id: value }));
-                     const employee = employees.find(emp => emp.id === value);
-                     if (employee) {
-                       // Auto-generate email and password
-                       const generatedEmail = generateEmail(employee.full_name);
-                       const generatedPassword = generatePassword();
-                       setFormData(prev => ({ 
-                         ...prev, 
-                         email: generatedEmail,
-                         password: generatedPassword,
-                         confirmPassword: generatedPassword
-                       }));
-                     }
-                   }}
-                 >
+                <Select
+                  value={formData.employee_id}
+                  onValueChange={(value) => {
+                    setFormData(prev => ({ ...prev, employee_id: value }));
+                    // Auto-generate password when employee is selected
+                    setFormData(prev => ({ ...prev, password: generatePassword(), confirmPassword: generatePassword() }));
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select an employee" />
                   </SelectTrigger>
@@ -266,30 +270,8 @@ const UserManagement: React.FC<UserManagementProps> = ({
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-gray-500">Email will be generated automatically when you select an employee</p>
               </div>
-
-                             <div className="space-y-2">
-                 <Label htmlFor="email">Email (Auto-generated)</Label>
-                 <div className="flex items-center space-x-2">
-                   <Input
-                     id="email"
-                     type="email"
-                     value={formData.email}
-                     readOnly
-                     className="bg-gray-50"
-                   />
-                   <Button
-                     type="button"
-                     variant="outline"
-                     size="sm"
-                     onClick={() => formData.email && navigator.clipboard.writeText(formData.email)}
-                     disabled={!formData.email}
-                   >
-                     Copy
-                   </Button>
-                 </div>
-                 <p className="text-xs text-gray-500">Email will be generated automatically when you select an employee</p>
-               </div>
 
                <div className="space-y-2">
                  <Label htmlFor="password">Password (Auto-generated)</Label>
@@ -327,18 +309,18 @@ const UserManagement: React.FC<UserManagementProps> = ({
                </div>
 
               <div className="space-y-2">
-                <Label htmlFor="role">Role Template</Label>
+                <Label htmlFor="role">Role</Label>
                 <Select
                   value={selectedRoleTemplate}
                   onValueChange={setSelectedRoleTemplate}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a role template" />
+                    <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
-                    {ROLE_TEMPLATES.map((role) => (
+                    {roles.map((role) => (
                       <SelectItem key={role.id} value={role.id}>
-                        {role.name} - {role.description}
+                        {role.display_name} - {role.description}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -387,16 +369,31 @@ const UserManagement: React.FC<UserManagementProps> = ({
                      <span className="text-sm font-semibold">{selectedUser.employee.full_name}</span>
                    </div>
                    <div className="flex items-center justify-between">
-                     <span className="text-sm font-medium text-gray-600">Email</span>
-                     <span className="text-sm font-semibold">{selectedUser.email}</span>
+                     <span className="text-sm font-medium text-gray-600">User Management Email</span>
+                     <span className="text-sm font-semibold">{selectedUser.user_management_email || selectedUser.email}</span>
                    </div>
-                   <div className="flex items-center justify-between">
-                     <span className="text-sm font-medium text-gray-600">Department</span>
-                     <span className="text-sm font-semibold">{selectedUser.employee.department}</span>
-                   </div>
+                   {selectedUser.employee.personal_email && (
+                     <div className="flex items-center justify-between">
+                       <span className="text-sm font-medium text-gray-600">Personal Email</span>
+                       <span className="text-sm font-semibold">{selectedUser.employee.personal_email}</span>
+                     </div>
+                   )}
                    <div className="flex items-center justify-between">
                      <span className="text-sm font-medium text-gray-600">Job Title</span>
                      <span className="text-sm font-semibold">{selectedUser.employee.job_title}</span>
+                   </div>
+                   <div className="flex items-center justify-between">
+                     <span className="text-sm font-medium text-gray-600">Role</span>
+                     <span className="text-sm font-semibold">
+                       {selectedUser.role ? (
+                         <div>
+                           <div className="font-medium">{selectedUser.role.display_name}</div>
+                           <div className="text-xs text-gray-500">{selectedUser.role.description}</div>
+                         </div>
+                       ) : (
+                         <span className="text-gray-400">No role assigned</span>
+                       )}
+                     </span>
                    </div>
                    <div className="flex items-center justify-between">
                      <span className="text-sm font-medium text-gray-600">Status</span>
@@ -480,7 +477,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Department</TableHead>
+                <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead>Actions</TableHead>
@@ -490,8 +487,17 @@ const UserManagement: React.FC<UserManagementProps> = ({
               {users.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>{user.employee.full_name}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.employee.department}</TableCell>
+                  <TableCell>{user.user_management_email || user.email}</TableCell>
+                  <TableCell>
+                    {user.role ? (
+                      <div>
+                        <div className="font-medium">{user.role.display_name}</div>
+                        <div className="text-xs text-gray-500">{user.role.description}</div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">No role assigned</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
                       {user.status}
@@ -500,29 +506,29 @@ const UserManagement: React.FC<UserManagementProps> = ({
                   <TableCell>
                     {new Date(user.created_at).toLocaleDateString()}
                   </TableCell>
-                                     <TableCell>
-                     <div className="flex space-x-2">
-                       <Button 
-                         variant="outline" 
-                         size="sm"
-                         onClick={() => handleViewUserDetails(user)}
-                       >
-                         <Eye className="h-4 w-4" />
-                       </Button>
-                       <Button
-                         variant="outline"
-                         size="sm"
-                         onClick={() => handleDeleteUser(user.id)}
-                         disabled={isDeleting}
-                       >
-                         {isDeleting ? (
-                           <Loader2 className="h-4 w-4 animate-spin" />
-                         ) : (
-                           <Trash2 className="h-4 w-4" />
-                         )}
-                       </Button>
-                     </div>
-                   </TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleViewUserDetails(user)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteUser(user.id)}
+                        disabled={isDeleting}
+                      >
+                        {isDeleting ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

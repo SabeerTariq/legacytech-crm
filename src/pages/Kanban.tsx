@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-// Authentication removed - no user context needed
+import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../integrations/supabase/client';
 import KanbanBoard from '../components/kanban/KanbanBoard';
 import { Button } from '../components/ui/button';
@@ -7,7 +7,7 @@ import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Kanban: React.FC = () => {
-  // User context removed - no authentication needed
+  const { user } = useAuth();
   const [boards, setBoards] = useState<Array<{
     id: string;
     name: string;

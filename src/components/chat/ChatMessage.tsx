@@ -12,24 +12,47 @@ interface ChatMessageProps {
 }
 
 export const ChatMessage = ({ message }: ChatMessageProps) => {
+  const isAssistant = message.role === 'assistant';
+  const isSystem = message.role === 'system';
+  const isUser = message.role === 'user';
+
   return (
-    <div
-      className={`mb-4 p-3 rounded-lg ${
-        message.role === 'assistant'
-          ? 'bg-muted'
-          : message.role === 'system'
-          ? 'bg-destructive/10 border border-destructive/20'
-          : 'bg-primary/10'
-      }`}
-    >
-      <p className="text-sm font-medium mb-1 flex items-center gap-2">
-        {message.role === 'assistant' 
-          ? 'Saul' 
-          : message.role === 'system' 
-          ? <><AlertCircle size={16} /> System</>
-          : 'You'}
-      </p>
-      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+    <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
+      <div
+        className={`max-w-[80%] p-4 rounded-lg ${
+          isAssistant
+            ? 'bg-white border border-gray-200'
+            : isSystem
+            ? 'bg-red-50 border border-red-200'
+            : 'bg-blue-600 text-white'
+        }`}
+      >
+        <div className={`text-sm leading-relaxed text-left ${
+          isUser ? 'text-white' : 'text-gray-800'
+        }`}>
+          {message.content.split('\n').map((line, index) => {
+            // Handle bold text (**text**)
+            let formattedLine = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // Handle numbered lists (1. text)
+            formattedLine = formattedLine.replace(/^(\d+)\.\s/, '<span class="font-medium">$1.</span> ');
+            
+            // Handle bullet points (- text)
+            formattedLine = formattedLine.replace(/^-\s/, '• ');
+            
+            // Skip empty lines but keep spacing
+            if (line.trim() === '') {
+              return <div key={index} className="h-2" />;
+            }
+            
+            return (
+              <div key={index} className="mb-1 text-left" 
+                dangerouslySetInnerHTML={{ __html: formattedLine }}
+              />
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 };

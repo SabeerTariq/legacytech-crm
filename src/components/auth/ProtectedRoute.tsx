@@ -19,7 +19,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   redirectTo = '/login'
 }) => {
   const { user, loading: authLoading } = useAuth();
-  const { loading: permissionLoading, canRead } = usePermissions();
+  const { loading: permissionLoading, canRead, permissions } = usePermissions();
   const location = useLocation();
 
   // Show loading spinner while checking authentication and permissions
@@ -36,6 +36,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // If user is not authenticated, redirect to login
   if (!user) {
+    console.log('No user found, redirecting to login');
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
@@ -56,6 +57,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     const hasRequiredPermissions = requiredPermissions.every(permission => canRead(permission));
     
     if (!hasRequiredPermissions) {
+      console.log('User does not have required permissions:', requiredPermissions);
       return fallback ? (
         <>{fallback}</>
       ) : (
@@ -73,7 +75,23 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const currentPath = location.pathname;
   const requiredModule = NAVIGATION_PERMISSIONS[currentPath];
   
-  if (requiredModule && !canRead(requiredModule)) {
+  console.log('ProtectedRoute check:', {
+    currentPath,
+    requiredModule,
+    user: user?.email,
+    userRole: user?.role?.name,
+    permissions: permissions.map(p => ({ module: p.module_name, can_read: p.can_read }))
+  });
+  
+  // If no specific module is required for this route, allow access
+  if (!requiredModule) {
+    console.log('No specific module required for this route, allowing access');
+    return <>{children}</>;
+  }
+  
+  // Check if user has permission for the required module
+  if (!canRead(requiredModule)) {
+    console.log('Access denied for module:', requiredModule);
     return fallback ? (
       <>{fallback}</>
     ) : (
@@ -81,12 +99,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         <div className="text-center">
           <h2 className="text-2xl font-bold text-red-600 mb-2">Access Denied</h2>
           <p className="text-gray-600">You don't have permission to access this module.</p>
+          <p className="text-sm text-gray-500 mt-2">Required: {requiredModule}</p>
+          <p className="text-sm text-gray-500">Your role: {user.role?.name || 'No role'}</p>
         </div>
       </div>
     );
   }
 
   // All checks passed, render children
+  console.log('Access granted for module:', requiredModule);
   return <>{children}</>;
 };
 

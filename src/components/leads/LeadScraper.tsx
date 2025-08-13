@@ -24,7 +24,7 @@ import {
   FileText
 } from "lucide-react";
 import { Lead } from "./LeadsList";
-// Authentication removed - no user context needed
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 interface LeadScraperProps {
@@ -34,7 +34,7 @@ interface LeadScraperProps {
 }
 
 const LeadScraper = ({ open, onOpenChange, onLeadAdded }: LeadScraperProps) => {
-  // User profile removed - no authentication needed
+  const { user } = useAuth();
   const { toast } = useToast();
   
   const [formData, setFormData] = useState({
@@ -103,7 +103,7 @@ const LeadScraper = ({ open, onOpenChange, onLeadAdded }: LeadScraperProps) => {
       budget: formData.budget,
       price: formData.price,
       additional_info: formData.additional_info,
-      agent: profile?.full_name || 'Lead Scraper',
+      agent: user?.full_name || 'Lead Scraper',
     };
     
     onLeadAdded(newLead);
@@ -142,7 +142,7 @@ const LeadScraper = ({ open, onOpenChange, onLeadAdded }: LeadScraperProps) => {
               budget: rest[4] || "",
               price: 0,
               additional_info: rest[5] || "",
-              agent: profile?.full_name || 'Lead Scraper',
+              agent: user?.full_name || 'Lead Scraper',
             };
             onLeadAdded(lead);
             successCount++;

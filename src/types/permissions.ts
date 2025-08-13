@@ -45,7 +45,7 @@ export const MODULES = {
   dashboard: 'dashboard',
   leads: 'leads',
   customers: 'customers',
-  sales: 'sales',
+  sales_form: 'sales_form',
   upsell: 'upsell',
   projects: 'projects',
   kanban: 'kanban',
@@ -58,6 +58,7 @@ export const MODULES = {
   employees: 'employees',
   user_management: 'user_management',
   role_management: 'role_management',
+  upseller_management: 'upseller_management',
   settings: 'settings',
   front_sales_management: 'front_sales_management',
   my_dashboard: 'my_dashboard'
@@ -70,7 +71,7 @@ export const NAVIGATION_PERMISSIONS: Record<string, ModuleName> = {
   '/': 'dashboard',
   '/leads': 'leads',
   '/customers': 'customers',
-  '/sales-form': 'sales',
+  '/sales-form': 'sales_form',
   '/upsell': 'upsell',
   '/projects': 'projects',
   '/kanban': 'kanban',
@@ -79,6 +80,7 @@ export const NAVIGATION_PERMISSIONS: Record<string, ModuleName> = {
   '/hr/employees': 'employees',
   '/admin/users': 'user_management',
   '/admin/roles': 'role_management',
+  '/admin/upseller-management': 'upseller_management',
   '/front-sales-management': 'front_sales_management',
   '/front-seller-dashboard': 'my_dashboard'
 };
@@ -113,13 +115,14 @@ export const ROLE_TEMPLATES: RoleTemplate[] = [
       { module: 'dashboard', can_create: false, can_read: true, can_update: false, can_delete: false, screen_visible: true },
       { module: 'leads', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
       { module: 'customers', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
-      { module: 'sales', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
+      { module: 'sales_form', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
       { module: 'upsell', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
       { module: 'projects', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
       { module: 'kanban', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
       { module: 'payments', can_create: false, can_read: true, can_update: false, can_delete: false, screen_visible: true },
       { module: 'recurring_services', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
       { module: 'employees', can_create: false, can_read: true, can_update: false, can_delete: false, screen_visible: true },
+      { module: 'upseller_management', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
       { module: 'user_management', can_create: false, can_read: false, can_update: false, can_delete: false, screen_visible: false }
     ]
   },
@@ -131,7 +134,7 @@ export const ROLE_TEMPLATES: RoleTemplate[] = [
       { module: 'dashboard', can_create: false, can_read: true, can_update: false, can_delete: false, screen_visible: true },
       { module: 'leads', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
       { module: 'customers', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
-      { module: 'sales', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
+      { module: 'sales_form', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
       { module: 'upsell', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
       { module: 'my_dashboard', can_create: false, can_read: true, can_update: false, can_delete: false, screen_visible: true }
     ]

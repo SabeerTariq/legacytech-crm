@@ -13,8 +13,9 @@ async function applyMigration() {
   console.log('🔧 Applying database migration...\n');
 
   try {
-    // Read the migration file
-    const migrationPath = path.join(process.cwd(), 'supabase', 'migrations', '001_improved_permissions_schema.sql');
+    // Get migration file from command line argument or use default
+    const migrationFile = process.argv[2] || '001_improved_permissions_schema.sql';
+    const migrationPath = path.join(process.cwd(), 'supabase', 'migrations', migrationFile);
     
     if (!fs.existsSync(migrationPath)) {
       console.error('❌ Migration file not found:', migrationPath);
