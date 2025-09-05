@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 06, 2025 at 12:55 AM
+-- Generation Time: Sep 06, 2025 at 01:11 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -1826,18 +1826,6 @@ INSERT INTO `roles` (`id`, `name`, `display_name`, `description`, `hierarchy_lev
 -- --------------------------------------------------------
 
 --
--- Table structure for table `role_hierarchies`
---
-
-CREATE TABLE `role_hierarchies` (
-  `parent_role_id` varchar(36) NOT NULL,
-  `child_role_id` varchar(36) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ;
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `role_permissions`
 --
 
@@ -3049,13 +3037,6 @@ ALTER TABLE `roles`
   ADD KEY `idx_roles_hierarchy` (`hierarchy_level`);
 
 --
--- Indexes for table `role_hierarchies`
---
-ALTER TABLE `role_hierarchies`
-  ADD PRIMARY KEY (`parent_role_id`,`child_role_id`),
-  ADD KEY `child_role_id` (`child_role_id`);
-
---
 -- Indexes for table `role_permissions`
 --
 ALTER TABLE `role_permissions`
@@ -3260,13 +3241,6 @@ ALTER TABLE `auth_user_sessions`
 --
 ALTER TABLE `permission_audit_log`
   ADD CONSTRAINT `permission_audit_log_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `auth_users` (`id`) ON DELETE SET NULL;
-
---
--- Constraints for table `role_hierarchies`
---
-ALTER TABLE `role_hierarchies`
-  ADD CONSTRAINT `role_hierarchies_ibfk_1` FOREIGN KEY (`parent_role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `role_hierarchies_ibfk_2` FOREIGN KEY (`child_role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
