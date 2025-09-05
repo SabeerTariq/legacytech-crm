@@ -34,7 +34,7 @@ import {
   SidebarMenuButton 
 } from "@/components/ui/sidebar";
 import { usePermissions } from "@/contexts/PermissionContext";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContextJWT";
 import { NAVIGATION_PERMISSIONS } from "@/types/permissions";
 
 interface NavItem {
@@ -80,9 +80,10 @@ const NavigationMenu = () => {
       { icon: TrendingUp, label: "Admin Dashboard", path: "/admin-dashboard", module: "dashboard" }
     ] : []),
     { icon: Users2, label: "Front Sales Management", path: "/front-sales-management", module: "front_sales_management" },
-    { icon: Briefcase, label: "All Projects", path: "/projects", module: "projects" },
-    { icon: FolderKanban, label: "Project Assignment", path: "/projects/assignment", module: "projects" },
-    { icon: FolderKanban, label: "My Projects", path: "/projects/my-projects", module: "projects" },
+    // Project management - different access levels
+    { icon: Briefcase, label: "All Projects", path: "/projects", module: "all_projects" },
+    { icon: FolderKanban, label: "Project Assignment", path: "/projects/assignment", module: "project_assignment" },
+    { icon: FolderKanban, label: "My Projects", path: "/projects/my-projects", module: "my_projects" },
     { icon: FolderKanban, label: "Kanban Board", path: "/kanban", module: "kanban" },
     { icon: DollarSign, label: "Payments", path: "/payments", module: "payments" },
     { icon: Repeat, label: "Recurring Services", path: "/recurring-services", module: "recurring_services" },
@@ -119,13 +120,20 @@ const NavigationMenu = () => {
       loading,
       userRole: user?.role?.name,
       userEmail: user?.email,
-      totalItems: items.length
+      totalItems: items.length,
+      permissions: usePermissions ? 'Available' : 'Not Available'
     });
     
     // If permissions are still loading, show all items to prevent flickering
     if (loading) {
       console.log('Permissions loading, showing all items');
       return items;
+    }
+    
+    // Fallback: If no permissions loaded but user has a role, show role-appropriate items
+    if (!loading && user?.role?.name && items.length === 0) {
+      console.log('No items found but user has role, showing fallback items');
+      return getFallbackItems(user.role.name);
     }
     
     const filtered = items.filter(item => {
@@ -139,6 +147,9 @@ const NavigationMenu = () => {
         console.log(`Special case: My Dashboard always visible for ${user?.role?.name} users`);
         return true;
       }
+      
+      // Note: My Projects visibility is now controlled by role management permissions
+      // Remove hardcoded override to allow proper permission control
       
       // Debug: Check why My Dashboard might be filtered out
       if (item.label === "My Dashboard") {
@@ -165,25 +176,51 @@ const NavigationMenu = () => {
     return filtered;
   };
 
-  let filteredNavItems = filterNavItems(allNavItems);
-  
-  // Force include My Dashboard for front_sales users if not already present
-  if (user?.role?.name === 'front_sales' && !filteredNavItems.find(item => item.label === "My Dashboard")) {
-    console.log('Forcing My Dashboard for front_sales user');
-    filteredNavItems = [
-      { icon: BarChart3, label: "My Dashboard", path: "/front-seller-dashboard", module: "my_dashboard" },
-      ...filteredNavItems
-    ];
-  }
+  // Fallback function to show role-appropriate items when permissions fail
+  const getFallbackItems = (roleName: string) => {
+    console.log(`Using fallback items for role: ${roleName}`);
+    
+    const fallbackItems: NavItem[] = [];
+    
+    if (roleName === 'upseller') {
+      fallbackItems.push(
+        { icon: BarChart3, label: "My Dashboard", path: "/upseller-dashboard", module: "my_dashboard" },
+        { icon: FolderKanban, label: "Kanban Board", path: "/kanban", module: "kanban" },
+        { icon: TrendingUp, label: "Upsell", path: "/upsell", module: "upsell" },
+        { icon: UserCheck, label: "Customers", path: "/customers", module: "customers" },
+        { icon: MessageSquare, label: "Messages", path: "/messages", module: "messages" },
+        { icon: DollarSign, label: "Payments", path: "/payments", module: "payments" },
+        { icon: FolderKanban, label: "My Projects", path: "/projects/my-projects", module: "my_projects" },
+        { icon: Bot, label: "Better Ask Saul", path: "/better-ask-saul", module: "better_ask_saul" },
+        { icon: Settings, label: "Settings", path: "/settings", module: "settings" }
+      );
+    } else if (roleName === 'front_sales') {
+      fallbackItems.push(
+        { icon: BarChart3, label: "My Dashboard", path: "/front-seller-dashboard", module: "my_dashboard" },
+        { icon: Users, label: "Leads", path: "/leads", module: "leads" },
+        { icon: UserCheck, label: "Customers", path: "/customers", module: "customers" },
+        { icon: ClipboardList, label: "Sales Form", path: "/sales-form", module: "sales_form" },
+        { icon: MessageSquare, label: "Messages", path: "/messages", module: "messages" },
+        { icon: Bot, label: "Better Ask Saul", path: "/better-ask-saul", module: "better_ask_saul" },
+        { icon: Calendar, label: "Calendar", path: "/calendar", module: "calendar" },
+        { icon: Settings, label: "Settings", path: "/settings", module: "settings" }
+      );
+    } else if (roleName === 'admin') {
+      // Admin gets all items
+      return allNavItems;
+    }
+    
+    console.log(`Fallback items for ${roleName}:`, fallbackItems.map(item => item.label));
+    return fallbackItems;
+  };
 
-  // Force include My Dashboard for upseller users if not already present
-  if (user?.role?.name === 'upseller' && !filteredNavItems.find(item => item.label === "My Dashboard")) {
-    console.log('Forcing My Dashboard for upseller user');
-    filteredNavItems = [
-      { icon: BarChart3, label: "My Dashboard", path: "/upseller-dashboard", module: "my_dashboard" },
-      ...filteredNavItems
-    ];
-  }
+  const filteredNavItems = filterNavItems(allNavItems);
+  
+  // Note: My Dashboard visibility is now controlled by role management permissions
+  // Remove force-include mechanisms to allow proper permission control
+
+  // Note: My Projects visibility is now controlled by role management permissions
+  // Remove force-include to allow proper permission control
 
   return (
     <SidebarGroup>

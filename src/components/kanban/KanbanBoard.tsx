@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragStartEvent, DragOverEvent } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { supabase } from '../../integrations/supabase/client';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextJWT';
 import KanbanList from './KanbanList';
 import KanbanBoardHeader from './KanbanBoardHeader';
 import { Button } from '../ui/button';

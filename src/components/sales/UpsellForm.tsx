@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from '@/contexts/AuthContextJWT';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,10 +24,23 @@ import {
 } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 import CustomerSelector from "./CustomerSelector";
-import type { Customer, ServiceSelection, UpsellFormData, ServiceType, BillingFrequency, ServiceCategory } from "@/types/upsell";
+import type { ServiceSelection, UpsellFormData, ServiceType, BillingFrequency, ServiceCategory } from "@/types/upsell";
 
 type Service = Database["public"]["Tables"]["services"]["Row"];
 type SalesDisposition = Database["public"]["Tables"]["sales_dispositions"]["Row"];
+
+// Customer type matching CustomerSelector
+interface Customer {
+  id: string;
+  customer_name: string;
+  email: string;
+  phone_number: string;
+  business_name?: string;
+  service_sold?: string;
+  gross_value?: number;
+  sale_date?: string;
+  created_at?: string;
+}
 
 const UpsellForm: React.FC = () => {
   const { toast } = useToast();
@@ -48,11 +61,26 @@ const UpsellForm: React.FC = () => {
     cashIn: 0,
     remaining: 0,
     paymentMode: "WIRE",
+    paymentSource: "Wire",
+    customPaymentSource: "",
+    paymentCompany: "American Digital Agency",
+    customPaymentCompany: "",
+    brand: "Liberty Web Studio",
+    customBrand: "",
+    salesSource: "BARK",
+    leadSource: "PAID_MARKETING",
     isUpsell: true,
     serviceTypes: [],
     saleDate: new Date().toISOString().split('T')[0],
     agreementUrl: "",
-    notes: ""
+    notes: "",
+    // Enhanced Payment Plan Fields
+    paymentPlanType: "one_time" as "one_time" | "recurring" | "installments",
+    recurringFrequency: "monthly" as "monthly" | "quarterly" | "yearly",
+    totalInstallments: 1,
+    installmentAmount: 0,
+    nextPaymentDate: "",
+    paymentSchedule: [] as Array<{ date: string; amount: number; status: string }>,
   });
 
   // Load services
@@ -96,7 +124,16 @@ const UpsellForm: React.FC = () => {
         customerName: selectedCustomer.customer_name,
         email: selectedCustomer.email,
         phoneNumber: selectedCustomer.phone_number,
-        businessName: selectedCustomer.business_name || ""
+        businessName: selectedCustomer.business_name || "",
+        // Reset payment fields to defaults
+        paymentSource: "Wire",
+        customPaymentSource: "",
+        paymentCompany: "American Digital Agency",
+        customPaymentCompany: "",
+        brand: "Liberty Web Studio",
+        customBrand: "",
+        salesSource: "BARK",
+        leadSource: "PAID_MARKETING"
       }));
     }
   }, [selectedCustomer]);
@@ -164,6 +201,11 @@ const UpsellForm: React.FC = () => {
     }));
   };
 
+  // Helper function to check if a service entry is valid
+  const isServiceValid = (service: ServiceSelection) => {
+    return service.serviceId && service.serviceName;
+  };
+
   // Categorize services by type
   const categorizeServices = (services: ServiceSelection[]) => {
     return {
@@ -187,6 +229,12 @@ const UpsellForm: React.FC = () => {
         throw new Error("Please select at least one service");
       }
 
+      // Validate that each service has a selected service
+      const invalidServices = selectedServices.filter(service => !service.serviceId || !service.serviceName);
+      if (invalidServices.length > 0) {
+        throw new Error("Please select a service for all service entries before submitting");
+      }
+
       if (formData.grossValue <= 0) {
         throw new Error("Gross value must be greater than 0");
       }
@@ -196,6 +244,26 @@ const UpsellForm: React.FC = () => {
       }
 
       const { projects, recurring, oneTime } = categorizeServices(selectedServices);
+
+      // Create payment plan first if needed
+      let paymentPlanId = null;
+      if (formData.paymentPlanType !== "one_time") {
+        const { data: planData, error: planError } = await supabase
+          .from("payment_plans")
+          .insert({
+            name: `${formData.customerName} - Upsell ${formData.paymentPlanType}`,
+            type: formData.paymentPlanType,
+            description: `Upsell payment plan for ${formData.customerName}`,
+            is_active: true
+          })
+          .select()
+          .single();
+
+        if (planError) throw planError;
+        paymentPlanId = planData.id;
+      }
+
+
 
       // Create sales disposition for upsell
       const { data: salesData, error: salesError } = await supabase
@@ -210,9 +278,12 @@ const UpsellForm: React.FC = () => {
           service_details: selectedServices.map(s => `${s.serviceName}: ${s.details}`).join("\n"),
           agreement_url: formData.agreementUrl,
           payment_mode: formData.paymentMode as SalesDisposition["payment_mode"],
-          company: "American Digital Agency" as SalesDisposition["company"],
-          sales_source: "BARK" as SalesDisposition["sales_source"],
-          lead_source: "PAID_MARKETING" as SalesDisposition["lead_source"],
+          payment_source: formData.paymentSource === "Other" ? formData.customPaymentSource : formData.paymentSource,
+          payment_company: formData.paymentCompany === "Others" ? formData.customPaymentCompany : formData.paymentCompany,
+          company: formData.paymentCompany === "Others" ? formData.customPaymentCompany : formData.paymentCompany,
+          brand: formData.brand === "Others" ? formData.customBrand : formData.brand,
+          sales_source: formData.salesSource as SalesDisposition["sales_source"],
+          lead_source: formData.leadSource as SalesDisposition["lead_source"],
           sale_type: "UPSELL" as SalesDisposition["sale_type"],
           seller: "",
           account_manager: "",
@@ -229,7 +300,14 @@ const UpsellForm: React.FC = () => {
           user_id: user?.id || "",
           is_upsell: true,
           original_sales_disposition_id: selectedCustomer.id,
-          service_types: formData.serviceTypes
+          service_types: formData.serviceTypes,
+          // Enhanced Payment Plan Fields
+          payment_plan_id: paymentPlanId,
+          is_recurring: formData.paymentPlanType === "recurring",
+          recurring_frequency: formData.paymentPlanType === "recurring" ? formData.recurringFrequency : null,
+          total_installments: formData.paymentPlanType === "installments" ? formData.totalInstallments : 1,
+          current_installment: 1,
+          next_payment_date: formData.paymentPlanType === "recurring" ? formData.nextPaymentDate : null,
         })
         .select()
         .single();
@@ -251,13 +329,46 @@ const UpsellForm: React.FC = () => {
               sales_disposition_id: salesData.id,
               project_type: "upsell",
               services: [service.serviceName],
-              is_upsell: true
+              is_upsell: true,
+              // Enhanced Payment Plan Fields
+              payment_plan_id: paymentPlanId,
+              is_recurring: formData.paymentPlanType === "recurring",
+              recurring_frequency: formData.paymentPlanType === "recurring" ? formData.recurringFrequency : null,
+              next_payment_date: formData.paymentPlanType === "recurring" ? formData.nextPaymentDate : null,
+              total_installments: formData.paymentPlanType === "installments" ? formData.totalInstallments : 1,
+              current_installment: 1,
+              total_amount: formData.grossValue,
+              amount_paid: formData.cashIn,
             });
 
           if (projectError) throw projectError;
         });
 
         await Promise.all(projectPromises);
+      }
+
+      // Create recurring payment schedule if needed
+      if (formData.paymentPlanType === "recurring" && paymentPlanId) {
+        const { error: scheduleError } = await supabase
+          .from("recurring_payment_schedule")
+          .insert({
+            project_id: salesData.id, // Using sales disposition ID as project reference
+            frequency: formData.recurringFrequency,
+            amount: formData.grossValue / 12, // Monthly amount
+            next_payment_date: formData.nextPaymentDate,
+            total_payments: 12, // Assuming 12 months
+            payments_completed: 0,
+            is_active: true
+          });
+
+        if (scheduleError) {
+          console.error("Error creating recurring payment schedule:", scheduleError);
+          toast({
+            title: "Warning",
+            description: "Upsell created, but failed to create recurring payment schedule",
+            variant: "destructive",
+          });
+        }
       }
 
       // Create recurring service records
@@ -327,11 +438,26 @@ const UpsellForm: React.FC = () => {
         cashIn: 0,
         remaining: 0,
         paymentMode: "WIRE",
+        paymentSource: "Wire",
+        customPaymentSource: "",
+        paymentCompany: "American Digital Agency",
+        customPaymentCompany: "",
+        brand: "Liberty Web Studio",
+        customBrand: "",
+        salesSource: "BARK",
+        leadSource: "PAID_MARKETING",
         isUpsell: true,
         serviceTypes: [],
         saleDate: new Date().toISOString().split('T')[0],
         agreementUrl: "",
-        notes: ""
+        notes: "",
+        // Enhanced Payment Plan Fields
+        paymentPlanType: "one_time",
+        recurringFrequency: "monthly",
+        totalInstallments: 1,
+        installmentAmount: 0,
+        nextPaymentDate: "",
+        paymentSchedule: [],
       });
 
     } catch (error: any) {
@@ -388,8 +514,25 @@ const UpsellForm: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {selectedServices.length > 0 && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  {selectedServices.filter(isServiceValid).length} of {selectedServices.length} services are complete
+                  {selectedServices.filter(s => !isServiceValid(s)).length > 0 && (
+                    <span className="text-red-600 font-medium">
+                      . Please complete all services before submitting.
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
             {selectedServices.map((service, index) => (
-              <div key={index} className="p-4 border rounded-lg space-y-4">
+              <div 
+                key={index} 
+                className={`p-4 border rounded-lg space-y-4 ${
+                  !isServiceValid(service) ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                }`}
+              >
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium">Service {index + 1}</h4>
                   <Button
@@ -403,10 +546,11 @@ const UpsellForm: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Service</Label>
+                    <Label>Service *</Label>
                     <Select
                       value={service.serviceId}
                       onValueChange={(value) => updateService(index, "serviceId", value)}
+                      required
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select a service" />
@@ -419,6 +563,11 @@ const UpsellForm: React.FC = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                    {!isServiceValid(service) && (
+                      <p className="text-xs text-red-600">
+                        Please select a service for this entry.
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label>Service Details</Label>
@@ -553,22 +702,316 @@ const UpsellForm: React.FC = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="paymentMode">Payment Mode</Label>
-              <Select
-                value={formData.paymentMode}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMode: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="WIRE">Wire Transfer</SelectItem>
-                  <SelectItem value="CARD">Credit Card</SelectItem>
-                  <SelectItem value="CHECK">Check</SelectItem>
-                  <SelectItem value="CASH">Cash</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="paymentMode">Payment Mode</Label>
+                <Select
+                  value={formData.paymentMode}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMode: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="WIRE">Wire Transfer</SelectItem>
+                    <SelectItem value="CARD">Credit Card</SelectItem>
+                    <SelectItem value="CHECK">Check</SelectItem>
+                    <SelectItem value="CASH">Cash</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="paymentSource">Payment Source</Label>
+                <Select
+                  value={formData.paymentSource || "Wire"}
+                  onValueChange={(value) => setFormData(prev => ({ 
+                    ...prev, 
+                    paymentSource: value,
+                    customPaymentSource: value === "Other" ? prev.customPaymentSource : ""
+                  }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select payment source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Wire">Wire</SelectItem>
+                    <SelectItem value="Zelle">Zelle</SelectItem>
+                    <SelectItem value="Cashapp">Cashapp</SelectItem>
+                    <SelectItem value="PayPal">PayPal</SelectItem>
+                    <SelectItem value="Authorize.net">Authorize.net</SelectItem>
+                    <SelectItem value="Square">Square</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+                {formData.paymentSource === "Other" && (
+                  <Input
+                    placeholder="Specify payment source"
+                    value={formData.customPaymentSource}
+                    onChange={(e) => setFormData(prev => ({ ...prev, customPaymentSource: e.target.value }))}
+                  />
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="paymentCompany">Payment Company</Label>
+                <Select
+                  value={formData.paymentCompany || "American Digital Agency"}
+                  onValueChange={(value) => setFormData(prev => ({ 
+                    ...prev, 
+                    paymentCompany: value,
+                    customPaymentCompany: value === "Others" ? prev.customPaymentCompany : ""
+                  }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select payment company" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="American Digital Agency">American Digital Agency</SelectItem>
+                    <SelectItem value="Logic Works">Logic Works</SelectItem>
+                    <SelectItem value="OSCS">OSCS</SelectItem>
+                    <SelectItem value="AZ Tech">AZ Tech</SelectItem>
+                    <SelectItem value="Others">Others</SelectItem>
+                  </SelectContent>
+                </Select>
+                {formData.paymentCompany === "Others" && (
+                  <Input
+                    placeholder="Specify payment company"
+                    value={formData.customPaymentCompany}
+                    onChange={(e) => setFormData(prev => ({ ...prev, customPaymentCompany: e.target.value }))}
+                  />
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="brand">Brand</Label>
+                <Select
+                  value={formData.brand || "Liberty Web Studio"}
+                  onValueChange={(value) => setFormData(prev => ({ 
+                    ...prev, 
+                    brand: value,
+                    customBrand: value === "Others" ? prev.customBrand : ""
+                  }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select brand" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Liberty Web Studio">Liberty Web Studio</SelectItem>
+                    <SelectItem value="American Digital Agency">American Digital Agency</SelectItem>
+                    <SelectItem value="Logic Works">Logic Works</SelectItem>
+                    <SelectItem value="OSCS">OSCS</SelectItem>
+                    <SelectItem value="AZ Tech">AZ Tech</SelectItem>
+                    <SelectItem value="Others">Others</SelectItem>
+                  </SelectContent>
+                </Select>
+                {formData.brand === "Others" && (
+                  <Input
+                    placeholder="Specify brand"
+                    value={formData.customBrand}
+                    onChange={(e) => setFormData(prev => ({ ...prev, customBrand: e.target.value }))}
+                  />
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="salesSource">Sales Source</Label>
+                <Select
+                  value={formData.salesSource || "BARK"}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, salesSource: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="BARK">BARK</SelectItem>
+                    <SelectItem value="REFERRAL">Referral</SelectItem>
+                    <SelectItem value="WEBSITE">Website</SelectItem>
+                    <SelectItem value="SOCIAL_MEDIA">Social Media</SelectItem>
+                    <SelectItem value="OTHER">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="leadSource">Lead Source</Label>
+                <Select
+                  value={formData.leadSource || "PAID_MARKETING"}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, leadSource: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PAID_MARKETING">Paid Marketing</SelectItem>
+                    <SelectItem value="ORGANIC">Organic</SelectItem>
+                    <SelectItem value="REFERRAL">Referral</SelectItem>
+                    <SelectItem value="COLD_OUTREACH">Cold Outreach</SelectItem>
+                    <SelectItem value="OTHER">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Enhanced Payment Plan Configuration */}
+            <div className="space-y-4 border-t pt-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-medium">Payment Plan Configuration</Label>
+              </div>
+
+              {/* Payment Plan Type Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="paymentPlanType">Payment Plan Type *</Label>
+                <Select
+                  value={formData.paymentPlanType || "one_time"}
+                  onValueChange={(value) => setFormData(prev => ({ 
+                    ...prev, 
+                    paymentPlanType: value as "one_time" | "recurring" | "installments" 
+                  }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select payment plan type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="one_time">One Time Payment</SelectItem>
+                    <SelectItem value="recurring">Recurring Payments</SelectItem>
+                    <SelectItem value="installments">Installment Plan</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Recurring Payment Options */}
+              {formData.paymentPlanType === "recurring" && (
+                <div className="space-y-4 p-4 border rounded-lg bg-blue-50">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="recurringFrequency">Recurring Frequency *</Label>
+                      <Select
+                        value={formData.recurringFrequency || "monthly"}
+                        onValueChange={(value) => setFormData(prev => ({ 
+                          ...prev, 
+                          recurringFrequency: value as "monthly" | "quarterly" | "yearly" 
+                        }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select frequency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="quarterly">Quarterly</SelectItem>
+                          <SelectItem value="yearly">Yearly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="nextPaymentDate">Next Payment Date *</Label>
+                      <Input
+                        id="nextPaymentDate"
+                        type="date"
+                        value={formData.nextPaymentDate || ""}
+                        onChange={(e) => setFormData(prev => ({ ...prev, nextPaymentDate: e.target.value }))}
+                        min={new Date().toISOString().split('T')[0]}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="p-3 bg-blue-100 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <strong>Recurring Payment:</strong> {formData.recurringFrequency || "monthly"} payments of ${(formData.grossValue / 12).toFixed(2)} 
+                      starting from {formData.nextPaymentDate || 'selected date'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Installment Plan Options */}
+              {formData.paymentPlanType === "installments" && (
+                <div className="space-y-4 p-4 border rounded-lg bg-green-50">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="totalInstallments">Number of Installments *</Label>
+                      <Select
+                        value={(formData.totalInstallments || 1).toString()}
+                        onValueChange={(value) => {
+                          const installments = parseInt(value) || 1;
+                          const installmentAmount = formData.grossValue / installments;
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            totalInstallments: installments,
+                            installmentAmount: installmentAmount
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select installments" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="2">2 Installments</SelectItem>
+                          <SelectItem value="3">3 Installments</SelectItem>
+                          <SelectItem value="4">4 Installments</SelectItem>
+                          <SelectItem value="6">6 Installments</SelectItem>
+                          <SelectItem value="12">12 Installments</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Installment Amount</Label>
+                      <Input
+                        value={`$${(formData.installmentAmount || 0).toFixed(2)}`}
+                        readOnly
+                        className="bg-muted"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="p-3 bg-green-100 rounded-lg">
+                    <p className="text-sm text-green-800">
+                      <strong>Installment Plan:</strong> {formData.totalInstallments || 1} payments of ${(formData.installmentAmount || 0).toFixed(2)} each
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Payment Summary */}
+              <div className="p-4 bg-muted rounded-lg">
+                <h4 className="font-medium mb-2">Payment Plan Summary</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Initial Payment:</span>
+                    <span className="ml-2 font-medium">
+                      ${formData.paymentPlanType === "installments" ? (formData.installmentAmount || 0).toFixed(2) : formData.grossValue.toFixed(2)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Remaining Amount:</span>
+                    <span className="ml-2 font-medium">
+                      ${formData.paymentPlanType === "installments" ? (formData.grossValue - (formData.installmentAmount || 0)).toFixed(2) : '0.00'}
+                    </span>
+                  </div>
+                  {formData.paymentPlanType === "installments" && (
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground">Total Installments:</span>
+                      <span className="ml-2 font-medium">
+                        {formData.totalInstallments || 1} payments of ${(formData.installmentAmount || 0).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  {formData.paymentPlanType === "recurring" && (
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground">Recurring:</span>
+                      <span className="ml-2 font-medium">
+                        {formData.recurringFrequency || "monthly"} payments of ${(formData.grossValue / 12).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

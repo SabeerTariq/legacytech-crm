@@ -23,6 +23,7 @@ export interface FrontSellerPerformance {
 
 export interface TeamPerformanceSummary {
   seller_id: string;
+  employee_id?: string;
   seller_name: string;
   accounts_achieved: number;
   total_gross: number;

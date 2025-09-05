@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from '@/contexts/AuthContextJWT';
 import { Lead } from "@/components/leads/LeadsList";
 import { useToast } from "@/hooks/use-toast";
+import { apiClient } from '@/lib/api/client';
 
 export const useLeads = () => {
   const { user } = useAuth();
@@ -15,71 +15,63 @@ export const useLeads = () => {
   } = useQuery({
     queryKey: ['leads'],
     queryFn: async () => {
-      const { data: leadsData, error: leadsError } = await supabase
-        .from('leads')
-        .select(`
-          id, 
-          client_name, 
-          business_description,
-          email_address, 
-          contact_number, 
-          source,
-          status,
-          price,
-          created_at,
-          updated_at,
-          city_state,
-          services_required,
-          budget,
-          additional_info,
-          date,
-          user_id,
-          agent
-        `)
-        .neq("status", "converted"); // Filter out converted leads
+      try {
+        const response = await fetch('/api/leads', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
 
-      if (leadsError) {
-        console.error('Error fetching leads:', leadsError);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.message || 'Failed to fetch leads');
+        }
+
+        const leadsData = result.data || [];
+
+        const processedLeads = leadsData.map((lead: any) => ({
+          id: lead.id,
+          client_name: lead.client_name,
+          email_address: lead.email_address,
+          contact_number: lead.contact_number || '',
+          status: (lead.status || 'new') as Lead['status'],
+          source: lead.source || '',
+          price: lead.price || 0,
+          date: lead.date || lead.created_at || '',
+          city_state: lead.city_state,
+          business_description: lead.business_description,
+          services_required: lead.services_required,
+          budget: lead.budget,
+          additional_info: lead.additional_info,
+          user_id: lead.user_id,
+          agent: lead.agent,
+          // Enhanced fields (will be null for now)
+          priority: undefined as Lead['priority'],
+          lead_score: undefined,
+          last_contact: undefined,
+          next_follow_up: undefined,
+          converted_at: undefined,
+          sales_disposition_id: undefined,
+          created_at: lead.created_at,
+          updated_at: lead.updated_at,
+        }));
+
+        return processedLeads;
+      } catch (error) {
+        console.error('Error fetching leads:', error);
         toast({
           title: "Error fetching leads",
-          description: leadsError.message,
+          description: error instanceof Error ? error.message : 'Failed to fetch leads',
           variant: "destructive",
         });
         return [];
       }
-
-      if (!leadsData) {
-        return [];
-      }
-
-      const processedLeads = leadsData.map((lead) => ({
-        id: lead.id,
-        client_name: lead.client_name,
-        email_address: lead.email_address,
-        contact_number: lead.contact_number || '',
-        status: (lead.status || 'new') as Lead['status'],
-        source: lead.source || '',
-        price: lead.price || 0,
-        date: lead.date || lead.created_at || '',
-        city_state: lead.city_state,
-        business_description: lead.business_description,
-        services_required: lead.services_required,
-        budget: lead.budget,
-        additional_info: lead.additional_info,
-        user_id: lead.user_id,
-        agent: lead.agent,
-        // Enhanced fields (will be null for now)
-        priority: undefined as Lead['priority'],
-        lead_score: undefined,
-        last_contact: undefined,
-        next_follow_up: undefined,
-        converted_at: undefined,
-        sales_disposition_id: undefined,
-        created_at: lead.created_at,
-        updated_at: lead.updated_at,
-      }));
-
-      return processedLeads;
     },
     enabled: true,
     refetchInterval: 30000,
@@ -87,9 +79,13 @@ export const useLeads = () => {
 
   const addLeadMutation = useMutation({
     mutationFn: async (newLead: Omit<Lead, 'id' | 'date'>) => {
-      const { data, error } = await supabase
-        .from('leads')
-        .insert([{
+      const response = await fetch('/api/leads', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
           user_id: user?.id,
           client_name: newLead.client_name,
           business_description: newLead.business_description,
@@ -103,11 +99,16 @@ export const useLeads = () => {
           budget: newLead.budget,
           additional_info: newLead.additional_info,
           agent: newLead.agent || user?.user_metadata?.full_name || 'Unknown',
-        }])
-        .select();
+        })
+      });
 
-      if (error) throw error;
-      return data[0];
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create lead');
+      }
+
+      const result = await response.json();
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
@@ -123,9 +124,13 @@ export const useLeads = () => {
 
   const updateLeadMutation = useMutation({
     mutationFn: async ({ id, leadData }: { id: string, leadData: Partial<Lead> }) => {
-      const { data, error } = await supabase
-        .from('leads')
-        .update({
+      const response = await fetch(`/api/leads/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
           client_name: leadData.client_name,
           business_description: leadData.business_description,
           email_address: leadData.email_address,
@@ -140,11 +145,15 @@ export const useLeads = () => {
           date: leadData.date,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', id)
-        .select();
+      });
 
-      if (error) throw error;
-      return data[0];
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update lead');
+      }
+
+      const result = await response.json();
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
@@ -160,12 +169,19 @@ export const useLeads = () => {
 
   const deleteLeadMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('leads')
-        .delete()
-        .eq('id', id);
+      const response = await fetch(`/api/leads/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete lead');
+      }
+
       return id;
     },
     onSuccess: () => {

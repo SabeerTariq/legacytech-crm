@@ -24,7 +24,7 @@ import {
   FileText
 } from "lucide-react";
 import { Lead } from "./LeadsList";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from '@/contexts/AuthContextJWT';
 import { useToast } from "@/hooks/use-toast";
 
 interface LeadScraperProps {

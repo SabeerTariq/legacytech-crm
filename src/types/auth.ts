@@ -11,11 +11,16 @@ export interface User {
     display_name: string;
     description: string;
   };
-  employee?: {
+  employee: {
     id: string;
     full_name: string;
     department: string;
     job_title: string;
+  };
+  attributes?: {
+    department?: string;
+    role?: string;
+    [key: string]: string | number | boolean | undefined;
   };
 }
 

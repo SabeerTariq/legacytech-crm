@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from '@/contexts/AuthContextJWT';
 import { supabase } from "@/integrations/supabase/client";
 
 interface Message {

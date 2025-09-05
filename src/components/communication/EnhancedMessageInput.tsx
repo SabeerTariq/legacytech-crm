@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextJWT';
 import { cn } from '@/lib/utils';
 
 interface EnhancedMessageInputProps {

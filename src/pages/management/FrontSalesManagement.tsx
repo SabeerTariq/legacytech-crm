@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-// Authentication removed - no user context needed
 import { useToast } from '../../hooks/use-toast';
-import { supabase } from '../../integrations/supabase/client';
+import apiClient from '../../lib/api/client';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -70,8 +69,6 @@ interface MemberTarget {
   seller_name: string;
   month: string;
   target_accounts: number;
-  target_gross: number;
-  target_cash_in: number;
   created_at: string;
   updated_at: string;
 }
@@ -125,9 +122,7 @@ const FrontSalesManagement: React.FC = () => {
   const [targetForm, setTargetForm] = useState({
     seller_id: '',
     month: '',
-    target_accounts: 0,
-    target_gross: 0,
-    target_cash_in: 0
+    target_accounts: 0
   });
 
   // Removed permission check - all authenticated users can access
@@ -168,143 +163,112 @@ const FrontSalesManagement: React.FC = () => {
       setLoading(true);
 
       // Load teams
-      const { data: teamsData, error: teamsError } = await supabase
-        .from('teams')
-        .select('*')
-        .eq('department', 'Front Sales')
-        .eq('is_active', true)
-        .order('name');
-
-      if (teamsError) throw teamsError;
+      const teamsResponse = await fetch('/api/front-sales/teams', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (!teamsResponse.ok) {
+        throw new Error('Failed to fetch teams');
+      }
+      
+      const teamsResult = await teamsResponse.json();
+      const teamsData = teamsResult.data || [];
 
       // Load team members
-      const { data: membersData, error: membersError } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('is_active', true)
-        .order('joined_at');
-
-      if (membersError) throw membersError;
+      const membersResponse = await fetch('/api/front-sales/team-members', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (!membersResponse.ok) {
+        throw new Error('Failed to fetch team members');
+      }
+      
+      const membersResult = await membersResponse.json();
+      const membersData = membersResult.data || [];
 
       // Load team performance
-      // Validate that currentMonth is not empty before making the call
-      if (!currentMonth || currentMonth.trim() === '') {
-        throw new Error('Invalid month parameter: month cannot be empty');
+      const performanceResponse = await fetch(`/api/front-sales/performance?month=${currentMonth}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (!performanceResponse.ok) {
+        throw new Error('Failed to fetch performance data');
       }
       
-      const { data: performanceData, error: performanceError } = await supabase
-        .rpc('get_team_performance_summary', { p_month: currentMonth });
-
-      if (performanceError) {
-        throw performanceError;
-      }
+      const performanceResult = await performanceResponse.json();
+      const performanceData = performanceResult.data || [];
 
       // Load member targets
-      const { data: targetsData, error: targetsError } = await supabase
-        .from('front_seller_targets')
-        .select('*')
-        .eq('month', currentMonth)
-        .order('created_at');
-
-      if (targetsError) throw targetsError;
-
-      // Load Front Sales employees with front_sales role
-      // Use backend API to avoid RLS recursion issues
-      const response = await fetch('/api/admin/get-user-roles');
+      const targetsResponse = await fetch(`/api/front-sales/targets?month=${currentMonth}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+          'Content-Type': 'application/json',
+        }
+      });
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch user roles from API');
+      if (!targetsResponse.ok) {
+        throw new Error('Failed to fetch targets');
       }
       
-      const userData = await response.json();
+      const targetsResult = await targetsResponse.json();
+      const targetsData = targetsResult.data || [];
+
+      // Load Front Sales employees
+      const employeesResponse = await fetch('/api/front-sales/employees', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+          'Content-Type': 'application/json',
+        }
+      });
       
-      // Get all employees in Front Sales department
-      const { data: employeesData, error: employeesError } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('department', 'Front Sales')
-        .order('full_name');
-
-      if (employeesError) throw employeesError;
-
-      // Get user profiles for the employees
-      const { data: userProfilesData, error: userProfilesError } = await supabase
-        .from('user_profiles')
-        .select('user_id, email, display_name, employee_id')
-        .in('employee_id', employeesData?.map(e => e.id) || []);
-
-      if (userProfilesError) throw userProfilesError;
-
-      // Filter employees who have front_sales role using the API data
-      // Since the API now returns user profiles instead of roles, we'll include all front sales employees
-      const frontSalesUserIds = Object.keys(userData);
+      if (!employeesResponse.ok) {
+        throw new Error('Failed to fetch employees');
+      }
       
-      const frontSalesEmployeeIds = userProfilesData
-        ?.filter(up => frontSalesUserIds.includes(up.user_id))
-        ?.map(up => up.employee_id) || [];
-
-      const filteredEmployees = employeesData?.filter(emp => 
-        frontSalesEmployeeIds.includes(emp.id)
-      ) || [];
+      const employeesResult = await employeesResponse.json();
+      const employeesData = employeesResult.data || [];
 
       // Data loaded successfully
-      
-      const processedTeams = teamsData?.map(t => ({
-        ...t,
-        team_leader_name: t.team_leader?.full_name || 'Unassigned'
-      })) || [];
-      
-      setTeams(processedTeams);
-      
-      // Map team members with employee names
-      const processedTeamMembers = membersData?.map(m => {
-        const employee = filteredEmployees.find(e => e.id === m.member_id);
-        return {
-          ...m,
-          member_name: employee?.full_name || 'Unknown Employee'
-        };
-      }) || [];
-      
-      setTeamMembers(processedTeamMembers);
+      setTeams(teamsData);
+      setTeamMembers(membersData);
       
       // Aggregate team performance from individual member performance
       const aggregatedTeamPerformance = aggregateTeamPerformance(
-        performanceData || [], 
-        processedTeams, 
-        processedTeamMembers,
-        userProfilesData || [],
-        targetsData || []
+        performanceData, 
+        teamsData, 
+        membersData,
+        employeesData,
+        targetsData
       );
       
       setTeamPerformance(aggregatedTeamPerformance);
       
       // Store raw data for member performance display
-      setRawPerformanceData(performanceData || []);
-      setUserProfilesData(userProfilesData || []);
+      setRawPerformanceData(performanceData);
+      setUserProfilesData(employeesData);
 
       // Map member targets with employee names
-      setMemberTargets(targetsData?.map(t => {
-        const employee = filteredEmployees.find(e => e.id === t.seller_id);
-        return {
-          ...t,
-          seller_name: employee?.full_name || 'Unknown Employee'
-        };
-      }) || []);
+      setMemberTargets(targetsData);
 
       // Transform employees data to match FrontSalesEmployee interface
-      const transformedEmployees = filteredEmployees.map(employee => {
-        // Find the corresponding user profile for email
-        const userProfile = userProfilesData?.find(up => up.employee_id === employee.id);
-        return {
-          id: employee.id,
-          email: userProfile?.email || employee.email || '',
-          full_name: employee.full_name,
-          department: employee.department,
-          role: 'front_sales', // Assuming all front sales employees have this role
-          hire_date: new Date().toISOString().split('T')[0], // Default to today
-          status: 'active'
-        };
-      })
+      const transformedEmployees = employeesData.map(employee => ({
+        id: employee.id,
+        email: employee.email || '',
+        full_name: employee.full_name,
+        department: employee.department,
+        role: 'front_sales',
+        hire_date: employee.hire_date || new Date().toISOString().split('T')[0],
+        status: employee.status || 'active'
+      }))
       .sort((a, b) => a.full_name.localeCompare(b.full_name));
 
       setEmployees(transformedEmployees);
@@ -347,32 +311,32 @@ const FrontSalesManagement: React.FC = () => {
         department: 'Front Sales'
       };
 
-      if (selectedTeam) {
-        // Update existing team
-        const { error } = await supabase
-          .from('teams')
-          .update(teamData)
-          .eq('id', selectedTeam.id);
+      const url = selectedTeam ? `/api/front-sales/teams/${selectedTeam.id}` : '/api/front-sales/teams';
+      const method = selectedTeam ? 'PUT' : 'POST';
 
-        if (error) throw error;
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(teamData)
+      });
 
-        toast({
-          title: "Success",
-          description: "Team updated successfully",
-        });
-      } else {
-        // Create new team
-        const { error } = await supabase
-          .from('teams')
-          .insert(teamData);
-
-        if (error) throw error;
-
-        toast({
-          title: "Success",
-          description: "Team created successfully",
-        });
+      if (!response.ok) {
+        throw new Error('Failed to save team');
       }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to save team');
+      }
+
+      toast({
+        title: "Success",
+        description: selectedTeam ? "Team updated successfully" : "Team created successfully",
+      });
 
       setIsTeamDialogOpen(false);
       setSelectedTeam(null);
@@ -399,28 +363,7 @@ const FrontSalesManagement: React.FC = () => {
       if (!memberForm.team_id || !memberForm.member_id) {
         toast({
           title: "Error",
-          description: "Please select both team and member",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Check if member is already in this team
-      const { data: existingMember, error: checkError } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('team_id', memberForm.team_id)
-        .eq('member_id', memberForm.member_id)
-        .maybeSingle();
-
-      if (checkError) {
-        throw checkError;
-      }
-
-      if (existingMember) {
-        toast({
-          title: "Error",
-          description: "This member is already part of this team",
+          description: "Please select a front sales employee",
           variant: "destructive",
         });
         return;
@@ -432,11 +375,25 @@ const FrontSalesManagement: React.FC = () => {
         role: memberForm.role
       };
 
-      const { error } = await supabase
-        .from('team_members')
-        .insert(memberData);
+      const response = await fetch('/api/front-sales/team-members', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(memberData)
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to add member to team');
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to add member to team');
+      }
 
       toast({
         title: "Success",
@@ -455,7 +412,7 @@ const FrontSalesManagement: React.FC = () => {
       console.error('Error adding member:', error);
       toast({
         title: "Error",
-        description: "Failed to add member to team",
+        description: error.message || "Failed to add member to team",
         variant: "destructive",
       });
     }
@@ -476,37 +433,35 @@ const FrontSalesManagement: React.FC = () => {
       const targetData = {
         seller_id: targetForm.seller_id,
         month: targetForm.month,
-        target_accounts: targetForm.target_accounts,
-        target_gross: targetForm.target_gross,
-        target_cash_in: targetForm.target_cash_in
+        target_accounts: targetForm.target_accounts
       };
 
-      if (selectedTarget) {
-        // Update existing target
-        const { error } = await supabase
-          .from('front_seller_targets')
-          .update(targetData)
-          .eq('id', selectedTarget.id);
+      const url = selectedTarget ? `/api/front-sales/targets/${selectedTarget.id}` : '/api/front-sales/targets';
+      const method = selectedTarget ? 'PUT' : 'POST';
 
-        if (error) throw error;
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(targetData)
+      });
 
-        toast({
-          title: "Success",
-          description: "Target updated successfully",
-        });
-      } else {
-        // Create new target
-        const { error } = await supabase
-          .from('front_seller_targets')
-          .insert(targetData);
-
-        if (error) throw error;
-
-        toast({
-          title: "Success",
-          description: "Target created successfully",
-        });
+      if (!response.ok) {
+        throw new Error('Failed to save target');
       }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to save target');
+      }
+
+      toast({
+        title: "Success",
+        description: selectedTarget ? "Target updated successfully" : "Target created successfully",
+      });
 
       setIsTargetDialogOpen(false);
       setSelectedTarget(null);
@@ -542,15 +497,35 @@ const FrontSalesManagement: React.FC = () => {
 
   // Delete team
   const deleteTeam = async (teamId: string) => {
+    if (!teamId || teamId.trim() === '') {
+      toast({
+        title: "Error",
+        description: "Invalid team ID. Cannot delete team.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!confirm('Are you sure you want to delete this team?')) return;
 
     try {
-      const { error } = await supabase
-        .from('teams')
-        .update({ is_active: false })
-        .eq('id', teamId);
+      const response = await fetch(`/api/front-sales/teams/${teamId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+          'Content-Type': 'application/json',
+        }
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Failed to delete team');
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete team');
+      }
 
       toast({
         title: "Success",
@@ -573,12 +548,23 @@ const FrontSalesManagement: React.FC = () => {
     if (!confirm('Are you sure you want to remove this member from the team?')) return;
 
     try {
-      const { error } = await supabase
-        .from('team_members')
-        .update({ is_active: false })
-        .eq('id', memberId);
+      const response = await fetch(`/api/front-sales/team-members/${memberId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+          'Content-Type': 'application/json',
+        }
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Failed to remove member from team');
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to remove member from team');
+      }
 
       toast({
         title: "Success",
@@ -602,9 +588,7 @@ const FrontSalesManagement: React.FC = () => {
     setTargetForm({
       seller_id: target.seller_id,
       month: target.month,
-      target_accounts: target.target_accounts,
-      target_gross: target.target_gross,
-      target_cash_in: target.target_cash_in
+      target_accounts: target.target_accounts
     });
     setIsTargetDialogOpen(true);
   };
@@ -614,12 +598,23 @@ const FrontSalesManagement: React.FC = () => {
     if (!confirm('Are you sure you want to delete this target?')) return;
 
     try {
-      const { error } = await supabase
-        .from('front_seller_targets')
-        .delete()
-        .eq('id', targetId);
+      const response = await fetch(`/api/front-sales/targets/${targetId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+          'Content-Type': 'application/json',
+        }
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Failed to delete target');
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete target');
+      }
 
       toast({
         title: "Success",
@@ -659,7 +654,7 @@ const FrontSalesManagement: React.FC = () => {
   };
 
   // Aggregate team performance from individual member performance
-  const aggregateTeamPerformance = (memberPerformance: any[], teams: Team[], teamMembers: TeamMember[], userProfiles: any[], memberTargets: MemberTarget[]) => {
+  const aggregateTeamPerformance = (memberPerformance: any[], teams: Team[], teamMembers: TeamMember[], employees: any[], memberTargets: MemberTarget[]) => {
     const teamPerformanceMap = new Map();
 
     // Initialize team performance for each team
@@ -683,22 +678,21 @@ const FrontSalesManagement: React.FC = () => {
 
     // Aggregate member performance by team
     memberPerformance.forEach(member => {
-      // Find which team this member belongs to by matching user_id with employee_id
-      const userProfile = userProfiles.find(up => up.user_id === member.seller_id);
-      if (userProfile) {
-        const teamMember = teamMembers.find(tm => tm.member_id === userProfile.employee_id);
-        if (teamMember) {
-          const teamId = teamMember.team_id;
-          const teamData = teamPerformanceMap.get(teamId);
-          
-          if (teamData) {
-            teamData.member_count += 1;
-            teamData.total_accounts_achieved += member.accounts_achieved || 0;
-            teamData.total_gross += parseFloat(member.total_gross) || 0;
-            teamData.total_cash_in += parseFloat(member.total_cash_in) || 0;
-            teamData.total_remaining += parseFloat(member.total_remaining) || 0;
-            teamData.target_accounts += member.target_accounts || 0;
-          }
+      // Find which team this member belongs to by matching employee_id
+      const teamMember = teamMembers.find(tm => tm.member_id === member.employee_id);
+      if (teamMember) {
+        const teamId = teamMember.team_id;
+        const teamData = teamPerformanceMap.get(teamId);
+        
+        if (teamData) {
+          teamData.member_count += 1;
+          teamData.total_accounts_achieved += member.accounts_achieved || 0;
+          teamData.total_gross += parseFloat(member.total_gross) || 0;
+          teamData.total_cash_in += parseFloat(member.total_cash_in) || 0;
+          teamData.total_remaining += parseFloat(member.total_remaining) || 0;
+          teamData.target_accounts += member.target_accounts || 0;
+          teamData.target_gross += member.target_gross || 0;
+          teamData.target_cash_in += member.target_cash_in || 0;
         }
       }
     });
@@ -798,7 +792,9 @@ const FrontSalesManagement: React.FC = () => {
                           <Button
                             size="sm"
                             variant="outline"
+                            disabled={!team.id || team.id.trim() === ''}
                             onClick={() => deleteTeam(team.id)}
+                            title={!team.id || team.id.trim() === '' ? 'Invalid team ID' : 'Delete team'}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -847,7 +843,11 @@ const FrontSalesManagement: React.FC = () => {
                           size="sm"
                           variant="outline"
                           onClick={() => {
-                            setMemberForm({ ...memberForm, team_id: team.id });
+                            setMemberForm({ 
+                              team_id: team.id, 
+                              member_id: '', 
+                              role: 'member' 
+                            });
                             setIsMemberDialogOpen(true);
                           }}
                         >
@@ -917,10 +917,8 @@ const FrontSalesManagement: React.FC = () => {
                   
                   // Get individual member performance for this team
                   const memberPerformance = teamMembers.map(member => {
-                    // Find the user profile for this member
-                    const userProfile = userProfilesData?.find(up => up.employee_id === member.member_id);
                     // Find the performance data for this member
-                    const memberPerf = rawPerformanceData?.find(p => p.seller_id === userProfile?.user_id);
+                    const memberPerf = rawPerformanceData?.find(p => p.employee_id === member.member_id);
                     // Find the target data for this member
                     const memberTarget = memberTargets?.find(t => t.seller_id === member.member_id);
                     
@@ -1085,18 +1083,10 @@ const FrontSalesManagement: React.FC = () => {
                                 </div>
                                 
                                 {memberTarget ? (
-                                  <div className="grid grid-cols-3 gap-4">
+                                  <div className="flex justify-center">
                                     <div className="text-center">
                                       <div className="text-lg font-bold text-blue-600">{memberTarget.target_accounts}</div>
-                                      <div className="text-xs text-muted-foreground">Accounts</div>
-                                    </div>
-                                    <div className="text-center">
-                                      <div className="text-lg font-bold text-green-600">${memberTarget.target_gross.toLocaleString()}</div>
-                                      <div className="text-xs text-muted-foreground">Gross</div>
-                                    </div>
-                                    <div className="text-center">
-                                      <div className="text-lg font-bold text-purple-600">${memberTarget.target_cash_in.toLocaleString()}</div>
-                                      <div className="text-xs text-muted-foreground">Cash In</div>
+                                      <div className="text-xs text-muted-foreground">Target Accounts</div>
                                     </div>
                                   </div>
                                 ) : (
@@ -1161,11 +1151,13 @@ const FrontSalesManagement: React.FC = () => {
                   <SelectContent>
                     <SelectItem value="no-leader">No leader</SelectItem>
                     {/* Only shows employees with 'front_sales' role */}
-                    {employees.map((employee) => (
-                      <SelectItem key={employee.id} value={employee.id}>
-                        {employee.full_name}
-                      </SelectItem>
-                    ))}
+                    {employees && employees.length > 0 ? employees
+                      .filter(employee => employee.id && employee.id.trim() !== '')
+                      .map((employee) => (
+                        <SelectItem key={employee.id} value={employee.id}>
+                          {employee.full_name}
+                        </SelectItem>
+                      )) : null}
                   </SelectContent>
                 </Select>
               </div>
@@ -1185,59 +1177,41 @@ const FrontSalesManagement: React.FC = () => {
         <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add Member to Team</DialogTitle>
+              <DialogTitle>Add Front Sales Member</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="memberTeam">Team</Label>
-                <Select
-                  value={memberForm.team_id}
-                  onValueChange={(value) => setMemberForm(prev => ({ ...prev, team_id: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select team" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teams.map((team) => (
-                      <SelectItem key={team.id} value={team.id}>
-                        {team.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="memberEmployee">Employee</Label>
+                <Label htmlFor="memberEmployee">Front Sales Employee</Label>
                 <Select
                   value={memberForm.member_id}
                   onValueChange={(value) => setMemberForm(prev => ({ ...prev, member_id: value }))}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select employee" />
+                    <SelectValue placeholder="Select front sales employee" />
                   </SelectTrigger>
                   <SelectContent>
                     {/* Only shows employees with 'front_sales' role */}
-                    {employees
+                    {employees && employees.length > 0 ? employees
                       .filter(employee => {
-                        // Filter out employees who are already members of the selected team
+                        // Filter out employees who are already members of the selected team and have valid IDs
                         const isAlreadyMemberOfThisTeam = teamMembers.some(member => 
                           member.member_id === employee.id && member.team_id === memberForm.team_id
                         );
-                        return !isAlreadyMemberOfThisTeam;
+                        return !isAlreadyMemberOfThisTeam && employee.id && employee.id.trim() !== '';
                       })
                       .map((employee) => (
                         <SelectItem key={employee.id} value={employee.id}>
                           {employee.full_name}
                         </SelectItem>
-                      ))}
-                    {employees.filter(employee => {
+                      )) : null}
+                    {employees && employees.length > 0 && employees.filter(employee => {
                       const isAlreadyMemberOfThisTeam = teamMembers.some(member => 
                         member.member_id === employee.id && member.team_id === memberForm.team_id
                       );
-                      return !isAlreadyMemberOfThisTeam;
+                      return !isAlreadyMemberOfThisTeam && employee.id && employee.id.trim() !== '';
                     }).length === 0 && (
                       <SelectItem value="no-available-employees" disabled>
-                        {memberForm.team_id ? 'All employees are already in this team' : 'Select a team first'}
+                        All front sales employees are already in this team
                       </SelectItem>
                     )}
                   </SelectContent>
@@ -1289,24 +1263,24 @@ const FrontSalesManagement: React.FC = () => {
                     <SelectValue placeholder="Select team member" />
                   </SelectTrigger>
                   <SelectContent>
-                    {employees
+                    {employees && employees.length > 0 ? employees
                       .filter(employee => {
-                        // Only show employees who are already members of teams
+                        // Only show employees who are already members of teams and have valid IDs
                         const isTeamMember = teamMembers.some(member => 
                           member.member_id === employee.id
                         );
-                        return isTeamMember;
+                        return isTeamMember && employee.id && employee.id.trim() !== '';
                       })
                       .map((employee) => (
                         <SelectItem key={employee.id} value={employee.id}>
                           {employee.full_name}
                         </SelectItem>
-                      ))}
-                    {employees.filter(employee => {
+                      )) : null}
+                    {employees && employees.length > 0 && employees.filter(employee => {
                       const isTeamMember = teamMembers.some(member => 
                         member.member_id === employee.id
                       );
-                      return isTeamMember;
+                      return isTeamMember && employee.id && employee.id.trim() !== '';
                     }).length === 0 && (
                       <SelectItem value="no-team-members" disabled>
                         No team members available
@@ -1342,26 +1316,6 @@ const FrontSalesManagement: React.FC = () => {
                   value={targetForm.target_accounts}
                   onChange={(e) => setTargetForm(prev => ({ ...prev, target_accounts: parseInt(e.target.value) || 0 }))}
                   placeholder="Enter target accounts"
-                />
-              </div>
-              <div>
-                <Label htmlFor="targetGross">Target Gross</Label>
-                <Input
-                  id="targetGross"
-                  type="number"
-                  value={targetForm.target_gross}
-                  onChange={(e) => setTargetForm(prev => ({ ...prev, target_gross: parseFloat(e.target.value) || 0 }))}
-                  placeholder="Enter target gross"
-                />
-              </div>
-              <div>
-                <Label htmlFor="targetCashIn">Target Cash In</Label>
-                <Input
-                  id="targetCashIn"
-                  type="number"
-                  value={targetForm.target_cash_in}
-                  onChange={(e) => setTargetForm(prev => ({ ...prev, target_cash_in: parseFloat(e.target.value) || 0 }))}
-                  placeholder="Enter target cash in"
                 />
               </div>
               <div className="flex justify-end space-x-2">

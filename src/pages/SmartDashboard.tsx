@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextJWT';
 import { usePermissions } from '@/contexts/PermissionContext';
 import Dashboard from './Dashboard';
 import { FrontSellerDashboard } from './dashboard/FrontSellerDashboard';

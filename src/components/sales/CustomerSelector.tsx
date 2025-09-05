@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from '@/contexts/AuthContextJWT';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,8 +26,11 @@ interface Customer {
   business_name?: string;
   service_sold?: string;
   gross_value?: number;
+  total_value?: number;
+  total_sales?: number;
   sale_date?: string;
   created_at?: string;
+  user_id?: string;
 }
 
 interface CustomerSelectorProps {
@@ -46,70 +48,47 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
 
-  // Load customers from sales_dispositions table
+  // Load customers using the new efficient customers API with role-based filtering
   const loadCustomers = async (search: string = "") => {
     setLoading(true);
     try {
-      let query = supabase
-        .from("sales_dispositions")
-        .select(`
-          id,
-          customer_name,
-          email,
-          phone_number,
-          business_name,
-          service_sold,
-          gross_value,
-          sale_date,
-          created_at
-        `)
-        .order("created_at", { ascending: false });
-
-      // Filter by user if they are a front_sales user
-      if (user?.employee?.department === 'Front Sales') {
-        console.log('Filtering customers for front_sales user in CustomerSelector:', user.id);
-        query = query.eq('user_id', user.id);
+      if (!user?.id) {
+        console.error('No user ID available for customer loading');
+        return;
       }
-      // Filter by assigned projects if they are an upseller
-      else if (user?.employee?.department === 'Upseller') {
-        console.log('Filtering customers for upseller in CustomerSelector - only showing assigned customers:', user.employee.id);
-        
-        // Get projects assigned to this upseller
-        const { data: assignedProjects, error: projectsError } = await supabase
-          .from('projects')
-          .select('sales_disposition_id')
-          .eq('assigned_pm_id', user.employee.id)
-          .not('sales_disposition_id', 'is', null);
 
-        if (projectsError) throw projectsError;
-
-        if (assignedProjects && assignedProjects.length > 0) {
-          const salesDispositionIds = assignedProjects
-            .map(p => p.sales_disposition_id)
-            .filter(id => id !== null);
-          
-          query = query.in('id', salesDispositionIds);
-        } else {
-          // No assigned projects, return empty array
-          console.log('No projects assigned to upseller in CustomerSelector, showing no customers');
-          setCustomers([]);
-          setLoading(false);
-          return;
+      // Use the new efficient customers API that handles role-based filtering
+      const response = await fetch(`/api/customers?user_id=${user.id}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+          'Content-Type': 'application/json'
         }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to load customers');
+      }
+
+      let customers = result.data || [];
+
+      // Apply search filter if provided
       if (search.trim()) {
-        query = query.or(`
-          customer_name.ilike.%${search}%,
-          email.ilike.%${search}%,
-          business_name.ilike.%${search}%
-        `);
+        customers = customers.filter(c => 
+          c.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
+          c.email?.toLowerCase().includes(search.toLowerCase()) ||
+          c.business_name?.toLowerCase().includes(search.toLowerCase())
+        );
       }
 
-      const { data, error } = await query.limit(20);
-
-      if (error) throw error;
-      setCustomers(data || []);
+      // Limit results to 20
+      customers = customers.slice(0, 20);
+      setCustomers(customers);
     } catch (error) {
       console.error("Error loading customers:", error);
     } finally {
@@ -237,10 +216,10 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
                                 <span>{customer.service_sold}</span>
                               </div>
                             )}
-                            {customer.gross_value && (
+                            {(customer.total_value || customer.gross_value) && (
                               <div className="flex items-center gap-1">
                                 <DollarSign className="h-3 w-3" />
-                                <span>${customer.gross_value.toLocaleString()}</span>
+                                <span>${(customer.total_value || customer.gross_value || 0).toLocaleString()}</span>
                               </div>
                             )}
                             {customer.sale_date && (
@@ -282,8 +261,8 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
             {selectedCustomer.service_sold && (
               <p><strong>Previous Service:</strong> {selectedCustomer.service_sold}</p>
             )}
-            {selectedCustomer.gross_value && (
-              <p><strong>Previous Value:</strong> ${selectedCustomer.gross_value.toLocaleString()}</p>
+            {(selectedCustomer.total_value || selectedCustomer.gross_value) && (
+              <p><strong>Total Value:</strong> ${(selectedCustomer.total_value || selectedCustomer.gross_value || 0).toLocaleString()}</p>
             )}
           </div>
         </div>

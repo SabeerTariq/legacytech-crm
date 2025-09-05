@@ -16,7 +16,7 @@ import {
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isToday, addDays, subDays, startOfMonth, endOfMonth, eachWeekOfInterval, isSameMonth } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { CalendarEvent, EventType, EventStatus, EventPriority } from '@/types/calendar';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextJWT';
 
 interface SimpleCalendarProps {
   events: CalendarEvent[];

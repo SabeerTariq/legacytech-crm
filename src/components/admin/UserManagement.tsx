@@ -15,6 +15,7 @@ import { useEmployees } from '@/hooks/useEmployees';
 import adminService, { CreateUserData, AdminUser } from '@/lib/admin/adminService';
 import { getRoles, type RoleWithPermissions } from '@/lib/admin/roleService';
 import { useQuery } from '@tanstack/react-query';
+import apiClient from '@/lib/api/client';
 
 interface UserManagementProps {
   onUserCreate?: (userData: CreateUserData) => void;
@@ -88,21 +89,12 @@ const UserManagement: React.FC<UserManagementProps> = ({
     const newPassword = generatePassword();
     
     try {
-      // Update password in Supabase Auth
-      const response = await fetch(`/api/admin/update-user`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          userData: {
-            password: newPassword
-          }
-        })
+      // Update password in MySQL Auth
+      const response = await apiClient.updateUser(userId, {
+        password: newPassword
       });
 
-      if (response.ok) {
+      if (!response.error) {
         // Store the new password
         setUserPasswords(prev => ({
           ...prev,

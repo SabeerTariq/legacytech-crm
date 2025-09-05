@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import apiClient from '@/lib/api/client';
 
 export interface Role {
   id: string;
@@ -46,16 +46,14 @@ export interface UpdateRoleData extends Partial<CreateRoleData> {
   id: string;
 }
 
-const API_BASE_URL = '/api/admin';
-
 // Get all roles
 export const getRoles = async (): Promise<RoleWithPermissions[]> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/roles`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch roles');
+    const response = await apiClient.getRoles();
+    if (response.error) {
+      throw new Error(response.error);
     }
-    return await response.json();
+    return response.data || response;
   } catch (error) {
     console.error('Error fetching roles:', error);
     throw error;
@@ -65,11 +63,11 @@ export const getRoles = async (): Promise<RoleWithPermissions[]> => {
 // Get role by ID with permissions
 export const getRoleById = async (id: string): Promise<RoleWithPermissions> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/roles/${id}`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch role');
+    const response = await apiClient.getRoleById(id);
+    if (response.error) {
+      throw new Error(response.error);
     }
-    return await response.json();
+    return response.data || response;
   } catch (error) {
     console.error('Error fetching role:', error);
     throw error;
@@ -79,20 +77,11 @@ export const getRoleById = async (id: string): Promise<RoleWithPermissions> => {
 // Create new role
 export const createRole = async (roleData: CreateRoleData): Promise<Role> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/roles`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(roleData),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to create role');
+    const response = await apiClient.createRole(roleData);
+    if (response.error) {
+      throw new Error(response.error);
     }
-
-    return await response.json();
+    return response.data || response;
   } catch (error) {
     console.error('Error creating role:', error);
     throw error;
@@ -102,20 +91,11 @@ export const createRole = async (roleData: CreateRoleData): Promise<Role> => {
 // Update role
 export const updateRole = async (roleData: UpdateRoleData): Promise<Role> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/roles/${roleData.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(roleData),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to update role');
+    const response = await apiClient.updateRole(roleData);
+    if (response.error) {
+      throw new Error(response.error);
     }
-
-    return await response.json();
+    return response.data || response;
   } catch (error) {
     console.error('Error updating role:', error);
     throw error;
@@ -125,13 +105,9 @@ export const updateRole = async (roleData: UpdateRoleData): Promise<Role> => {
 // Delete role
 export const deleteRole = async (id: string): Promise<void> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/roles/${id}`, {
-      method: 'DELETE',
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to delete role');
+    const response = await apiClient.deleteRole(id);
+    if (response.error) {
+      throw new Error(response.error);
     }
   } catch (error) {
     console.error('Error deleting role:', error);
@@ -142,11 +118,11 @@ export const deleteRole = async (id: string): Promise<void> => {
 // Get all available modules
 export const getModules = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/roles/modules/list`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch modules');
+    const response = await apiClient.getModules();
+    if (response.error) {
+      throw new Error(response.error);
     }
-    return await response.json();
+    return response.data || response;
   } catch (error) {
     console.error('Error fetching modules:', error);
     throw error;

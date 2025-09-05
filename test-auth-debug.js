@@ -1,51 +1,87 @@
-// Simple debug script to test authentication
-console.log('=== AUTH DEBUG SCRIPT ===');
+const { createClient } = require('@supabase/supabase-js');
 
-// Test user data
-const testUsers = [
-  {
-    email: 'adamzainnasir.fro@logicworks.com',
-    id: '78294d98-4280-40c1-bb6d-b85b7203b370',
-    role: 'front_sales'
-  },
-  {
-    email: 'adam@americandigitalagency.us',
-    id: '705ede64-e466-4359-9b7a-e65c2b8debef',
-    role: 'admin'
-  }
-];
+// Replace with your actual Supabase URL and anon key
+const supabaseUrl = 'YOUR_SUPABASE_URL';
+const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
 
-console.log('Test users:', testUsers);
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Simulate login flow
-function simulateLogin(email) {
-  console.log(`\n=== Simulating login for: ${email} ===`);
-  
-  const user = testUsers.find(u => u.email === email);
-  if (!user) {
-    console.log('User not found');
-    return;
-  }
-  
-  console.log('User found:', user);
-  console.log('Role:', user.role);
-  
-  // Simulate permission check
-  const frontSalesModules = ['front_sales', 'leads', 'customers', 'sales_form', 'messages', 'calendar', 'better_ask_saul', 'my_dashboard'];
-  const adminModules = ['dashboard', 'leads', 'customers', 'admin', 'user_management', 'role_management'];
-  
-  if (user.role === 'front_sales') {
-    console.log('Front sales user - can access:', frontSalesModules);
-    console.log('Should redirect to: /front-seller-dashboard');
-  } else if (user.role === 'admin') {
-    console.log('Admin user - can access all modules');
-    console.log('Should stay on: /');
+async function testAuthAndProjects() {
+  try {
+    console.log('🔍 Testing authentication and project access...');
+    
+    // 1. Get current authenticated user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.error('❌ Error getting user:', userError);
+      return;
+    }
+    
+    if (!user) {
+      console.log('❌ No authenticated user found');
+      return;
+    }
+    
+    console.log('✅ Current user:', {
+      id: user.id,
+      email: user.email
+    });
+    
+    // 2. Test if we can access the projects table at all
+    console.log('🔍 Testing basic projects table access...');
+    const { data: allProjects, error: allProjectsError } = await supabase
+      .from('projects')
+      .select('id, name, assigned_pm_id, status')
+      .limit(5);
+    
+    if (allProjectsError) {
+      console.error('❌ Error accessing projects table:', allProjectsError);
+      return;
+    }
+    
+    console.log('✅ Projects table accessible. Found projects:', allProjects?.length || 0);
+    if (allProjects && allProjects.length > 0) {
+      console.log('Sample project:', allProjects[0]);
+    }
+    
+    // 3. Test the specific project query that should work
+    console.log('🔍 Testing specific project query for Muhammad Ali Sheikh...');
+    const { data: specificProjects, error: specificError } = await supabase
+      .from('projects')
+      .select('id, name, assigned_pm_id, status')
+      .eq('assigned_pm_id', 'c68193f0-bb0e-47d3-bdd7-a717acd775f6');
+    
+    if (specificError) {
+      console.error('❌ Error with specific project query:', specificError);
+      return;
+    }
+    
+    console.log('✅ Specific project query successful. Found projects:', specificProjects?.length || 0);
+    if (specificProjects && specificProjects.length > 0) {
+      console.log('Specific projects:', specificProjects);
+    }
+    
+    // 4. Test the RLS policy logic
+    console.log('🔍 Testing RLS policy logic...');
+    const { data: policyProjects, error: policyError } = await supabase
+      .from('projects')
+      .select('id, name, assigned_pm_id, status')
+      .or(`assigned_pm_id.eq.c68193f0-bb0e-47d3-bdd7-a717acd775f6,user_id.eq.${user.id}`);
+    
+    if (policyError) {
+      console.error('❌ Error with RLS policy query:', policyError);
+      return;
+    }
+    
+    console.log('✅ RLS policy query successful. Found projects:', policyProjects?.length || 0);
+    if (policyProjects && policyProjects.length > 0) {
+      console.log('Policy projects:', policyProjects);
+    }
+    
+  } catch (error) {
+    console.error('❌ Unexpected error:', error);
   }
 }
 
-// Test both users
-simulateLogin('adamzainnasir.fro@logicworks.com');
-simulateLogin('adam@americandigitalagency.us');
-
-console.log('\n=== DEBUG SCRIPT COMPLETE ===');
-console.log('Check browser console for authentication logs'); 
+// Run the test
+testAuthAndProjects(); 

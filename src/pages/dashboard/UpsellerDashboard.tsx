@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
 import { Target, Calendar, TrendingUp, Users, DollarSign, AlertCircle, RefreshCw } from 'lucide-react';
 import { useUpsellerPerformance } from '../../hooks/useUpsellerPerformance';
 import { Skeleton } from '../../components/ui/skeleton';
@@ -119,9 +120,16 @@ const UpsellerDashboardContent: React.FC = () => {
              disabled={isRefreshing}
              className="flex items-center space-x-2"
            >
-             <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+             <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`}
+             />
              <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
            </Button>
+           
+           {/* Debug info for troubleshooting */}
+           <div className="text-xs text-muted-foreground ml-4 p-2 bg-gray-50 rounded">
+             <div>Debug: Receivable: ${dashboardData.currentMonth?.receivable || 0}</div>
+             <div>Accounts: {dashboardData.currentMonth?.accountsAssigned || 0}</div>
+           </div>
          </div>
       </div>
 
@@ -131,6 +139,9 @@ const UpsellerDashboardContent: React.FC = () => {
           <CardTitle className="flex items-center space-x-2">
             <Target className="h-5 w-5 text-blue-600" />
             <span>This Month Performance</span>
+            <Badge variant="outline" className="ml-2">
+              {dashboardData.currentMonth?.month ? formatMonth(dashboardData.currentMonth.month) : 'Current Month'}
+            </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -212,45 +223,54 @@ const UpsellerDashboardContent: React.FC = () => {
           <CardTitle className="flex items-center space-x-2">
             <TrendingUp className="h-5 w-5 text-green-600" />
             <span>Previous Performance</span>
+            <Badge variant="outline" className="ml-2">
+              Past Months
+            </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             
             {dashboardData.previousMonths && dashboardData.previousMonths.length > 0 ? (
-              dashboardData.previousMonths.map((month, index) => (
-                <div key={index} className="border rounded-lg p-4">
-                  <div className="font-semibold text-lg mb-3">
-                    {month.month ? formatMonth(month.month) : 'Unknown Month'}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                      <span className="font-medium">Accounts Assigned</span>
-                      <span className="font-bold">{month.accountsAssigned || 0}</span>
-                    </div>
-                    <div className="flex justify-between items-center p-2 bg-blue-50 rounded">
-                      <span className="font-medium">Total Gross</span>
-                      <span className="font-bold">{formatCurrency(month.totalGross || 0)}</span>
-                    </div>
-                    <div className="flex justify-between items-center p-2 bg-green-50 rounded">
-                      <span className="font-medium">Total Cash In</span>
-                      <span className="font-bold">{formatCurrency(month.totalCashIn || 0)}</span>
-                    </div>
-                    <div className="flex justify-between items-center p-2 bg-purple-50 rounded">
-                      <span className="font-medium">Target Completion</span>
-                      <span className="font-bold">
-                        {month.totalTarget > 0 
-                          ? `${((month.targetAchieved / month.totalTarget) * 100).toFixed(1)}%`
-                          : 'N/A'
-                        }
-                      </span>
-                    </div>
-                  </div>
+              <>
+                <div className="text-sm text-muted-foreground mb-4 text-center">
+                  Showing performance data for {dashboardData.previousMonths.length} previous month{dashboardData.previousMonths.length !== 1 ? 's' : ''}
                 </div>
-              ))
+                {dashboardData.previousMonths.map((month, index) => (
+                  <div key={index} className="border rounded-lg p-4">
+                    <div className="font-semibold text-lg mb-3">
+                      {month.month ? formatMonth(month.month) : 'Unknown Month'}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                        <span className="font-medium">Accounts Assigned</span>
+                        <span className="font-bold">{month.accountsAssigned || 0}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-2 bg-blue-50 rounded">
+                        <span className="font-medium">Total Gross</span>
+                        <span className="font-bold">{formatCurrency(month.totalGross || 0)}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-2 bg-green-50 rounded">
+                        <span className="font-medium">Total Cash In</span>
+                        <span className="font-bold">{formatCurrency(month.totalCashIn || 0)}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-2 bg-purple-50 rounded">
+                        <span className="font-medium">Target Completion</span>
+                        <span className="font-bold">
+                          {month.totalTarget > 0 
+                            ? `${((month.targetAchieved / month.totalTarget) * 100).toFixed(1)}%`
+                            : 'N/A'
+                          }
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                No previous performance data available
+                <div className="mb-2">No previous months performance data available</div>
+                <div className="text-sm">Previous month performance data will appear once upsell forms are disposed and months have passed</div>
               </div>
             )}
           </div>
@@ -266,7 +286,7 @@ const UpsellerDashboardContent: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             {/* Team Financial */}
             <div className="space-y-4">
               <h3 className="font-semibold text-lg">Team Financial</h3>
@@ -274,21 +294,32 @@ const UpsellerDashboardContent: React.FC = () => {
                 <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                   <span className="font-medium">Total Target</span>
                   <span className="font-bold text-blue-600">
-                    {formatCurrency(dashboardData.teamPerformance?.reduce((sum, member) => sum + (member.total_target || 0), 0) || 0)}
+                    {formatCurrency(dashboardData.teamPerformance?.reduce((sum, member) => sum + (member.target_gross || 0), 0) || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                   <span className="font-medium">Achieved Target</span>
                   <span className="font-bold text-green-600">
-                    {formatCurrency(dashboardData.teamPerformance?.reduce((sum, member) => sum + (member.achieved_target || 0), 0) || 0)}
+                    {formatCurrency(dashboardData.teamPerformance?.reduce((sum, member) => sum + (member.total_cash_in || 0), 0) || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
                   <span className="font-medium">Remaining Target</span>
                   <span className="font-bold text-orange-600">
-                    {formatCurrency(dashboardData.teamPerformance?.reduce((sum, member) => sum + (member.remaining_target || 0), 0) || 0)}
+                    {formatCurrency(
+                      (dashboardData.teamPerformance?.reduce((sum, member) => sum + (member.target_gross || 0), 0) || 0) - 
+                      (dashboardData.teamPerformance?.reduce((sum, member) => sum + (member.total_cash_in || 0), 0) || 0)
+                    )}
                   </span>
                 </div>
+                
+                {/* Show info message when no performance data */}
+                {dashboardData.teamPerformance && dashboardData.teamPerformance.length > 0 && 
+                 dashboardData.teamPerformance.every(member => (member.total_cash_in || 0) === 0) && (
+                  <div className="text-xs text-muted-foreground text-center p-2 bg-yellow-50 rounded">
+                    💡 Targets set but no performance data yet. Performance will appear when upsell forms are disposed.
+                  </div>
+                )}
               </div>
             </div>
 
@@ -317,23 +348,21 @@ const UpsellerDashboardContent: React.FC = () => {
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {dashboardData.teamPerformance && dashboardData.teamPerformance.length > 0 ? (
                   dashboardData.teamPerformance.map((member, index) => (
-                    <div key={member.seller_id} className="flex justify-between items-center p-2 bg-gray-50 rounded text-sm">
-                      <span className="font-medium truncate">
-                        {member.seller_name || `Member ${index + 1}`}
-                      </span>
-                      <div className="flex items-center space-x-4">
-                        <span className="font-bold text-blue-600">
-                          {formatCurrency(member.total_target || 0)}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {member.accounts_assigned || 0} accounts
-                        </span>
-                      </div>
-                    </div>
+                                         <div key={member.seller_id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                       <span className="font-medium text-gray-900">
+                         {member.seller_name || `Member ${index + 1}`}
+                       </span>
+                       <div className="flex items-center">
+                         <span className="text-sm font-semibold text-green-600">
+                           {formatCurrency(member.total_cash_in || 0)}
+                         </span>
+                       </div>
+                     </div>
                   ))
                 ) : (
                   <div className="text-center py-4 text-muted-foreground text-sm">
-                    No team data available
+                    <div className="mb-1">No team data available</div>
+                    <div className="text-xs">Team performance will appear once upsell forms are disposed</div>
                   </div>
                 )}
               </div>
@@ -342,91 +371,7 @@ const UpsellerDashboardContent: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Team Members Performance */}
-      {dashboardData.teamPerformance && dashboardData.teamPerformance.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <DollarSign className="h-5 w-5 text-indigo-600" />
-              <span>Team Members Performance</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {dashboardData.teamPerformance.map((member, index) => (
-                <div key={member.seller_id} className="border rounded-lg p-4">
-                  <div className="font-semibold text-lg mb-4 flex items-center justify-between">
-                    <span>{member.seller_name}</span>
-                    <span className="text-sm text-muted-foreground">Rank #{index + 1}</span>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Target Section */}
-                    <div className="space-y-3">
-                      <h4 className="font-medium text-sm text-muted-foreground">TARGET</h4>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="text-center p-2 bg-blue-50 rounded">
-                          <div className="text-xs text-muted-foreground">Target</div>
-                          <div className="font-bold text-blue-600">{formatCurrency(member.total_target || 0)}</div>
-                        </div>
-                        <div className="text-center p-2 bg-green-50 rounded">
-                          <div className="text-xs text-muted-foreground">Achieved</div>
-                          <div className="font-bold text-green-600">{formatCurrency(member.achieved_target || 0)}</div>
-                        </div>
-                        <div className="text-center p-2 bg-orange-50 rounded">
-                          <div className="text-xs text-muted-foreground">Remaining</div>
-                          <div className="font-bold text-orange-600">{formatCurrency(member.remaining_target || 0)}</div>
-                        </div>
-                      </div>
-                    </div>
 
-                    {/* Financial Section */}
-                    <div className="space-y-3">
-                      <h4 className="font-medium text-sm text-muted-foreground">FINANCIAL</h4>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="text-center p-2 bg-blue-50 rounded">
-                          <div className="text-xs text-muted-foreground">Target</div>
-                          <div className="font-bold text-blue-600">{formatCurrency(member.total_target || 0)}</div>
-                        </div>
-                        <div className="text-center p-2 bg-green-50 rounded">
-                          <div className="text-xs text-muted-foreground">Achieved</div>
-                          <div className="font-bold text-green-600">{formatCurrency(member.achieved_target || 0)}</div>
-                        </div>
-                        <div className="text-center p-2 bg-red-50 rounded">
-                          <div className="text-xs text-muted-foreground">Receivable</div>
-                          <div className="font-bold text-red-600">{formatCurrency(member.receivable || 0)}</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Total Remaining Section */}
-                    <div className="space-y-3">
-                      <h4 className="font-medium text-sm text-muted-foreground">TOTAL REMAINING</h4>
-                      <div className="grid grid-cols-1 gap-2">
-                        <div className="text-center p-2 bg-purple-50 rounded">
-                          <div className="text-xs text-muted-foreground">Upsell + Receivable</div>
-                          <div className="font-bold text-purple-600">{formatCurrency((member.remaining_target || 0) + (member.receivable || 0))}</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Accounts Section */}
-                    <div className="space-y-3">
-                      <h4 className="font-medium text-sm text-muted-foreground">ACCOUNTS</h4>
-                      <div className="grid grid-cols-1 gap-2">
-                        <div className="text-center p-2 bg-indigo-50 rounded">
-                          <div className="text-xs text-muted-foreground">Accounts Assigned</div>
-                          <div className="font-bold text-indigo-600">{member.accounts_assigned || 0}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };

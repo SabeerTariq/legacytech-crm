@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from '@/contexts/AuthContextJWT';
+import { apiClient } from "@/lib/api/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,36 +17,95 @@ import {
   AlertCircle,
   UserPlus
 } from "lucide-react";
-import { Database } from "@/integrations/supabase/types";
 
-type Project = Database["public"]["Tables"]["projects"]["Row"];
+// Define proper types for the component
+interface Project {
+  id: string;
+  name: string;
+  client: string;
+  description?: string;
+  budget?: number;
+  due_date: string;
+  status: string;
+  services?: string[];
+  sales_disposition_id?: string;
+  assigned_pm_id?: string;
+  assignment_date?: string;
+  created_at: string;
+  updated_at: string;
+}
 
-type Employee = Database["public"]["Tables"]["employees"]["Row"];
+interface Employee {
+  id: string;
+  full_name: string;
+  email: string;
+  department: string;
+  job_title?: string;
+}
+
+interface UserProfile {
+  id: string;
+  user_id: string;
+  email: string;
+  display_name?: string;
+  employee_id?: string;
+  is_admin?: boolean;
+  employees?: {
+    id: string;
+    full_name: string;
+    department: string;
+    job_title?: string;
+  };
+}
 
 const ProjectAssignment: React.FC = () => {
   const { toast } = useToast();
+  const { user: authUser } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectManagers, setProjectManagers] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [assigning, setAssigning] = useState<string | null>(null);
 
   useEffect(() => {
-    loadUnassignedProjects();
-    loadProjectManagers();
-  }, []);
+    if (authUser) {
+      loadUnassignedProjects();
+      loadProjectManagers();
+    }
+  }, [authUser]);
 
   const loadUnassignedProjects = async () => {
     try {
-      const { data, error } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("status", "unassigned")
-        .order("created_at", { ascending: false });
+      setLoading(true);
+      
+      if (!authUser) {
+        console.error('🔍 ProjectAssignment: No authenticated user');
+        return;
+      }
 
-      if (error) throw error;
-      setProjects(data || []);
+      console.log('🔍 ProjectAssignment: Loading unassigned projects for user:', authUser.id);
+      
+      // Use MySQL API endpoint instead of Supabase
+      const response = await apiClient.getUnassignedProjects(authUser.id);
+      
+      if (response.error) {
+        console.error('🔍 ProjectAssignment: Error loading projects:', response.error);
+        toast({
+          title: "Error",
+          description: "Failed to load unassigned projects",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!response.data) {
+        setProjects([]);
+        return;
+      }
+
+      console.log('🔍 ProjectAssignment: Loaded projects:', response.data.length);
+      setProjects(response.data);
     } catch (error) {
-      console.error("Error loading projects:", error);
+      console.error("🔍 ProjectAssignment: Error loading projects:", error);
       toast({
         title: "Error",
         description: "Failed to load unassigned projects",
@@ -58,16 +118,31 @@ const ProjectAssignment: React.FC = () => {
 
   const loadProjectManagers = async () => {
     try {
-      const { data, error } = await supabase
-        .from("employees")
-        .select("*")
-        .eq("department", "Upseller")
-        .order("full_name");
+      console.log("🔍 ProjectAssignment: Loading project managers...");
+      
+      // Use MySQL API endpoint instead of Supabase
+      const response = await apiClient.getProjectManagers();
+      
+      if (response.error) {
+        console.error("🔍 ProjectAssignment: Error fetching project managers:", response.error);
+        toast({
+          title: "Error",
+          description: "Failed to load project managers",
+          variant: "destructive",
+        });
+        return;
+      }
 
-      if (error) throw error;
-      setProjectManagers(data || []);
+      if (!response.data) {
+        console.log("🔍 ProjectAssignment: No project managers found");
+        setProjectManagers([]);
+        return;
+      }
+
+      console.log(`🔍 ProjectAssignment: Found ${response.data.length} project managers`);
+      setProjectManagers(response.data);
     } catch (error) {
-      console.error("Error loading project managers:", error);
+      console.error("🔍 ProjectAssignment: Error loading project managers:", error);
       toast({
         title: "Error",
         description: "Failed to load project managers",
@@ -79,22 +154,21 @@ const ProjectAssignment: React.FC = () => {
   const assignProject = async (projectId: string, pmId: string) => {
     setAssigning(projectId);
     try {
-      // Update project assignment
-      const { error: projectError } = await supabase
-        .from("projects")
-        .update({
-          assigned_pm_id: pmId,
-          assignment_date: new Date().toISOString(),
-          status: "assigned",
-        })
-        .eq("id", projectId);
-
-      if (projectError) throw projectError;
+      console.log(`🔍 ProjectAssignment: Assigning project ${projectId} to PM ${pmId}`);
+      
+      // Use MySQL API endpoint instead of Supabase
+      const response = await apiClient.assignProject(projectId, pmId);
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
 
       toast({
         title: "Success!",
-        description: "Project assigned successfully",
+        description: `Project assigned successfully to PM ID: ${pmId}. The upseller dashboard should update automatically.`,
       });
+
+      console.log(`✅ Project ${projectId} assigned to PM ${pmId} successfully`);
 
       // Reload projects
       loadUnassignedProjects();
@@ -154,7 +228,7 @@ const ProjectAssignment: React.FC = () => {
         <div className="space-y-2">
           <h1 className="text-3xl font-bold">Project Assignment</h1>
           <p className="text-muted-foreground">
-            Assign unassigned projects to Project Managers from the Upseller department.
+            Assign unassigned projects to Project Managers with the Upseller role.
           </p>
         </div>
 

@@ -48,6 +48,9 @@ export const MODULES = {
   sales_form: 'sales_form',
   upsell: 'upsell',
   projects: 'projects',
+  all_projects: 'all_projects',
+  project_assignment: 'project_assignment',
+  my_projects: 'my_projects',
   kanban: 'kanban',
   payments: 'payments',
   recurring_services: 'recurring_services',
@@ -128,6 +131,9 @@ export const ROLE_TEMPLATES: RoleTemplate[] = [
       { module: 'sales_form', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
       { module: 'upsell', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
       { module: 'projects', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
+      { module: 'all_projects', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
+      { module: 'project_assignment', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
+      { module: 'my_projects', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
       { module: 'kanban', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
       { module: 'payments', can_create: false, can_read: true, can_update: false, can_delete: false, screen_visible: true },
       { module: 'recurring_services', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
@@ -158,6 +164,18 @@ export const ROLE_TEMPLATES: RoleTemplate[] = [
       { module: 'leads', can_create: false, can_read: true, can_update: false, can_delete: false, screen_visible: true },
       { module: 'customers', can_create: false, can_read: true, can_update: false, can_delete: false, screen_visible: true },
       { module: 'projects', can_create: false, can_read: true, can_update: false, can_delete: false, screen_visible: true }
+    ]
+  },
+  {
+    id: 'upseller',
+    name: 'Upseller',
+    description: 'Access to upsell and project management modules',
+    permissions: [
+      { module: 'dashboard', can_create: false, can_read: true, can_update: false, can_delete: false, screen_visible: true },
+      { module: 'customers', can_create: false, can_read: true, can_update: false, can_delete: false, screen_visible: true },
+      { module: 'upsell', can_create: true, can_read: true, can_update: true, can_delete: false, screen_visible: true },
+      { module: 'my_projects', can_create: false, can_read: true, can_update: true, can_delete: false, screen_visible: true },
+      { module: 'my_dashboard', can_create: false, can_read: true, can_update: false, can_delete: false, screen_visible: true }
     ]
   }
 ]; 

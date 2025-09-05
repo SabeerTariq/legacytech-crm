@@ -12,7 +12,7 @@ import {
 import { MessageList } from "@/components/chat/MessageList";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
 import { useAiChat } from "@/hooks/useAiChat";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from '@/contexts/AuthContextJWT';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
 

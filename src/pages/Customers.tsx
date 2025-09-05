@@ -4,9 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, UserCheck, Building, Mail, Phone, Calendar, DollarSign, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from '@/contexts/AuthContextJWT';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { apiClient } from "@/lib/api/client";
 
 interface Customer {
   id: string;
@@ -26,11 +26,35 @@ interface Customer {
   user_id?: string;
 }
 
+interface SalesHistoryProps {
+  customer: Customer;
+  formatCurrency: (amount: number) => string;
+  formatDate: (dateString: string) => string;
+}
+
+interface ProjectSalesInfoProps {
+  customer: Customer;
+  formatCurrency: (amount: number) => string;
+  formatDate: (dateString: string) => string;
+}
+
+interface RecurringServicesInfoProps {
+  customer: Customer;
+  formatCurrency: (amount: number) => string;
+  formatDate: (dateString: string) => string;
+}
+
 const Customers = () => {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Role-based access control
+  const userRole = user?.role?.name || '';
+  const isAdmin = user?.is_admin || userRole === 'admin';
+  const isFrontSales = userRole === 'front_sales';
+  const isUpseller = userRole === 'upseller';
 
   useEffect(() => {
     if (user) {
@@ -42,107 +66,57 @@ const Customers = () => {
     try {
       setLoading(true);
       
-      let query = supabase
-        .from('sales_dispositions')
-        .select(`
-          id,
-          customer_name,
-          email,
-          phone_number,
-          business_name,
-          service_sold,
-          gross_value,
-          sale_date,
-          created_at,
-          cash_in,
-          remaining,
-          user_id
-        `)
-        .order('created_at', { ascending: false });
-
-      // Filter by user if they are a front_sales user
-      if (user?.employee?.department === 'Front Sales') {
-        console.log('Filtering customers for front_sales user:', user.id);
-        query = query.eq('user_id', user.id);
-      } 
-      // Filter by assigned projects if they are an upseller
-      else if (user?.employee?.department === 'Upseller') {
-        console.log('Filtering customers for upseller - only showing assigned customers:', user.employee.id);
-        
-        // Get projects assigned to this upseller
-        const { data: assignedProjects, error: projectsError } = await supabase
-          .from('projects')
-          .select('sales_disposition_id')
-          .eq('assigned_pm_id', user.employee.id)
-          .not('sales_disposition_id', 'is', null);
-
-        if (projectsError) throw projectsError;
-
-        if (assignedProjects && assignedProjects.length > 0) {
-          const salesDispositionIds = assignedProjects
-            .map(p => p.sales_disposition_id)
-            .filter(id => id !== null);
-          
-          query = query.in('id', salesDispositionIds);
-        } else {
-          // No assigned projects, return empty array
-          console.log('No projects assigned to upseller, showing no customers');
-          setCustomers([]);
-          setLoading(false);
-          return;
-        }
-      } else {
-        console.log('Showing all customers for non-front_sales/upseller user:', user?.employee?.department);
+      if (!user?.id) {
+        throw new Error('No authenticated user');
       }
 
-      const { data: allSales, error: salesError } = await query;
+      console.log('User role:', userRole);
+      console.log('Is Admin:', isAdmin);
+      console.log('Is Front Sales:', isFrontSales);
+      console.log('Is Upseller:', isUpseller);
+      console.log('Fetching customers for user:', user.id);
 
-      if (salesError) throw salesError;
+      // Use the new efficient customers API with role-based filtering
+      const response = await apiClient.getCustomers(user.id);
 
-      // Group by unique customers (email + phone combination)
-      const customerMap = new Map();
-      
-      allSales?.forEach(sale => {
-        const customerKey = `${sale.email}-${sale.phone_number}`;
-        
-        if (!customerMap.has(customerKey)) {
-          // This is a new customer, add them
-          customerMap.set(customerKey, {
-            id: sale.id,
-            customer_name: sale.customer_name,
-            email: sale.email,
-            phone_number: sale.phone_number,
-            business_name: sale.business_name,
-            service_sold: sale.service_sold,
-            gross_value: sale.gross_value || 0,
-            sale_date: sale.sale_date,
-            created_at: sale.created_at,
-            cash_in: sale.cash_in || 0,
-            remaining: sale.remaining || 0,
-            total_sales: 1,
-            total_value: sale.gross_value || 0,
-            user_id: sale.user_id
-          });
-        } else {
-          // Customer already exists, update totals
-          const existingCustomer = customerMap.get(customerKey);
-          existingCustomer.total_sales += 1;
-          existingCustomer.total_value += (sale.gross_value || 0);
-          
-          // Keep the most recent sale date
-          if (new Date(sale.sale_date) > new Date(existingCustomer.sale_date)) {
-            existingCustomer.sale_date = sale.sale_date;
-            existingCustomer.created_at = sale.created_at;
-          }
-        }
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      const customers = response.data || [];
+
+      console.log('Customers fetched:', customers.length);
+      console.log('Customer aggregation details:');
+      customers.forEach(customer => {
+        console.log(`${customer.customer_name}: ${customer.total_sales} sales, total value: ${customer.total_value}`);
       });
-
-      // Convert map to array and sort by most recent
-      const uniqueCustomers = Array.from(customerMap.values())
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-      console.log('Unique customers:', uniqueCustomers);
-      setCustomers(uniqueCustomers);
+      
+      // Debug: Log the user context and filtering
+      console.log('🔍 Debug Info:');
+      console.log('   User ID:', user?.id);
+      console.log('   User Role:', userRole);
+      console.log('   Is Admin:', isAdmin);
+      console.log('   Is Front Sales:', isFrontSales);
+      console.log('   Is Upseller:', isUpseller);
+      console.log('   Total Customers Fetched:', customers.length);
+      
+      // Debug: Log Jack's specific data
+      const jackCustomer = customers.find(c => 
+        c.email === 'demo@example.com' && c.phone_number === '(916) 705-1136'
+      );
+      if (jackCustomer) {
+        console.log('   Jack Customer Found:', {
+          total_sales: jackCustomer.total_sales,
+          total_value: jackCustomer.total_value,
+          gross_value: jackCustomer.gross_value,
+          email: jackCustomer.email,
+          phone: jackCustomer.phone_number
+        });
+      } else {
+        console.log('   Jack Customer NOT found in aggregated data');
+      }
+      
+      setCustomers(customers);
     } catch (error) {
       console.error('Error fetching customers:', error);
     } finally {
@@ -171,7 +145,7 @@ const Customers = () => {
     customer.business_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const totalValue = customers.reduce((sum, customer) => sum + (customer.gross_value || 0), 0);
+  const totalValue = customers.reduce((sum, customer) => sum + (customer.total_value || customer.gross_value || 0), 0);
   const thisMonth = customers.filter(customer => {
     const customerDate = new Date(customer.created_at);
     const now = new Date();
@@ -194,9 +168,9 @@ const Customers = () => {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
             <p className="text-muted-foreground">
-              {user?.employee?.department === 'Front Sales' 
+              {isFrontSales
                 ? "View customers you converted from leads"
-                : user?.employee?.department === 'Upseller'
+                : isUpseller
                 ? "View customers assigned to your projects"
                 : "Manage your customers and view their project details"
               }
@@ -281,9 +255,9 @@ const Customers = () => {
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
                   {customers.length === 0 
-                    ? user?.employee?.department === 'Front Sales'
+                    ? isFrontSales
                       ? "Convert leads to customers using the sales form to see them here."
-                      : user?.employee?.department === 'Upseller'
+                      : isUpseller
                       ? "You'll see customers here once projects are assigned to you."
                       : "Create customers by filling out the sales disposition form to see them here."
                     : "Try adjusting your search terms."
@@ -410,30 +384,43 @@ const Customers = () => {
 
 export default Customers; 
 
-function SalesHistory({ customer, formatCurrency, formatDate }) {
+function SalesHistory({ customer, formatCurrency, formatDate }: SalesHistoryProps) {
   const { user } = useAuth();
-  const [salesHistory, setSalesHistory] = useState([]);
+  const [salesHistory, setSalesHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchSalesHistory = async () => {
       setLoading(true);
       
-      let query = supabase
-        .from("sales_dispositions")
-        .select("*")
-        .eq("email", customer.email)
-        .eq("phone_number", customer.phone_number)
-        .order("sale_date", { ascending: false });
+      try {
+        // Build query parameters
+        const queryParams: any = {
+          email: customer.email,
+          phone_number: customer.phone_number
+        };
 
-      // Filter by user if they are a front_sales user
-      if (user?.employee?.department === 'Front Sales') {
-        query = query.eq('user_id', user.id);
+        // Filter by user if they are a front_sales user
+        const userRole = user?.role?.name || '';
+        if (userRole === 'front_sales') {
+          queryParams.user_id = user.id;
+        }
+
+        const response = await apiClient.getSalesDispositions(queryParams);
+
+        if (response.error) {
+          throw new Error(response.error);
+        }
+
+        const salesData = response.data?.sales_dispositions || [];
+        console.log('Sales history data received:', salesData);
+        setSalesHistory(salesData);
+      } catch (error) {
+        console.error('Error fetching sales history:', error);
+        setSalesHistory([]);
+      } finally {
+        setLoading(false);
       }
-
-      const { data } = await query;
-      setSalesHistory(data || []);
-      setLoading(false);
     };
     fetchSalesHistory();
   }, [customer.email, customer.phone_number, user]);
@@ -479,40 +466,60 @@ function SalesHistory({ customer, formatCurrency, formatDate }) {
   );
 }
 
-function ProjectSalesInfo({ customer, formatCurrency, formatDate }) {
+function ProjectSalesInfo({ customer, formatCurrency, formatDate }: ProjectSalesInfoProps) {
   const { user } = useAuth();
-  const [projects, setProjects] = useState([]);
+  const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchProjects = async () => {
       setLoading(true);
       
-      let query = supabase
-        .from("sales_dispositions")
-        .select("id")
-        .eq("email", customer.email)
-        .eq("phone_number", customer.phone_number);
+      try {
+        // First get all sales dispositions for this customer
+        const salesQueryParams: any = {
+          email: customer.email,
+          phone_number: customer.phone_number
+        };
 
-      // Filter by user if they are a front_sales user
-      if (user?.employee?.department === 'Front Sales') {
-        query = query.eq('user_id', user.id);
-      }
+        // Filter by user if they are a front_sales user
+        const userRole = user?.role?.name || '';
+        if (userRole === 'front_sales') {
+          salesQueryParams.user_id = user.id;
+        }
 
-      const { data: salesData } = await query;
-      
-      if (salesData && salesData.length > 0) {
-        const salesIds = salesData.map(sale => sale.id);
-        const { data } = await supabase
-          .from("projects")
-          .select("*")
-          .in("sales_disposition_id", salesIds)
-          .order("created_at", { ascending: false });
-        setProjects(data || []);
-      } else {
+        const salesResponse = await apiClient.getSalesDispositions(salesQueryParams);
+
+        if (salesResponse.error) {
+          throw new Error(salesResponse.error);
+        }
+
+        const salesData = salesResponse.data?.sales_dispositions || [];
+        
+        if (salesData.length > 0) {
+          const salesIds = salesData.map((sale: any) => sale.id);
+          
+          // Get projects linked to these sales dispositions
+          const projectsResponse = await apiClient.getProjects({
+            sales_disposition_ids: salesIds.join(',')
+          });
+
+          if (projectsResponse.error) {
+            throw new Error(projectsResponse.error);
+          }
+
+          const projectsData = projectsResponse.data?.projects || [];
+          console.log('Projects data received:', projectsData);
+          setProjects(projectsData);
+        } else {
+          setProjects([]);
+        }
+      } catch (error) {
+        console.error('Error fetching projects:', error);
         setProjects([]);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchProjects();
   }, [customer.email, customer.phone_number, user]);
@@ -536,7 +543,7 @@ function ProjectSalesInfo({ customer, formatCurrency, formatDate }) {
             </span>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-            <div><span className="font-medium">Type:</span> {project.project_type || 'N/A'}</div>
+            <div><span className="font-medium">Status:</span> {project.status || 'N/A'}</div>
             <div><span className="font-medium">Due Date:</span> {project.due_date ? formatDate(project.due_date) : 'N/A'}</div>
             <div><span className="font-medium">Budget:</span> {project.budget ? formatCurrency(project.budget) : 'N/A'}</div>
           </div>
@@ -545,9 +552,9 @@ function ProjectSalesInfo({ customer, formatCurrency, formatDate }) {
               <span className="font-medium">Description:</span> {project.description}
             </div>
           )}
-          {project.services && project.services.length > 0 && (
+          {project.is_recurring && (
             <div className="mt-2 text-sm text-gray-600">
-              <span className="font-medium">Services:</span> {project.services.join(', ')}
+              <span className="font-medium">Recurring:</span> {project.recurring_frequency} - {project.total_installments} installments
             </div>
           )}
         </div>
@@ -556,40 +563,60 @@ function ProjectSalesInfo({ customer, formatCurrency, formatDate }) {
   );
 }
 
-function RecurringServicesInfo({ customer, formatCurrency, formatDate }) {
+function RecurringServicesInfo({ customer, formatCurrency, formatDate }: RecurringServicesInfoProps) {
   const { user } = useAuth();
-  const [recurringServices, setRecurringServices] = useState([]);
+  const [recurringServices, setRecurringServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchRecurringServices = async () => {
       setLoading(true);
       
-      let query = supabase
-        .from("sales_dispositions")
-        .select("id")
-        .eq("email", customer.email)
-        .eq("phone_number", customer.phone_number);
+      try {
+        // Get sales dispositions for this customer
+        const salesQueryParams: any = {
+          email: customer.email,
+          phone_number: customer.phone_number
+        };
 
-      // Filter by user if they are a front_sales user
-      if (user?.employee?.department === 'Front Sales') {
-        query = query.eq('user_id', user.id);
-      }
+        // Filter by user if they are a front_sales user
+        const userRole = user?.role?.name || '';
+        if (userRole === 'front_sales') {
+          salesQueryParams.user_id = user.id;
+        }
 
-      const { data: salesData } = await query;
-      
-      if (salesData && salesData.length > 0) {
-        const salesIds = salesData.map(sale => sale.id);
-        const { data } = await supabase
-          .from("recurring_services")
-          .select("*")
-          .in("customer_id", salesIds)
-          .order("created_at", { ascending: false });
-        setRecurringServices(data || []);
-      } else {
+        const salesResponse = await apiClient.getSalesDispositions(salesQueryParams);
+
+        if (salesResponse.error) {
+          throw new Error(salesResponse.error);
+        }
+
+        const salesData = salesResponse.data?.sales_dispositions || [];
+        
+        if (salesData.length > 0) {
+          const salesIds = salesData.map((sale: any) => sale.id);
+          
+          // Get recurring services linked to these sales
+          const servicesResponse = await apiClient.getRecurringServices({
+            customer_ids: salesIds.join(',')
+          });
+
+          if (servicesResponse.error) {
+            throw new Error(servicesResponse.error);
+          }
+
+          const servicesData = servicesResponse.data?.recurring_services || [];
+          console.log('Recurring services data received:', servicesData);
+          setRecurringServices(servicesData);
+        } else {
+          setRecurringServices([]);
+        }
+      } catch (error) {
+        console.error('Error fetching recurring services:', error);
         setRecurringServices([]);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchRecurringServices();
   }, [customer.email, customer.phone_number, user]);
@@ -602,25 +629,22 @@ function RecurringServicesInfo({ customer, formatCurrency, formatDate }) {
       {recurringServices.map((service) => (
         <div key={service.id} className="p-4 border rounded-lg bg-green-50">
           <div className="flex justify-between items-start mb-2">
-            <div className="font-semibold">{service.service_name}</div>
+            <div className="font-semibold">{service.project_name || 'Recurring Service'}</div>
             <span className={`px-2 py-1 rounded text-xs ${
-              service.status === 'active' ? 'bg-green-100 text-green-800' :
-              service.status === 'suspended' ? 'bg-red-100 text-red-800' :
-              service.status === 'cancelled' ? 'bg-gray-100 text-gray-800' :
-              'bg-yellow-100 text-yellow-800'
+              service.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
             }`}>
-              {service.status?.toUpperCase()}
+              {service.is_active ? 'ACTIVE' : 'INACTIVE'}
             </span>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
             <div><span className="font-medium">Amount:</span> {formatCurrency(service.amount)}</div>
-            <div><span className="font-medium">Billing Cycle:</span> {service.billing_cycle}</div>
-            <div><span className="font-medium">Next Billing:</span> {formatDate(service.next_billing_date)}</div>
-            <div><span className="font-medium">Auto Renew:</span> {service.auto_renewal ? 'Yes' : 'No'}</div>
+            <div><span className="font-medium">Frequency:</span> {service.frequency}</div>
+            <div><span className="font-medium">Next Payment:</span> {formatDate(service.next_payment_date)}</div>
+            <div><span className="font-medium">Status:</span> {service.is_active ? 'Active' : 'Inactive'}</div>
           </div>
-          {service.description && (
+          {service.project_name && (
             <div className="mt-2 text-sm text-gray-600">
-              <span className="font-medium">Description:</span> {service.description}
+              <span className="font-medium">Project:</span> {service.project_name}
             </div>
           )}
         </div>

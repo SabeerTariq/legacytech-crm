@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextJWT';
 import SimpleCalendar from '@/components/calendar/SimpleCalendar';
 import SimpleEventModal from '@/components/calendar/SimpleEventModal';
 import { CalendarEvent, CalendarView as CalendarViewType } from '@/types/calendar';

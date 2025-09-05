@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextJWT';
 import { useToast } from '../../hooks/use-toast';
-import { supabase } from '../../integrations/supabase/client';
+import apiClient from '../../lib/api/client';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -167,106 +167,49 @@ const UpsellerManagement: React.FC = () => {
     try {
       setLoading(true);
 
-      // Load teams
-      const { data: teamsData, error: teamsError } = await supabase
-        .from('upseller_teams')
-        .select(`
-          *,
-          team_lead:employees!upseller_teams_team_lead_id_fkey(id, full_name, email)
-        `)
-        .eq('is_active', true)
-        .order('name');
-
-      if (teamsError) throw teamsError;
-
-      // Load team members
-      const { data: membersData, error: membersError } = await supabase
-        .from('upseller_team_members')
-        .select(`
-          *,
-          employee:employees!upseller_team_members_employee_id_fkey(id, full_name, email)
-        `)
-        .eq('is_active', true)
-        .order('joined_at');
-
-      if (membersError) throw membersError;
-
-      // Load team performance
-      // Validate that currentMonth is not empty before making the call
-      if (!currentMonth || currentMonth.trim() === '') {
-        throw new Error('Invalid month parameter: month cannot be empty');
-      }
+      // Load all upseller data from MySQL API
+      const result = await apiClient.getUpsellerData();
       
-      // Convert string to DATE for the function call
-      // Ensure currentMonth is in YYYY-MM format before creating Date
-      if (!currentMonth || currentMonth.trim() === '') {
-        throw new Error('Invalid month parameter: month cannot be empty');
-      }
-      
-      // Validate the month format (should be YYYY-MM)
-      if (!/^\d{4}-\d{2}$/.test(currentMonth)) {
-        throw new Error(`Invalid month format: ${currentMonth}. Expected format: YYYY-MM`);
-      }
-      
-      const monthDate = new Date(currentMonth + '-01').toISOString().split('T')[0];
-      
-      const { data: performanceData, error: performanceError } = await supabase
-        .rpc('get_upseller_team_performance_summary', { p_month: monthDate });
-
-      if (performanceError) {
-        throw performanceError;
+      if (result.error) {
+        throw new Error(result.error || 'Failed to fetch upseller data');
       }
 
-      // Load member targets
-      // Convert currentMonth (YYYY-MM) to a date for the database query
-      const targetsMonthDate = new Date(currentMonth + '-01').toISOString().split('T')[0];
-      
-      const { data: targetsData, error: targetsError } = await supabase
-        .from('upseller_targets')
-        .select('*')
-        .eq('month', targetsMonthDate)
-        .order('created_at');
+      // Extract data from the response
+      const data = result.data || result;
+      const { teams, teamMembers, targets, performance, upsellerEmployees } = data as {
+        teams: any[];
+        teamMembers: any[];
+        targets: any[];
+        performance: any[];
+        upsellerEmployees: any[];
+      };
 
-      if (targetsError) throw targetsError;
+      // Transform data to match the expected format
+      const teamsData = teams.map(team => ({
+        ...team,
+        team_lead: team.team_lead_name ? {
+          id: team.team_lead_id,
+          full_name: team.team_lead_name,
+          email: ''
+        } : null
+      }));
 
-      // Load Upseller employees with upseller role
-      // Use backend API to avoid RLS recursion issues
-      const response = await fetch('/api/admin/get-user-roles');
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch user roles from API');
-      }
-      
-      const userData = await response.json();
-      
-      // Get all employees in Upseller department
-      const { data: employeesData, error: employeesError } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('department', 'Upseller')
-        .order('full_name');
+      const membersData = teamMembers.map(member => ({
+        ...member,
+        employee: {
+          id: member.employee_id,
+          full_name: member.member_name,
+          email: member.member_email
+        }
+      }));
 
-      if (employeesError) throw employeesError;
+      const targetsData = targets;
+      const performanceData = performance;
+      const employeesData = upsellerEmployees;
 
-      // Get user profiles for the employees
-      const { data: userProfilesData, error: userProfilesError } = await supabase
-        .from('user_profiles')
-        .select('user_id, email, display_name, employee_id')
-        .in('employee_id', employeesData?.map(e => e.id) || []);
-
-      if (userProfilesError) throw userProfilesError;
-
-      // Filter employees who have upseller role using the API data
-      // Since the API now returns user profiles instead of roles, we'll include all upseller employees
-      const upsellerUserIds = Object.keys(userData);
-      
-      const upsellerEmployeeIds = userProfilesData
-        ?.filter(up => upsellerUserIds.includes(up.user_id))
-        ?.map(up => up.employee_id) || [];
-
-      const filteredEmployees = employeesData?.filter(emp => 
-        upsellerEmployeeIds.includes(emp.id)
-      ) || [];
+      // Get user profiles for the employees from MySQL API
+      // The API already returns upsellerEmployees with the necessary data
+      const filteredEmployees = upsellerEmployees || [];
 
       // Data loaded successfully
       
@@ -300,7 +243,7 @@ const UpsellerManagement: React.FC = () => {
         performanceData || [], 
         processedTeams, 
         processedTeamMembers,
-        userProfilesData || [],
+        [], // userProfilesData no longer needed
         targetsData || []
       );
       
@@ -308,7 +251,7 @@ const UpsellerManagement: React.FC = () => {
       
       // Store raw data for member performance display
       setRawPerformanceData(performanceData || []);
-      setUserProfilesData(userProfilesData || []);
+      setUserProfilesData([]); // No longer needed since we get data from MySQL API
 
       // Map member targets with employee names
       setMemberTargets(targetsData?.map(t => {
@@ -322,15 +265,13 @@ const UpsellerManagement: React.FC = () => {
 
       // Transform employees data to match UpsellerEmployee interface
       const transformedEmployees = filteredEmployees.map(employee => {
-        // Find the corresponding user profile for email
-        const userProfile = userProfilesData?.find(up => up.employee_id === employee.id);
         return {
           id: employee.id,
-          email: userProfile?.email || employee.email || '',
+          email: employee.email || '',
           full_name: employee.full_name,
           department: employee.department,
           role: 'upseller', // Assuming all upseller employees have this role
-          hire_date: new Date().toISOString().split('T')[0], // Default to today
+          hire_date: employee.date_of_joining || new Date().toISOString().split('T')[0],
           status: 'active'
         };
       })
@@ -376,29 +317,16 @@ const UpsellerManagement: React.FC = () => {
       };
 
       if (selectedTeam) {
-        // Update existing team
-        const { error } = await supabase
-          .from('upseller_teams')
-          .update(teamData)
-          .eq('id', selectedTeam.id);
-
-        if (error) throw error;
-
+        // Update existing team - TODO: Implement MySQL API call
         toast({
-          title: "Success",
-          description: "Team updated successfully",
+          title: "Info",
+          description: "Team update functionality will be implemented with MySQL API",
         });
       } else {
-        // Create new team
-        const { error } = await supabase
-          .from('upseller_teams')
-          .insert(teamData);
-
-        if (error) throw error;
-
+        // Create new team - TODO: Implement MySQL API call
         toast({
-          title: "Success",
-          description: "Team created successfully",
+          title: "Info",
+          description: "Team creation functionality will be implemented with MySQL API",
         });
       }
 
@@ -433,17 +361,11 @@ const UpsellerManagement: React.FC = () => {
         return;
       }
 
-      // Check if member is already in this team
-      const { data: existingMember, error: checkError } = await supabase
-        .from('upseller_team_members')
-        .select('*')
-        .eq('team_id', memberForm.team_id)
-        .eq('employee_id', memberForm.employee_id)
-        .maybeSingle();
-
-      if (checkError) {
-        throw checkError;
-      }
+      // Check if member is already in this team - TODO: Implement MySQL API call
+      const existingMember = teamMembers.find(member => 
+        member.team_id === memberForm.team_id && 
+        member.employee_id === memberForm.employee_id
+      );
 
       if (existingMember) {
         toast({
@@ -454,17 +376,11 @@ const UpsellerManagement: React.FC = () => {
         return;
       }
 
-      const memberData = {
-        team_id: memberForm.team_id,
-        employee_id: memberForm.employee_id,
-        role: memberForm.role
-      };
-
-      const { error } = await supabase
-        .from('upseller_team_members')
-        .insert(memberData);
-
-      if (error) throw error;
+      // TODO: Implement MySQL API call for adding member
+      toast({
+        title: "Info",
+        description: "Member addition functionality will be implemented with MySQL API",
+      });
 
       toast({
         title: "Success",
@@ -510,32 +426,33 @@ const UpsellerManagement: React.FC = () => {
         target_cash_in: targetForm.target_cash_in // Use the single target_amount field
       };
 
-      if (selectedTarget) {
-        // Update existing target
-        const { error } = await supabase
-          .from('upseller_targets')
-          .update(targetData)
-          .eq('id', selectedTarget.id);
+      console.log('🎯 Frontend: Sending target data:', targetData);
+      console.log('🎯 Frontend: targetForm:', targetForm);
 
-        if (error) throw error;
+      // Call the MySQL API to create/update target
+      const response = await fetch('/api/upseller/targets', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(targetData)
+      });
 
-        toast({
-          title: "Success",
-          description: "Target updated successfully",
-        });
-      } else {
-        // Create new target
-        const { error } = await supabase
-          .from('upseller_targets')
-          .insert(targetData);
-
-        if (error) throw error;
-
-        toast({
-          title: "Success",
-          description: "Target created successfully",
-        });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to save target');
+      }
+
+      toast({
+        title: "Success",
+        description: selectedTarget ? "Target updated successfully" : "Target created successfully",
+      });
 
       setIsTargetDialogOpen(false);
       setSelectedTarget(null);
@@ -571,12 +488,11 @@ const UpsellerManagement: React.FC = () => {
     if (!confirm('Are you sure you want to delete this team?')) return;
 
     try {
-      const { error } = await supabase
-        .from('upseller_teams')
-        .update({ is_active: false })
-        .eq('id', teamId);
-
-      if (error) throw error;
+      // TODO: Implement MySQL API call for deleting team
+      toast({
+        title: "Info",
+        description: "Team deletion functionality will be implemented with MySQL API",
+      });
 
       toast({
         title: "Success",
@@ -599,12 +515,11 @@ const UpsellerManagement: React.FC = () => {
     if (!confirm('Are you sure you want to remove this member from the team?')) return;
 
     try {
-      const { error } = await supabase
-        .from('upseller_team_members')
-        .update({ is_active: false })
-        .eq('id', memberId);
-
-      if (error) throw error;
+      // TODO: Implement MySQL API call for removing member
+      toast({
+        title: "Info",
+        description: "Member removal functionality will be implemented with MySQL API",
+      });
 
       toast({
         title: "Success",
@@ -637,12 +552,24 @@ const UpsellerManagement: React.FC = () => {
     if (!confirm('Are you sure you want to delete this target?')) return;
 
     try {
-      const { error } = await supabase
-        .from('upseller_targets')
-        .delete()
-        .eq('id', targetId);
+      // Call the MySQL API to delete target
+      const response = await fetch(`/api/upseller/targets/${targetId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+          'Content-Type': 'application/json',
+        }
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to delete target');
+      }
 
       toast({
         title: "Success",
@@ -693,7 +620,7 @@ const UpsellerManagement: React.FC = () => {
   // Target Concept: Each member has a target_cash_in field only
   // The completion rate is calculated as: (total_cash_in / target_cash_in) * 100
   // This matches the actual database schema in upseller_targets table
-  const aggregateTeamPerformance = (memberPerformance: UpsellerTeamPerformanceSummary[], teams: Team[], teamMembers: TeamMember[], userProfiles: {user_id: string; email: string; display_name: string; employee_id: string}[], memberTargets: MemberTarget[]) => {
+  const aggregateTeamPerformance = (memberPerformance: UpsellerTeamPerformanceSummary[], teams: Team[], teamMembers: TeamMember[], userProfiles: never[], memberTargets: MemberTarget[]) => {
     const teamPerformanceMap = new Map();
 
     // Initialize team performance for each team
@@ -714,23 +641,22 @@ const UpsellerManagement: React.FC = () => {
     });
 
     // Aggregate member performance by team
+    // Since we're now getting data directly from MySQL API, we need to match differently
     memberPerformance.forEach(member => {
-      // Find which team this member belongs to by matching user_id with employee_id
-      const userProfile = userProfiles.find(up => up.user_id === member.seller_id);
-      if (userProfile) {
-        const teamMember = teamMembers.find(tm => tm.employee_id === userProfile.employee_id);
-        if (teamMember) {
-          const teamId = teamMember.team_id;
-          const teamData = teamPerformanceMap.get(teamId);
-          
-          if (teamData) {
-            teamData.member_count += 1;
-            teamData.total_accounts_achieved += member.accounts_achieved || 0;
-            teamData.total_gross += (typeof member.total_gross === 'string' ? parseFloat(member.total_gross) : member.total_gross) || 0;
-            teamData.total_cash_in += (typeof member.total_cash_in === 'string' ? parseFloat(member.total_cash_in) : member.total_cash_in) || 0;
-            teamData.total_remaining += (typeof member.total_remaining === 'string' ? parseFloat(member.total_remaining) : member.total_remaining) || 0;
-            teamData.target_cash_in += member.target_cash_in || 0; // Aggregate target_cash_in
-          }
+      // Find which team this member belongs to by matching seller_id directly
+      // The MySQL API returns seller_id which should match employee_id in team members
+      const teamMember = teamMembers.find(tm => tm.employee_id === member.seller_id);
+      if (teamMember) {
+        const teamId = teamMember.team_id;
+        const teamData = teamPerformanceMap.get(teamId);
+        
+        if (teamData) {
+          teamData.member_count += 1;
+          teamData.total_accounts_achieved += member.accounts_achieved || 0;
+          teamData.total_gross += (typeof member.total_gross === 'string' ? parseFloat(member.total_gross) : member.total_gross) || 0;
+          teamData.total_cash_in += (typeof member.total_cash_in === 'string' ? parseFloat(member.total_cash_in) : member.total_cash_in) || 0;
+          teamData.total_remaining += (typeof member.total_remaining === 'string' ? parseFloat(member.total_remaining) : member.total_remaining) || 0;
+          teamData.target_cash_in += member.target_cash_in || 0; // Aggregate target_cash_in
         }
       }
     });
@@ -949,10 +875,8 @@ const UpsellerManagement: React.FC = () => {
                   
                   // Get individual member performance for this team
                   const memberPerformance = teamMembers.map(member => {
-                    // Find the user profile for this member
-                    const userProfile = userProfilesData?.find(up => up.employee_id === member.employee_id);
-                    // Find the performance data for this member
-                    const memberPerf = rawPerformanceData?.find(p => p.seller_id === userProfile?.user_id);
+                    // Find the performance data for this member (seller_id matches employee_id in MySQL)
+                    const memberPerf = rawPerformanceData?.find(p => p.seller_id === member.employee_id);
                     // Find the target data for this member
                     const memberTarget = memberTargets?.find(t => t.seller_id === member.employee_id);
                     

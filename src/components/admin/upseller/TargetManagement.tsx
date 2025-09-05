@@ -64,10 +64,21 @@ const TargetManagement: React.FC<TargetManagementProps> = ({
   useEffect(() => {
     loadAvailableEmployees();
     // Set default month to current month
-    const now = new Date();
-    const year = now.getFullYear();
-    const monthNum = now.getMonth() + 1;
-    setMonth(`${year}-${monthNum.toString().padStart(2, '0')}-01`);
+    const updateCurrentMonth = () => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const monthNum = now.getMonth() + 1;
+      const currentMonth = `${year}-${monthNum.toString().padStart(2, '0')}-01`;
+      setMonth(currentMonth);
+      console.log('📅 Target Management: Set current month to:', currentMonth);
+    };
+    
+    updateCurrentMonth();
+    
+    // Update month every time the component is used (not just on mount)
+    const interval = setInterval(updateCurrentMonth, 60000); // Check every minute
+    
+    return () => clearInterval(interval);
   }, []);
 
   const loadAvailableEmployees = async () => {

@@ -7,7 +7,7 @@ import { Bell, LogOut, Menu, MessageCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import NavigationMenu from "@/components/layout/NavigationMenu";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContextJWT";
 import { removeBackgroundFromImage } from "@/utils/imageUtils";
 import BrandSelector from "./BrandSelector";
 

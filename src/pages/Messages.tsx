@@ -6,14 +6,14 @@ import { Search, UserPlus, ArrowLeft, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { useChat, Conversation } from "@/hooks/useChat";
-import { useAuth } from "@/contexts/AuthContext";
+import { useChatMySQL, Conversation } from "@/hooks/useChatMySQL";
+import { useAuth } from '@/contexts/AuthContextJWT';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { MultiSelect, MultiSelectOption } from "@/components/ui/multi-select";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { MessagesClient } from "@/lib/api/messagesClient";
 
 const Messages: React.FC = () => {
   const { user } = useAuth();
@@ -26,7 +26,7 @@ const Messages: React.FC = () => {
     sendMessage,
     createConversation,
     creatingConversation 
-  } = useChat();
+  } = useChatMySQL();
   
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [newMessageText, setNewMessageText] = useState("");
@@ -87,24 +87,10 @@ const Messages: React.FC = () => {
     setUsers([]); // Reset users to prevent issues with stale data
 
     try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('user_id, display_name')
-        .neq('user_id', user.id); // Exclude current user
+      const data = await MessagesClient.getUserProfiles(true);
 
-      if (error) {
-        console.error('Error fetching users:', error);
-        toast({
-          title: "Error fetching users",
-          description: error.message,
-          variant: "destructive"
-        });
-        setUsers([]); // Ensure we set an empty array on error
-        return;
-      }
-
-      if (data && Array.isArray(data)) {
-        const formattedUsers = data.map(u => ({
+      if (data.success && data.data.users && Array.isArray(data.data.users)) {
+        const formattedUsers = data.data.users.map((u: any) => ({
           value: u.user_id,
           label: u.display_name || u.user_id
         }));

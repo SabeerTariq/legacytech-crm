@@ -89,6 +89,14 @@ export interface UpsellFormData {
   cashIn: number;
   remaining: number;
   paymentMode: string;
+  paymentSource?: string;
+  customPaymentSource?: string;
+  paymentCompany?: string;
+  customPaymentCompany?: string;
+  brand?: string;
+  customBrand?: string;
+  salesSource?: string;
+  leadSource?: string;
   
   // Upsell Info
   isUpsell: boolean;
@@ -99,6 +107,14 @@ export interface UpsellFormData {
   saleDate: string;
   agreementUrl?: string;
   notes?: string;
+  
+  // Enhanced Payment Plan Fields
+  paymentPlanType?: "one_time" | "recurring" | "installments";
+  recurringFrequency?: "monthly" | "quarterly" | "yearly";
+  totalInstallments?: number;
+  installmentAmount?: number;
+  nextPaymentDate?: string;
+  paymentSchedule?: Array<{ date: string; amount: number; status: string }>;
 }
 
 export interface UpsellAnalytics {

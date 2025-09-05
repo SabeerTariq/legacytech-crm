@@ -79,19 +79,28 @@ const createUserFromProfile = (userProfile: any, roleData?: any): User => {
   console.log('Creating user from profile:', userProfile);
   console.log('Role data:', roleData);
   
+  // Extract department from either employees table or attributes
+  const department = userProfile.employees?.department || userProfile.attributes?.department || 'General';
+  
   const user: User = {
     id: userProfile.user_id,
     email: userProfile.email,
     display_name: userProfile.employees?.full_name || userProfile.email,
-    is_admin: false,
+    is_admin: userProfile.is_admin || false,
     status: 'active',
     created_at: userProfile.created_at,
     employee: userProfile.employees ? {
       id: userProfile.employees.id,
       full_name: userProfile.employees.full_name,
-      department: userProfile.employees.department,
+      department: department,
       job_title: userProfile.employees.job_title,
-    } : undefined,
+    } : {
+      id: userProfile.user_id,
+      full_name: userProfile.display_name || userProfile.email,
+      department: department,
+      job_title: 'User'
+    },
+    attributes: userProfile.attributes || {},
   };
 
   // Set role if available
@@ -134,21 +143,46 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const storedUser = localStorage.getItem('crm_user');
         if (storedUser) {
           try {
-            const user = JSON.parse(storedUser);
-            console.log('Found stored user:', user.email);
+            const oldUser = JSON.parse(storedUser);
+            console.log('Found stored user:', oldUser.email);
             
-            // Verify user still exists in database
+            // Verify user still exists in database and recreate user object
             const { data: userProfile, error: profileError } = await supabase
               .from('user_profiles')
               .select(`
                 *,
                 employees:employees(*)
               `)
-              .eq('email', user.email)
+              .eq('email', oldUser.email)
               .single();
 
             if (!profileError && userProfile) {
-              console.log('Stored user verified, restoring session');
+              console.log('Stored user verified, recreating user object');
+              
+              // Load user role
+              let roleData = null;
+              try {
+                const { data: userRoleData, error: roleError } = await supabase
+                  .from('user_roles')
+                  .select(`
+                    roles (
+                      id,
+                      name,
+                      display_name,
+                      description
+                    )
+                  `)
+                  .eq('user_id', userProfile.user_id);
+
+                if (!roleError && userRoleData && userRoleData.length > 0) {
+                  roleData = userRoleData;
+                }
+              } catch (error) {
+                console.error('Error loading user role:', error);
+              }
+
+              // Recreate user object with updated profile data
+              const user = createUserFromProfile(userProfile, roleData);
               dispatch({ type: 'SET_USER', payload: user });
               return;
             } else {

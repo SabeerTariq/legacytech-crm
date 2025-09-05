@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextJWT';
 import { usePermissions } from '@/contexts/PermissionContext';
 import { NAVIGATION_PERMISSIONS } from '@/types/permissions';
 import { Loader2 } from 'lucide-react';

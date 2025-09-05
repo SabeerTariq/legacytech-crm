@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from '@/contexts/AuthContextJWT';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,12 +30,63 @@ import {
   FileCheck,
   Target,
 } from "lucide-react";
-import { Database } from "@/integrations/supabase/types";
 import LeadSelector from "@/components/leads/LeadSelector";
 import type { Lead } from "@/components/leads/LeadsList";
 
-type Service = Database["public"]["Tables"]["services"]["Row"];
-type SalesDisposition = Database["public"]["Tables"]["sales_dispositions"]["Row"];
+interface Service {
+  id: string;
+  name: string;
+  description?: string;
+  price?: number;
+  category?: string;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface SalesDisposition {
+  id: string;
+  customer_name: string;
+  phone_number?: string;
+  email: string;
+  business_name?: string;
+  front_brand?: string;
+  service_sold: string;
+  services_included: string[];
+  service_details?: string;
+  agreement_url?: string;
+  payment_mode: string;
+  payment_source: string;
+  payment_company: string;
+  brand: string;
+  agreement_signed: boolean;
+  agreement_sent: boolean;
+  company: string;
+  sales_source: string;
+  lead_source: string;
+  sale_type: string;
+  seller?: string;
+  account_manager?: string;
+  assigned_by?: string;
+  assigned_to?: string;
+  project_manager?: string;
+  gross_value: number;
+  cash_in: number;
+  remaining: number;
+  tax_deduction: number;
+  sale_date: string;
+  service_tenure?: string;
+  turnaround_time?: string;
+  user_id?: string;
+  is_recurring?: boolean;
+  recurring_frequency?: string;
+  installment_frequency?: string;
+  total_installments?: number;
+  current_installment?: number;
+  next_payment_date?: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 interface ServiceSelection {
   serviceId: string;
@@ -88,6 +138,17 @@ const EnhancedSalesForm: React.FC = () => {
     remaining: 0,
     taxDeduction: 0,
     saleDate: new Date().toISOString().split('T')[0],
+    // Enhanced Payment Plan Fields
+    paymentPlanType: "one_time" as "one_time" | "recurring" | "installments",
+    recurringFrequency: "monthly" as "monthly" | "quarterly" | "yearly",
+    totalInstallments: 1,
+    installmentAmount: 0,
+    installmentFrequency: "monthly" as "monthly" | "quarterly" | "yearly",
+    nextPaymentDate: "",
+    nextInstallmentDate: "",
+    paymentSchedule: [] as Array<{ date: string; amount: number; status: string }>,
+    recurringPackageAmount: 0, // Added for recurring payment
+    gross: 0, // Added for recurring payment
   });
 
   // Load services and leads
@@ -98,13 +159,24 @@ const EnhancedSalesForm: React.FC = () => {
 
   const loadServices = async () => {
     try {
-      const { data, error } = await supabase
-        .from("services")
-        .select("*")
-        .order("name");
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/sales/services`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-      if (error) throw error;
-      setServices(data || []);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to load services');
+      }
+
+      setServices(result.data || []);
     } catch (error) {
       console.error("Error loading services:", error);
       toast({
@@ -117,14 +189,24 @@ const EnhancedSalesForm: React.FC = () => {
 
   const loadLeads = async () => {
     try {
-      const { data, error } = await supabase
-        .from("leads")
-        .select("*")
-        .neq("status", "converted") // Only show leads that haven't been converted
-        .order("created_at", { ascending: false });
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/sales-disposition/leads`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-      if (error) throw error;
-      setLeads((data || []).map(lead => ({
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to load leads');
+      }
+
+      setLeads((result.data || []).map(lead => ({
         ...lead,
         status: (lead.status || 'new') as Lead['status'],
         priority: lead.priority as Lead['priority']
@@ -161,35 +243,47 @@ const EnhancedSalesForm: React.FC = () => {
         remaining: 0,
       }));
       
-      // If lead has services required, add them to selected services
-      if (lead.services_required) {
-        const serviceNames = lead.services_required.split(',').map(s => s.trim());
-        const newServices = serviceNames.map((serviceName, index) => ({
-          serviceId: `lead-service-${index}`,
-          serviceName,
-          details: lead.additional_info || ""
-        }));
-        setSelectedServices(newServices);
-      }
+
       
-      toast({
-        title: "Lead selected",
-        description: `Customer details populated from lead: ${lead.client_name}`,
-      });
+             toast({
+         title: "Lead selected",
+         description: `Customer details populated from lead: ${lead.client_name}. Please select services manually.`,
+       });
     }
   };
 
-  // Calculate remaining amount when cash in or gross value changes
+  // Calculate remaining amount and payment plan details when gross value, cash in, or payment plan type changes
   useEffect(() => {
-    // Ensure cash in doesn't exceed gross value
-    const validCashIn = Math.min(formData.cashIn, formData.grossValue);
-    const remaining = Math.max(0, formData.grossValue - validCashIn);
+    let remaining = 0;
+    let installmentAmount = 0;
+    
+    if (formData.paymentPlanType === "installments") {
+      // For installment plans, calculate based on number of installments
+      installmentAmount = formData.grossValue / (formData.totalInstallments || 1);
+      remaining = formData.grossValue - formData.cashIn;
+    } else if (formData.paymentPlanType === "recurring") {
+      // For recurring payments, initial payment is cash in, remaining is recurring
+      remaining = formData.grossValue - formData.cashIn;
+    } else {
+      // For one-time payments, simple calculation
+      remaining = formData.grossValue - formData.cashIn;
+    }
+    
+    // Ensure cash in doesn't exceed appropriate limit based on payment plan
+    let validCashIn = formData.cashIn;
+    if (formData.paymentPlanType === "installments") {
+      validCashIn = Math.min(formData.cashIn, installmentAmount);
+    } else {
+      validCashIn = Math.min(formData.cashIn, formData.grossValue);
+    }
+    
     setFormData(prev => ({ 
       ...prev, 
       cashIn: validCashIn,
-      remaining 
+      remaining: Math.max(0, formData.grossValue - validCashIn),
+      installmentAmount: installmentAmount
     }));
-  }, [formData.grossValue, formData.cashIn]);
+  }, [formData.grossValue, formData.cashIn, formData.paymentPlanType, formData.totalInstallments]);
 
   // Service selection handlers
   const addService = () => {
@@ -204,6 +298,11 @@ const EnhancedSalesForm: React.FC = () => {
     setSelectedServices(prev => prev.map((service, i) => 
       i === index ? { ...service, [field]: value } : service
     ));
+  };
+
+  // Helper function to check if a service entry is valid
+  const isServiceValid = (service: ServiceSelection) => {
+    return service.serviceId && service.serviceName;
   };
 
   // Payment handlers removed - simplified to direct cash in input
@@ -244,6 +343,12 @@ const EnhancedSalesForm: React.FC = () => {
         throw new Error("Please select at least one service");
       }
 
+      // Validate that each service has a selected service
+      const invalidServices = selectedServices.filter(service => !service.serviceId || !service.serviceName);
+      if (invalidServices.length > 0) {
+        throw new Error("Please select a service for all service entries before submitting");
+      }
+
       if (formData.grossValue <= 0) {
         throw new Error("Gross value must be greater than 0");
       }
@@ -264,101 +369,82 @@ const EnhancedSalesForm: React.FC = () => {
         throw new Error("Please enter a custom brand name");
       }
 
-      // Create sales disposition
-      const { data: salesData, error: salesError } = await supabase
-        .from("sales_dispositions")
-        .insert({
-          customer_name: formData.customerName,
-          phone_number: formData.phoneNumber,
-          email: formData.email,
-          business_name: formData.businessName,
-          front_brand: formData.frontBrand,
-          service_sold: selectedServices[0]?.serviceName || "",
-          services_included: selectedServices.map(s => s.serviceName),
-          service_details: selectedServices.map(s => `${s.serviceName}: ${s.details}`).join("\n"),
-          agreement_url: formData.agreementUrl,
-          payment_mode: formData.paymentMode,
-          payment_source: formData.paymentSource === "Other" ? formData.customPaymentSource : formData.paymentSource,
-          payment_company: formData.paymentCompany === "Others" ? formData.customPaymentCompany : formData.paymentCompany,
-          brand: formData.brand === "Others" ? formData.customBrand : formData.brand,
-          agreement_signed: formData.agreementSigned,
-          agreement_sent: formData.agreementSent,
-          company: formData.company,
-          sales_source: formData.salesSource,
-          lead_source: formData.leadSource,
-          sale_type: formData.saleType,
-          seller: "", // Will be assigned from Project Assignment module
-          account_manager: "", // Will be assigned from Project Assignment module
-          assigned_by: user?.id || "",
-          assigned_to: "", // Will be assigned from Project Assignment module
-          project_manager: "", // Will be assigned from Project Assignment module
-          gross_value: formData.grossValue,
-          cash_in: formData.cashIn,
-          remaining: formData.remaining,
-          tax_deduction: formData.taxDeduction,
-          sale_date: formData.saleDate,
-          service_tenure: formData.serviceTenure,
-          turnaround_time: formData.turnaroundTime,
-          user_id: user?.id || "",
-        })
-        .select()
-        .single();
-
-      if (salesError) throw salesError;
-
-      // Create projects for each service
-      const projectPromises = selectedServices.map(async (service) => {
-        const { error: projectError } = await supabase
-          .from("projects")
-          .insert({
-            name: `${formData.customerName} - ${service.serviceName}`,
-            client: formData.customerName,
-            description: service.details,
-            due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
-            status: "unassigned",
-            user_id: user?.id || "",
-            sales_disposition_id: salesData.id,
-            lead_id: selectedLead?.id || null,
-            project_type: "one-time",
-            services: [service.serviceName],
-          });
-
-        if (projectError) throw projectError;
-      });
-
-      await Promise.all(projectPromises);
-
-      // Hide the selected lead by marking it as converted if one was selected
-      if (selectedLead) {
-        const { error: leadUpdateError } = await supabase
-          .from("leads")
-          .update({
-            status: "converted",
-            converted_at: new Date().toISOString(),
-            sales_disposition_id: salesData.id,
-            email_address: selectedLead.email_address
-          })
-          .eq("id", selectedLead.id);
-
-        if (leadUpdateError) {
-          console.error("Error updating lead:", leadUpdateError);
-          toast({
-            title: "Warning",
-            description: "Sales disposition and projects created, but failed to update lead status",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Success!",
-            description: "Sales disposition and projects created successfully. Lead marked as converted. Your dashboard performance has been updated!",
-          });
+      // Validate payment plan configuration
+      if (formData.paymentPlanType === "installments" && formData.totalInstallments > 1) {
+        if (formData.cashIn > formData.installmentAmount) {
+          throw new Error("Initial payment cannot exceed the first installment amount");
         }
-      } else {
-        toast({
-          title: "Success!",
-          description: "Sales disposition and projects created successfully. Your dashboard performance has been updated!",
-        });
       }
+      
+      if (formData.paymentPlanType === "recurring" && !formData.nextPaymentDate) {
+        throw new Error("Please select a next payment date for recurring payments");
+      }
+
+              // Create recurring payment schedule if needed
+        let recurringScheduleId = null;
+        if (formData.paymentPlanType === "recurring") {
+          // This will be handled by the MySQL API
+          recurringScheduleId = "temp-id";
+        }
+
+        // Create sales disposition using MySQL API
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/sales-disposition/disposition`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            customerName: formData.customerName,
+            phoneNumber: formData.phoneNumber,
+            email: formData.email,
+            businessName: formData.businessName,
+            frontBrand: formData.frontBrand,
+            selectedServices: selectedServices,
+            agreementUrl: formData.agreementUrl,
+            paymentMode: formData.paymentMode,
+            paymentSource: formData.paymentSource === "Other" ? formData.customPaymentSource : formData.paymentSource,
+            paymentCompany: formData.paymentCompany === "Others" ? formData.customPaymentCompany : formData.paymentCompany,
+            brand: formData.brand === "Others" ? formData.customBrand : formData.brand,
+            agreementSigned: formData.agreementSigned,
+            agreementSent: formData.agreementSent,
+            company: formData.company,
+            salesSource: formData.salesSource,
+            leadSource: formData.leadSource,
+            saleType: formData.saleType,
+            grossValue: formData.grossValue,
+            cashIn: formData.cashIn,
+            remaining: formData.remaining,
+            taxDeduction: formData.taxDeduction,
+            saleDate: formData.saleDate,
+            serviceTenure: formData.serviceTenure,
+            turnaroundTime: formData.turnaroundTime,
+            userId: user?.id || "",
+            selectedLeadId: selectedLead?.id || null,
+            paymentPlanType: formData.paymentPlanType,
+            recurringFrequency: formData.recurringFrequency,
+            totalInstallments: formData.totalInstallments,
+            installmentAmount: formData.installmentAmount,
+            installmentFrequency: formData.installmentFrequency,
+            nextPaymentDate: formData.nextPaymentDate,
+            nextInstallmentDate: formData.nextInstallmentDate,
+            recurringPackageAmount: formData.recurringPackageAmount
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to create sales disposition');
+        }
+
+        const result = await response.json();
+        const salesData = { id: result.data.salesDispositionId };
+
+              // Projects and lead updates are now handled by the MySQL API
+      toast({
+        title: "Success!",
+        description: "Sales disposition and projects created successfully. Lead marked as converted. Your dashboard performance has been updated!",
+      });
 
       // Reset form
       setFormData({
@@ -392,6 +478,17 @@ const EnhancedSalesForm: React.FC = () => {
         remaining: 0,
         taxDeduction: 0,
         saleDate: new Date().toISOString().split('T')[0],
+        // Enhanced Payment Plan Fields
+        paymentPlanType: "one_time",
+        recurringFrequency: "monthly",
+        totalInstallments: 1,
+        installmentAmount: 0,
+        installmentFrequency: "monthly",
+        nextPaymentDate: "",
+        nextInstallmentDate: "",
+        paymentSchedule: [],
+        recurringPackageAmount: 0, // Reset recurring package amount
+        gross: 0, // Reset gross
       });
       setSelectedServices([]);
       setUploadedFiles([]);
@@ -513,18 +610,19 @@ const EnhancedSalesForm: React.FC = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="businessName" className="flex items-center gap-2">
-                  Business Name
-                  {selectedLead && formData.businessName === selectedLead.business_description && (
-                    <CheckCircle className="h-3 w-3 text-green-600" />
-                  )}
-                </Label>
-                <Input
-                  id="businessName"
-                  value={formData.businessName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, businessName: e.target.value }))}
-                  className={selectedLead && formData.businessName === selectedLead.business_description ? "border-green-200 bg-green-50" : ""}
-                />
+                                 <Label htmlFor="businessName" className="flex items-center gap-2">
+                   Business Name *
+                   {selectedLead && formData.businessName === selectedLead.business_description && (
+                     <CheckCircle className="h-3 w-3 text-green-600" />
+                   )}
+                 </Label>
+                                 <Input
+                   id="businessName"
+                   value={formData.businessName}
+                   onChange={(e) => setFormData(prev => ({ ...prev, businessName: e.target.value }))}
+                   className={selectedLead && formData.businessName === selectedLead.business_description ? "border-green-200 bg-green-50" : ""}
+                   required
+                 />
               </div>
             </div>
           </CardContent>
@@ -539,8 +637,25 @@ const EnhancedSalesForm: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {selectedServices.length > 0 && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  {selectedServices.filter(isServiceValid).length} of {selectedServices.length} services are complete
+                  {selectedServices.filter(s => !isServiceValid(s)).length > 0 && (
+                    <span className="text-red-600 font-medium">
+                      . Please complete all services before submitting.
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
             {selectedServices.map((service, index) => (
-              <div key={index} className="p-4 border rounded-lg space-y-4">
+              <div 
+                key={index} 
+                className={`p-4 border rounded-lg space-y-4 ${
+                  !isServiceValid(service) ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                }`}
+              >
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium">Service {index + 1}</h4>
                   <Button
@@ -554,7 +669,7 @@ const EnhancedSalesForm: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Service</Label>
+                    <Label>Service *</Label>
                     <Select
                       value={service.serviceId}
                       onValueChange={(value) => {
@@ -562,6 +677,7 @@ const EnhancedSalesForm: React.FC = () => {
                         updateService(index, "serviceId", value);
                         updateService(index, "serviceName", selectedService?.name || "");
                       }}
+                      required
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select a service" />
@@ -574,14 +690,20 @@ const EnhancedSalesForm: React.FC = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                                         {!isServiceValid(service) && (
+                       <p className="text-xs text-red-600">
+                         Please select a service for this entry.
+                       </p>
+                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label>Service Details</Label>
-                    <Textarea
-                      value={service.details}
-                      onChange={(e) => updateService(index, "details", e.target.value)}
-                      placeholder="Describe the specific requirements..."
-                    />
+                                         <Label>Service Details *</Label>
+                                         <Textarea
+                       value={service.details}
+                       onChange={(e) => updateService(index, "details", e.target.value)}
+                       placeholder="Describe the specific requirements..."
+                       required
+                     />
                   </div>
                 </div>
               </div>
@@ -607,6 +729,354 @@ const EnhancedSalesForm: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Enhanced Payment Plan Configuration */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-medium">Payment Plan Configuration</Label>
+              </div>
+              
+              {/* Payment Plan Information */}
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>How Payment Plans Work:</strong>
+                </p>
+                <ul className="text-xs text-blue-700 mt-1 space-y-1">
+                  <li>• <strong>One Time:</strong> Pay full amount upfront or partial payment with remaining balance</li>
+                  <li>• <strong>Recurring:</strong> Initial payment + ongoing monthly/quarterly/yearly payments</li>
+                  <li>• <strong>Installments:</strong> Split total into equal payments (initial + remaining installments)</li>
+                </ul>
+              </div>
+
+              {/* Payment Plan Type Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="paymentPlanType">Payment Plan Type *</Label>
+                <Select
+                  value={formData.paymentPlanType}
+                  onValueChange={(value) => {
+                    const newType = value as "one_time" | "recurring" | "installments";
+                    let newCashIn = formData.cashIn;
+                    let newRemaining = formData.remaining;
+                    
+                    // Adjust cash in based on payment plan type
+                    if (newType === "installments") {
+                      // For installments, initial payment should be first installment
+                      newCashIn = Math.min(formData.cashIn, formData.grossValue / (formData.totalInstallments || 1));
+                      
+                      // Auto-calculate next installment date based on current date and frequency
+                      let nextDate = new Date();
+                      if (formData.installmentFrequency === "monthly") {
+                        nextDate.setMonth(nextDate.getMonth() + 1);
+                      } else if (formData.installmentFrequency === "quarterly") {
+                        nextDate.setMonth(nextDate.getMonth() + 3);
+                      } else if (formData.installmentFrequency === "yearly") {
+                        nextDate.setFullYear(nextDate.getFullYear() + 1);
+                      }
+                      
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        nextInstallmentDate: nextDate.toISOString().split('T')[0]
+                      }));
+                    } else if (newType === "recurring") {
+                      // For recurring, don't override the recurring package amount logic
+                      // The recurring package amount will handle gross and cash in updates
+                      newCashIn = formData.cashIn;
+                      
+                      // Auto-calculate next payment date based on current date and frequency
+                      let nextDate = new Date();
+                      if (formData.recurringFrequency === "monthly") {
+                        nextDate.setMonth(nextDate.getMonth() + 1);
+                      } else if (formData.recurringFrequency === "quarterly") {
+                        nextDate.setMonth(nextDate.getMonth() + 3);
+                      } else if (formData.recurringFrequency === "yearly") {
+                        nextDate.setFullYear(nextDate.getFullYear() + 1);
+                      }
+                      
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        nextPaymentDate: nextDate.toISOString().split('T')[0]
+                      }));
+                    } else {
+                      // For one-time, cash in can be up to gross value
+                      newCashIn = Math.min(formData.cashIn, formData.grossValue);
+                    }
+                    
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      paymentPlanType: newType,
+                      cashIn: newCashIn,
+                      remaining: formData.grossValue - newCashIn
+                    }));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select payment plan type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="one_time">One Time Payment</SelectItem>
+                    <SelectItem value="recurring">Recurring Payments</SelectItem>
+                    <SelectItem value="installments">Installment Plan</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Recurring Payment Options */}
+              {formData.paymentPlanType === "recurring" && (
+                <div className="space-y-4 p-4 border rounded-lg bg-blue-50">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="recurringFrequency">Recurring Frequency *</Label>
+                      <Select
+                        value={formData.recurringFrequency}
+                        onValueChange={(value) => {
+                          const frequency = value as "monthly" | "quarterly" | "yearly";
+                          let nextDate = new Date();
+                          
+                          if (frequency === "monthly") {
+                            nextDate.setMonth(nextDate.getMonth() + 1);
+                          } else if (frequency === "quarterly") {
+                            nextDate.setMonth(nextDate.getMonth() + 3);
+                          } else if (frequency === "yearly") {
+                            nextDate.setFullYear(nextDate.getFullYear() + 1);
+                          }
+                          
+                          setFormData(prev => ({
+                            ...prev,
+                            recurringFrequency: frequency,
+                            nextPaymentDate: nextDate.toISOString().split('T')[0]
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select frequency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="quarterly">Quarterly</SelectItem>
+                          <SelectItem value="yearly">Yearly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="recurringPackageAmount">Package Amount *</Label>
+                      <Input
+                        id="recurringPackageAmount"
+                        type="number"
+                        placeholder="Enter package amount"
+                        value={formData.recurringPackageAmount || ''}
+                        onChange={(e) => {
+                          const amount = parseFloat(e.target.value) || 0;
+                          setFormData(prev => ({
+                            ...prev,
+                            recurringPackageAmount: amount,
+                            // Package amount becomes this month's gross and cash in
+                            grossValue: amount,
+                            cashIn: amount,
+                            remaining: 0 // No remaining since it's recurring
+                          }));
+                        }}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="text-sm text-blue-600 bg-blue-100 p-3 rounded">
+                    <strong>How it works:</strong> Package amount (${formData.recurringPackageAmount || 0}) becomes this month's gross and cash in. 
+                    Next payment of ${formData.recurringPackageAmount || 0} will be due on {formData.nextPaymentDate ? new Date(formData.nextPaymentDate).toLocaleDateString() : 'Not set'}.
+                  </div>
+                </div>
+              )}
+
+              {/* Installment Plan Options */}
+              {formData.paymentPlanType === "installments" && (
+                <div className="space-y-4 p-4 border rounded-lg bg-green-50">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="totalInstallments">Number of Installments *</Label>
+                      <Select
+                        value={formData.totalInstallments.toString()}
+                        onValueChange={(value) => {
+                          const installments = parseInt(value) || 1;
+                          const installmentAmount = formData.grossValue / installments;
+                          
+                          // Calculate next installment date based on frequency
+                          let nextDate = new Date();
+                          if (formData.installmentFrequency === "monthly") {
+                            nextDate.setMonth(nextDate.getMonth() + 1);
+                          } else if (formData.installmentFrequency === "quarterly") {
+                            nextDate.setMonth(nextDate.getMonth() + 3);
+                          } else if (formData.installmentFrequency === "yearly") {
+                            nextDate.setFullYear(nextDate.getFullYear() + 1);
+                          }
+                          
+                          // Adjust cash in to be the first installment amount
+                          const newCashIn = Math.min(formData.cashIn, installmentAmount);
+                          const newRemaining = formData.grossValue - newCashIn;
+                          
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            totalInstallments: installments,
+                            installmentAmount: installmentAmount,
+                            cashIn: newCashIn,
+                            remaining: newRemaining,
+                            nextInstallmentDate: nextDate.toISOString().split('T')[0]
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select installments" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="2">2 Installments</SelectItem>
+                          <SelectItem value="3">3 Installments</SelectItem>
+                          <SelectItem value="4">4 Installments</SelectItem>
+                          <SelectItem value="6">6 Installments</SelectItem>
+                          <SelectItem value="12">12 Installments</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="installmentFrequency">Installment Frequency *</Label>
+                      <Select
+                        value={formData.installmentFrequency}
+                        onValueChange={(value) => {
+                          const frequency = value as "monthly" | "quarterly" | "yearly";
+                          let nextDate = new Date();
+                          
+                          // Calculate next installment date based on frequency
+                          if (frequency === "monthly") {
+                            nextDate.setMonth(nextDate.getMonth() + 1);
+                          } else if (frequency === "quarterly") {
+                            nextDate.setMonth(nextDate.getMonth() + 3);
+                          } else if (frequency === "yearly") {
+                            nextDate.setFullYear(nextDate.getFullYear() + 1);
+                          }
+                          
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            installmentFrequency: frequency,
+                            nextInstallmentDate: nextDate.toISOString().split('T')[0]
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select frequency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="quarterly">Quarterly</SelectItem>
+                          <SelectItem value="yearly">Yearly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  {/* Next Installment Date */}
+                  <div className="space-y-2">
+                    <Label htmlFor="nextInstallmentDate">Next Installment Date *</Label>
+                    <Input
+                      id="nextInstallmentDate"
+                      type="date"
+                      value={formData.nextInstallmentDate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, nextInstallmentDate: e.target.value }))}
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
+                  
+                  <div className="p-3 bg-green-100 rounded-lg">
+                    <p className="text-sm text-green-800">
+                      <strong>Installment Plan:</strong> {formData.totalInstallments} payments of ${(Number(formData.installmentAmount) || 0).toFixed(2)} each
+                    </p>
+                    <p className="text-xs text-green-700 mt-1">
+                      <strong>Frequency:</strong> {formData.installmentFrequency} | <strong>Next Due:</strong> {formData.nextInstallmentDate ? new Date(formData.nextInstallmentDate).toLocaleDateString() : 'Not set'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Payment Summary */}
+              <div className="p-4 bg-muted rounded-lg">
+                <h4 className="font-medium mb-2">Payment Plan Summary</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Initial Payment:</span>
+                    <span className="ml-2 font-medium">
+                      ${(Number(formData.cashIn) || 0).toFixed(2)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Remaining Amount:</span>
+                    <span className="ml-2 font-medium">
+                      ${(Number(formData.remaining) || 0).toFixed(2)}
+                    </span>
+                  </div>
+                  
+                  {formData.paymentPlanType === "installments" && (
+                    <>
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">Installment Structure:</span>
+                        <span className="ml-2 font-medium">
+                          {formData.totalInstallments} payments of ${(Number(formData.installmentAmount) || 0).toFixed(2)} each
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">Frequency:</span>
+                        <span className="ml-2 font-medium">
+                          {formData.installmentFrequency} installments
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">Next Installment Due:</span>
+                        <span className="ml-2 font-medium">
+                          {formData.nextInstallmentDate ? new Date(formData.nextInstallmentDate).toLocaleDateString() : 'Not set'}
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">Remaining Installments:</span>
+                        <span className="ml-2 font-medium">
+                          {formData.totalInstallments - 1} payments of ${(Number(formData.installmentAmount) || 0).toFixed(2)} each
+                        </span>
+                      </div>
+                    </>
+                  )}
+                  
+                  {formData.paymentPlanType === "recurring" && (
+                    <>
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">Recurring Package:</span>
+                        <span className="ml-2 font-medium">
+                          ${formData.recurringPackageAmount || 0} every {formData.recurringFrequency}
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">This Month:</span>
+                        <span className="ml-2 font-medium">
+                          ${formData.recurringPackageAmount || 0} (Gross & Cash In)
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">Next Payment:</span>
+                        <span className="ml-2 font-medium">
+                          ${formData.recurringPackageAmount || 0} on {formData.nextPaymentDate ? new Date(formData.nextPaymentDate).toLocaleDateString() : 'Not set'}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                  
+                  {formData.paymentPlanType === "one_time" && (
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground">Payment Status:</span>
+                      <span className="ml-2 font-medium">
+                        {formData.remaining === 0 ? 'Fully Paid' : 'Partial Payment'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="grossValue">Gross Value *</Label>
@@ -626,13 +1096,32 @@ const EnhancedSalesForm: React.FC = () => {
                   value={formData.cashIn}
                   onChange={(e) => {
                     const newCashIn = parseFloat(e.target.value) || 0;
-                    const maxCashIn = formData.grossValue;
+                    let maxCashIn = formData.grossValue;
+                    
+                    // Adjust max cash in based on payment plan type
+                    if (formData.paymentPlanType === "installments") {
+                      maxCashIn = formData.installmentAmount || formData.grossValue;
+                    } else if (formData.paymentPlanType === "recurring") {
+                      maxCashIn = formData.grossValue; // Can pay full amount upfront for recurring
+                    }
+                    
                     const validCashIn = Math.min(newCashIn, maxCashIn);
-                    setFormData(prev => ({ ...prev, cashIn: validCashIn }));
+                    const remaining = formData.grossValue - validCashIn;
+                    
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      cashIn: validCashIn,
+                      remaining: Math.max(0, remaining)
+                    }));
                   }}
-                  max={formData.grossValue}
+                  max={formData.paymentPlanType === "installments" ? (formData.installmentAmount || formData.grossValue) : formData.grossValue}
                   required
                 />
+                {formData.paymentPlanType === "installments" && (
+                  <p className="text-sm text-blue-600">
+                    Initial payment: ${(Number(formData.installmentAmount) || 0).toFixed(2)} (first installment)
+                  </p>
+                )}
                 {formData.cashIn > formData.grossValue && (
                   <p className="text-sm text-red-600">
                     Cash in cannot exceed gross value
@@ -653,16 +1142,17 @@ const EnhancedSalesForm: React.FC = () => {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="paymentSource">Payment Source *</Label>
-                <Select
-                  value={formData.paymentSource}
-                  onValueChange={(value) => {
-                    setFormData(prev => ({ 
-                      ...prev, 
-                      paymentSource: value,
-                      customPaymentSource: value === "Other" ? prev.customPaymentSource : ""
-                    }));
-                  }}
-                >
+                                 <Select
+                   value={formData.paymentSource}
+                   onValueChange={(value) => {
+                     setFormData(prev => ({ 
+                       ...prev, 
+                       paymentSource: value,
+                       customPaymentSource: value === "Other" ? prev.customPaymentSource : ""
+                     }));
+                   }}
+                   required
+                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select payment source" />
                   </SelectTrigger>
@@ -696,16 +1186,17 @@ const EnhancedSalesForm: React.FC = () => {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="paymentCompany">Payment Company *</Label>
-                <Select
-                  value={formData.paymentCompany}
-                  onValueChange={(value) => {
-                    setFormData(prev => ({ 
-                      ...prev, 
-                      paymentCompany: value,
-                      customPaymentCompany: value === "Others" ? prev.customPaymentCompany : ""
-                    }));
-                  }}
-                >
+                                 <Select
+                   value={formData.paymentCompany}
+                   onValueChange={(value) => {
+                     setFormData(prev => ({ 
+                       ...prev, 
+                       paymentCompany: value,
+                       customPaymentCompany: value === "Others" ? prev.customPaymentCompany : ""
+                     }));
+                   }}
+                   required
+                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select payment company" />
                   </SelectTrigger>
@@ -722,31 +1213,32 @@ const EnhancedSalesForm: React.FC = () => {
               {formData.paymentCompany === "Others" && (
                 <div className="space-y-2">
                   <Label htmlFor="customPaymentCompany">Custom Payment Company *</Label>
-                  <Input
-                    id="customPaymentCompany"
-                    value={formData.customPaymentCompany}
-                    onChange={(e) => setFormData(prev => ({ ...prev, customPaymentCompany: e.target.value }))}
-                    placeholder="Enter payment company name"
-                    required={formData.paymentCompany === "Others"}
-                  />
+                                     <Input
+                     id="customPaymentCompany"
+                     value={formData.customPaymentCompany}
+                     onChange={(e) => setFormData(prev => ({ ...prev, customPaymentCompany: e.target.value }))}
+                     placeholder="Enter payment company name"
+                     required={formData.paymentCompany === "Others"}
+                   />
                 </div>
               )}
             </div>
 
-            {/* Brands */}
+                        {/* Brands */}
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="brand">Brand *</Label>
-                <Select
-                  value={formData.brand}
-                  onValueChange={(value) => {
-                    setFormData(prev => ({ 
-                      ...prev, 
-                      brand: value,
-                      customBrand: value === "Others" ? prev.customBrand : ""
-                    }));
-                  }}
-                >
+                                 <Select
+                   value={formData.brand}
+                   onValueChange={(value) => {
+                     setFormData(prev => ({ 
+                       ...prev, 
+                       brand: value,
+                       customBrand: value === "Others" ? prev.customBrand : ""
+                     }));
+                   }}
+                   required
+                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select brand" />
                   </SelectTrigger>
@@ -774,16 +1266,18 @@ const EnhancedSalesForm: React.FC = () => {
               {formData.brand === "Others" && (
                 <div className="space-y-2">
                   <Label htmlFor="customBrand">Custom Brand *</Label>
-                  <Input
-                    id="customBrand"
-                    value={formData.customBrand}
-                    onChange={(e) => setFormData(prev => ({ ...prev, customBrand: e.target.value }))}
-                    placeholder="Enter brand name"
-                    required={formData.brand === "Others"}
-                  />
+                                     <Input
+                     id="customBrand"
+                     value={formData.customBrand}
+                     onChange={(e) => setFormData(prev => ({ ...prev, customBrand: e.target.value }))}
+                     placeholder="Enter brand name"
+                     required={formData.brand === "Others"}
+                   />
                 </div>
               )}
             </div>
+
+
           </CardContent>
         </Card>
 

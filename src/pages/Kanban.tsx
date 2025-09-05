@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextJWT';
 import { supabase } from '../integrations/supabase/client';
 import KanbanBoard from '../components/kanban/KanbanBoard';
 import { Button } from '../components/ui/button';

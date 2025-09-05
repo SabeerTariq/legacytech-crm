@@ -437,8 +437,11 @@ const FrontSellerDashboardContent: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            {dashboardData.teamPerformance.map((member, index) => (
-              <div key={member.seller_id} className="border rounded-lg p-4">
+            {dashboardData.teamPerformance.map((member, index) => {
+              // Create a unique key combining seller_id and index to prevent duplicates
+              const uniqueKey = `${member.seller_id || 'unknown'}-${index}`;
+              return (
+              <div key={uniqueKey} className="border rounded-lg p-4">
                 <div className="font-semibold text-lg mb-4 flex items-center justify-between">
                   <span>{member.seller_name || 'Unknown Member'}</span>
                   <span className="text-sm text-muted-foreground">Rank #{Number(member.performance_rank || 0)}</span>
@@ -484,7 +487,8 @@ const FrontSellerDashboardContent: React.FC = () => {
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>

@@ -33,7 +33,7 @@ import {
   Music,
   File
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextJWT';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 

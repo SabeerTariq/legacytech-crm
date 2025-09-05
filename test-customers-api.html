@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Customers API</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; border-radius: 5px; }
+        .result { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 3px; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Test Customers API Endpoints</h1>
+    
+    <div class="test-section">
+        <h2>1. Test Sales Dispositions API</h2>
+        <button onclick="testSalesDispositions()">Test /api/sales/sales-dispositions</button>
+        <div id="sales-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Test Projects API</h2>
+        <button onclick="testProjects()">Test /api/projects</button>
+        <div id="projects-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Test Recurring Services API</h2>
+        <button onclick="testRecurringServices()">Test /api/recurring-services</button>
+        <div id="recurring-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Test with Specific Customer Data</h2>
+        <p>Testing with Jack's customer data (email: demo@example.com, phone: (916) 705-1136)</p>
+        <button onclick="testJackCustomer()">Test Jack's Customer Data</button>
+        <div id="jack-result" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001';
+        
+        async function testSalesDispositions() {
+            const resultDiv = document.getElementById('sales-result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/sales/sales-dispositions`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="success">✅ Success! Found ${data.data?.sales_dispositions?.length || 0} sales dispositions</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Error ${response.status}: ${data.error || 'Unknown error'}</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Network Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testProjects() {
+            const resultDiv = document.getElementById('projects-result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/projects`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="success">✅ Success! Found ${data.data?.projects?.length || 0} projects</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Error ${response.status}: ${data.error || 'Unknown error'}</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Network Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testRecurringServices() {
+            const resultDiv = document.getElementById('recurring-result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/recurring-services`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="success">✅ Success! Found ${data.data?.recurring_services?.length || 0} recurring services</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Error ${response.status}: ${data.error || 'Unknown error'}</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Network Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testJackCustomer() {
+            const resultDiv = document.getElementById('jack-result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                // Test sales dispositions for Jack
+                const salesResponse = await fetch(`${API_BASE}/api/sales/sales-dispositions?email=demo@example.com&phone_number=(916) 705-1136`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const salesData = await salesResponse.json();
+                
+                let resultHTML = '<h3>Sales Dispositions for Jack:</h3>';
+                if (salesResponse.ok) {
+                    resultHTML += `<div class="success">✅ Found ${salesData.data?.sales_dispositions?.length || 0} sales dispositions</div>
+                    <pre>${JSON.stringify(salesData, null, 2)}</pre>`;
+                } else {
+                    resultHTML += `<div class="error">❌ Error: ${salesData.error || 'Unknown error'}</div>`;
+                }
+
+                // Test projects for Jack
+                if (salesData.data?.sales_dispositions?.length > 0) {
+                    const salesIds = salesData.data.sales_dispositions.map(s => s.id);
+                    const projectsResponse = await fetch(`${API_BASE}/api/projects?sales_disposition_ids=${salesIds.join(',')}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    const projectsData = await projectsResponse.json();
+                    
+                    resultHTML += '<h3>Projects for Jack:</h3>';
+                    if (projectsResponse.ok) {
+                        resultHTML += `<div class="success">✅ Found ${projectsData.data?.projects?.length || 0} projects</div>
+                        <pre>${JSON.stringify(projectsData, null, 2)}</pre>`;
+                    } else {
+                        resultHTML += `<div class="error">❌ Error: ${projectsData.error || 'Unknown error'}</div>`;
+                    }
+
+                    // Test recurring services for Jack
+                    const servicesResponse = await fetch(`${API_BASE}/api/recurring-services?customer_ids=${salesIds.join(',')}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    const servicesData = await servicesResponse.json();
+                    
+                    resultHTML += '<h3>Recurring Services for Jack:</h3>';
+                    if (servicesResponse.ok) {
+                        resultHTML += `<div class="success">✅ Found ${servicesData.data?.recurring_services?.length || 0} recurring services</div>
+                        <pre>${JSON.stringify(servicesData, null, 2)}</pre>`;
+                    } else {
+                        resultHTML += `<div class="error">❌ Error: ${servicesData.error || 'Unknown error'}</div>`;
+                    }
+                }
+
+                resultDiv.innerHTML = resultHTML;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Network Error: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

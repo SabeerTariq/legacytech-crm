@@ -38,8 +38,9 @@ import {
   Trash2,
   X
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextJWT';
 import { useToast } from '@/hooks/use-toast';
+import apiClient from '@/lib/api/client';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
@@ -166,14 +167,14 @@ const EnhancedMessages: React.FC = () => {
     setUsers([]); // Reset users to empty array
     try {
       console.log('Fetching users...');
-      const response = await fetch('/api/admin/get-user-roles');
-      console.log('Response status:', response.status);
+      const response = await apiClient.getUserRoles();
+      console.log('Response status:', response.error ? 'error' : 'success');
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (response.error) {
+        throw new Error(response.error);
       }
       
-      const data = await response.json();
+      const data = response.data || response;
       console.log('Users data:', data);
       
       // Transform the data to include user info

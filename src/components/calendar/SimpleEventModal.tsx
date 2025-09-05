@@ -12,7 +12,7 @@ import { format } from 'date-fns';
 import { Calendar as CalendarIcon, Clock, MapPin, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CalendarEvent, EventType, EventStatus, EventPriority } from '@/types/calendar';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextJWT';
 
 interface SimpleEventModalProps {
   isOpen: boolean;

@@ -3,7 +3,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TooltipProvider } from '@radix-ui/react-tooltip';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContextJWT';
 import { PermissionProvider } from './contexts/PermissionContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import RoleBasedRedirect from './components/auth/RoleBasedRedirect';
@@ -23,6 +23,7 @@ import Kanban from './pages/Kanban';
 import Calendar from './pages/Calendar';
 import Documents from './pages/Documents';
 import Payments from './pages/Payments';
+import CustomerPaymentDetails from './pages/CustomerPaymentDetails';
 import Settings from './pages/Settings';
 import BetterAskSaul from './pages/BetterAskSaul';
 import MarketingAutomation from './pages/MarketingAutomation';
@@ -162,6 +163,13 @@ function App() {
                   <ProtectedRoute>
                     <MainLayout>
                       <Payments />
+                    </MainLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/payments/customer/:customerName" element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <CustomerPaymentDetails />
                     </MainLayout>
                   </ProtectedRoute>
                 } />

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { usePermissions } from '@/contexts/PermissionContext';
 import { 
   getRoles, 
   getRoleById, 
@@ -27,6 +28,7 @@ import { Plus, Edit, Trash2, Eye, Shield, Users, Settings } from 'lucide-react';
 const RoleManagement: React.FC = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { refreshPermissions } = usePermissions();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<RoleWithPermissions | null>(null);
@@ -52,8 +54,9 @@ const RoleManagement: React.FC = () => {
   // Create role mutation
   const createRoleMutation = useMutation({
     mutationFn: createRole,
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] });
+      await refreshPermissions(); // Refresh permissions after role creation
       setIsCreateDialogOpen(false);
       resetForm();
       toast({
@@ -73,8 +76,9 @@ const RoleManagement: React.FC = () => {
   // Update role mutation
   const updateRoleMutation = useMutation({
     mutationFn: updateRole,
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] });
+      await refreshPermissions(); // Refresh permissions after role update
       setIsEditDialogOpen(false);
       setSelectedRole(null);
       resetForm();
@@ -95,8 +99,9 @@ const RoleManagement: React.FC = () => {
   // Delete role mutation
   const deleteRoleMutation = useMutation({
     mutationFn: deleteRole,
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] });
+      await refreshPermissions(); // Refresh permissions after role deletion
       toast({
         title: "Role deleted successfully",
         description: "The role has been permanently deleted.",
