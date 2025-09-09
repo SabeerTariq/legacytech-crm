@@ -1,0 +1,10 @@
+[33m899431a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m)[m Revert broken transaction files to working state
+[33m8074e07[m Fix syntax error in delete-user-mysql.js transaction block
+[33meddafe7[m Fix syntax error in sales-mysql.js transaction block
+[33m9066e86[m Fix MySQL transaction issues and connection pool problems
+[33m82deff7[m Fix: Add parameter validation and debugging for sales dispositions API
+[33mda2978f[m Fix: Implement connection pool and fix MySQL parameter issues
+[33m1878bd6[m Made the connection pool for Sales Disposition
+[33mda90eda[m Made the connection pool for all the apis
+[33meeccf26[m Changes done on mysql credentials
+[33m580532c[m New database
