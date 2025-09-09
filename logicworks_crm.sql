@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 09, 2025 at 06:11 PM
+-- Generation Time: Sep 09, 2025 at 06:24 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -2152,8 +2152,8 @@ CREATE TABLE `task_cards` (
   `description` text DEFAULT NULL,
   `position` int(11) DEFAULT NULL,
   `due_date` timestamp NULL DEFAULT NULL,
-  `priority` text DEFAULT 'medium',
-  `status` text DEFAULT 'active',
+  `priority` text DEFAULT NULL,
+  `status` text DEFAULT NULL,
   `assigned_to` varchar(36) DEFAULT NULL,
   `created_by` varchar(36) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
@@ -2662,7 +2662,7 @@ INSERT INTO `user_permissions` (`id`, `user_id`, `module_id`, `can_create`, `can
 CREATE TABLE `user_presence` (
   `id` varchar(36) NOT NULL,
   `user_id` varchar(36) DEFAULT NULL,
-  `status` varchar(50) DEFAULT 'offline',
+  `status` varchar(50) DEFAULT NULL,
   `last_seen` timestamp NULL DEFAULT NULL,
   `custom_status` text DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
