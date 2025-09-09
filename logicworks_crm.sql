@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 09, 2025 at 05:26 PM
+-- Generation Time: Sep 09, 2025 at 06:11 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -108,7 +108,7 @@ CREATE TABLE `auth_audit_log` (
   `action` varchar(100) NOT NULL,
   `table_name` varchar(100) DEFAULT NULL,
   `record_id` varchar(36) DEFAULT NULL,
-  `details` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`details`)),
+  `details` longtext DEFAULT NULL,
   `ip_address` varchar(45) DEFAULT NULL,
   `user_agent` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
@@ -1611,7 +1611,7 @@ CREATE TABLE `permissions` (
   `resource` varchar(100) NOT NULL,
   `action` varchar(100) NOT NULL,
   `description` text DEFAULT NULL,
-  `attributes` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT '{}' CHECK (json_valid(`attributes`)),
+  `attributes` longtext DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -1655,7 +1655,7 @@ CREATE TABLE `permission_audit_log` (
   `resource` varchar(100) NOT NULL,
   `action` varchar(100) NOT NULL,
   `permission_granted` tinyint(1) NOT NULL,
-  `context` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT '{}' CHECK (json_valid(`context`)),
+  `context` longtext DEFAULT NULL,
   `ip_address` varchar(45) DEFAULT NULL,
   `user_agent` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
@@ -1809,7 +1809,7 @@ CREATE TABLE `roles` (
   `description` text DEFAULT NULL,
   `hierarchy_level` int(11) DEFAULT NULL,
   `is_system_role` tinyint(1) DEFAULT 0,
-  `permissions` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT '[]' CHECK (json_valid(`permissions`)),
+  `permissions` longtext DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
