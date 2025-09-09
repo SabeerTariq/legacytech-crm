@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 09, 2025 at 06:24 PM
+-- Generation Time: Sep 09, 2025 at 06:34 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -2780,11 +2780,7 @@ ALTER TABLE `audit_log`
 -- Indexes for table `auth_audit_log`
 --
 ALTER TABLE `auth_audit_log`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_user_id` (`user_id`),
-  ADD KEY `idx_action` (`action`),
-  ADD KEY `idx_table_name` (`table_name`),
-  ADD KEY `idx_created_at` (`created_at`);
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `auth_password_reset_tokens`
@@ -2873,9 +2869,7 @@ ALTER TABLE `customer_tasks`
 -- Indexes for table `employees`
 --
 ALTER TABLE `employees`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uk_employees_email` (`email`) USING HASH,
-  ADD UNIQUE KEY `uk_employees_cnic` (`cnic_number`) USING HASH;
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `employee_dependents`
