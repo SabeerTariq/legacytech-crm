@@ -36,8 +36,8 @@ const supabase = createClient(
 // MySQL configuration
 const mysqlConfig = {
   host: process.env.MYSQL_HOST || 'localhost',
-  user: process.env.MYSQL_USER || 'root',
-  password: process.env.MYSQL_PASSWORD || undefined,
+  user: process.env.MYSQL_USER || 'dev_root',
+  password: process.env.MYSQL_PASSWORD || 'Developer@1234',
   database: process.env.MYSQL_DATABASE || 'logicworks_crm',
   charset: 'utf8mb4',
   timezone: '+00:00',

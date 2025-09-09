@@ -134,8 +134,8 @@ app.get('/api/test/sales-dispositions', async (req, res) => {
   try {
     const mysqlConnection = await mysql.createConnection({
       host: process.env.MYSQL_HOST || 'localhost',
-      user: process.env.MYSQL_USER || 'root',
-      password: process.env.MYSQL_PASSWORD || undefined,
+      user: process.env.MYSQL_USER || 'dev_root',
+      password: process.env.MYSQL_PASSWORD || 'Developer@1234',
       database: process.env.MYSQL_DATABASE || 'logicworks_crm',
       port: process.env.MYSQL_PORT || 3306
     });
@@ -159,8 +159,8 @@ app.get('/api/test/projects', async (req, res) => {
   try {
     const mysqlConnection = await mysql.createConnection({
       host: process.env.MYSQL_HOST || 'localhost',
-      user: process.env.MYSQL_USER || 'root',
-      password: process.env.MYSQL_PASSWORD || undefined,
+      user: process.env.MYSQL_USER || 'dev_root',
+      password: process.env.MYSQL_PASSWORD || 'Developer@1234',
       database: process.env.MYSQL_DATABASE || 'logicworks_crm',
       port: process.env.MYSQL_PORT || 3306
     });
@@ -184,8 +184,8 @@ app.get('/api/test/recurring-services', async (req, res) => {
   try {
     const mysqlConnection = await mysql.createConnection({
       host: process.env.MYSQL_HOST || 'localhost',
-      user: process.env.MYSQL_USER || 'root',
-      password: process.env.MYSQL_PASSWORD || undefined,
+      user: process.env.MYSQL_USER || 'dev_root',
+      password: process.env.MYSQL_PASSWORD || 'Developer@1234',
       database: process.env.MYSQL_DATABASE || 'logicworks_crm',
       port: process.env.MYSQL_PORT || 3306
     });
