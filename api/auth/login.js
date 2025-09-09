@@ -1,18 +1,9 @@
-import mysql from 'mysql2/promise';
 import { comparePassword, generateToken } from '../../src/lib/auth/jwt-utils.js';
 import { logAuthAttempt as logAuthAttemptMiddleware } from '../../src/lib/auth/auth-middleware.js';
+import DatabaseService from '../../src/lib/database/dbService.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
-
-const mysqlConfig = {
-  host: process.env.MYSQL_HOST || 'localhost',
-  user: process.env.MYSQL_USER || 'dev_root',
-  password: process.env.MYSQL_PASSWORD || 'Developer@1234',
-  database: process.env.MYSQL_DATABASE || 'logicworks_crm',
-  port: process.env.MYSQL_PORT || 3306,
-  multipleStatements: false
-};
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -37,12 +28,9 @@ export default async function handler(req, res) {
       });
     }
 
-    // Connect to database
-    const mysqlConnection = await mysql.createConnection(mysqlConfig);
-    
     try {
       // Get user from auth_users table
-      const [users] = await mysqlConnection.execute(`
+      const users = await DatabaseService.query(`
         SELECT id, email, password_hash, display_name, is_admin, is_active
         FROM auth_users 
         WHERE email = ? AND is_active = TRUE
@@ -74,7 +62,7 @@ export default async function handler(req, res) {
       }
 
       // Get additional user info from user_profiles and employees
-      const [userProfiles] = await mysqlConnection.execute(`
+      const userProfiles = await DatabaseService.query(`
         SELECT up.*, e.department, e.full_name, e.job_title
         FROM user_profiles up
         LEFT JOIN employees e ON up.employee_id = e.id
@@ -87,7 +75,7 @@ export default async function handler(req, res) {
       }
 
       // Update last sign in
-      await mysqlConnection.execute(`
+      await DatabaseService.query(`
         UPDATE auth_users 
         SET last_sign_in_at = CURRENT_TIMESTAMP 
         WHERE id = ?
@@ -123,8 +111,12 @@ export default async function handler(req, res) {
         }
       });
 
-    } finally {
-      await mysqlConnection.end();
+    } catch (dbError) {
+      console.error('Database error during login:', dbError);
+      return res.status(500).json({ 
+        error: 'Database error',
+        message: 'An error occurred during login'
+      });
     }
 
   } catch (error) {

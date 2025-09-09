@@ -1,14 +1,5 @@
 import { verifyToken, extractTokenFromHeader } from './jwt-utils.js';
-import mysql from 'mysql2/promise';
-
-const mysqlConfig = {
-  host: process.env.MYSQL_HOST || 'localhost',
-  user: process.env.MYSQL_USER || 'dev_root',
-  password: process.env.MYSQL_PASSWORD || 'Developer@1234',
-  database: process.env.MYSQL_DATABASE || 'logicworks_crm',
-  port: process.env.MYSQL_PORT || 3306,
-  multipleStatements: false
-};
+import DatabaseService from '../database/dbService.js';
 
 /**
  * Authentication middleware for Express routes
@@ -35,9 +26,8 @@ export async function authenticateToken(req, res, next) {
     }
 
     // Get fresh user data from database
-    const mysqlConnection = await mysql.createConnection(mysqlConfig);
     try {
-      const [users] = await mysqlConnection.execute(`
+      const users = await DatabaseService.query(`
         SELECT id, email, display_name, is_admin, is_active, created_at, updated_at
         FROM auth_users 
         WHERE id = ? AND is_active = TRUE
@@ -63,8 +53,12 @@ export async function authenticateToken(req, res, next) {
       };
 
       next();
-    } finally {
-      await mysqlConnection.end();
+    } catch (dbError) {
+      console.error('Database error in auth middleware:', dbError);
+      return res.status(500).json({ 
+        error: 'Database error',
+        message: 'An error occurred during authentication'
+      });
     }
 
   } catch (error) {
