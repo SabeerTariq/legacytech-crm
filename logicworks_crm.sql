@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 06, 2025 at 12:01 AM
+-- Generation Time: Sep 09, 2025 at 05:26 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `logicworks_crm`
+-- Database: `logicworks_crm_new`
 --
 
 -- --------------------------------------------------------
@@ -309,7 +309,8 @@ INSERT INTO `auth_audit_log` (`id`, `user_id`, `action`, `table_name`, `record_i
 (189, '722d6008-7cec-43d3-8648-926a14f765c9', 'login_success', NULL, NULL, '{\"email\":\"admin@logicworks.com\",\"success\":true,\"timestamp\":\"2025-09-05T19:30:19.973Z\"}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36', '2025-09-05 19:30:19'),
 (190, '722d6008-7cec-43d3-8648-926a14f765c9', 'login_success', NULL, NULL, '{\"email\":\"admin@logicworks.com\",\"success\":true,\"timestamp\":\"2025-09-05T19:30:29.002Z\"}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36', '2025-09-05 19:30:29'),
 (191, '722d6008-7cec-43d3-8648-926a14f765c9', 'logout', NULL, NULL, '{\"timestamp\":\"2025-09-05T19:30:31.869Z\",\"token_revoked\":true}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36', '2025-09-05 19:30:31'),
-(192, 'f3efd012-5e4b-4ea4-917a-a9deb3a272a9', 'login_success', NULL, NULL, '{\"email\":\"adamzainnasir.fro@logicworks.com\",\"success\":true,\"timestamp\":\"2025-09-05T19:30:51.955Z\"}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36', '2025-09-05 19:30:51');
+(192, 'f3efd012-5e4b-4ea4-917a-a9deb3a272a9', 'login_success', NULL, NULL, '{\"email\":\"adamzainnasir.fro@logicworks.com\",\"success\":true,\"timestamp\":\"2025-09-05T19:30:51.955Z\"}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36', '2025-09-05 19:30:51'),
+(193, '307b981c-46bb-4c23-8eca-aa5a065a7fca', 'login_success', NULL, NULL, '{\"email\":\"muhammadalisheikh.ups@logicworks.com\",\"success\":true,\"timestamp\":\"2025-09-05T22:09:48.221Z\"}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36', '2025-09-05 22:09:48');
 
 -- --------------------------------------------------------
 
@@ -350,7 +351,7 @@ CREATE TABLE `auth_users` (
 --
 
 INSERT INTO `auth_users` (`id`, `email`, `password_hash`, `display_name`, `is_admin`, `is_active`, `email_confirmed_at`, `last_sign_in_at`, `created_at`, `updated_at`) VALUES
-('307b981c-46bb-4c23-8eca-aa5a065a7fca', 'muhammadalisheikh.ups@logicworks.com', '$2b$10$pl4/09lWNCJjZZc815TxSOeUN0lVz/BElcYgJzBL2OhbcYqTVzrVm', 'Muhammad Ali Sheikh', 0, 1, '2025-08-11 14:43:46', '2025-09-05 17:37:31', '2025-08-11 14:43:46', '2025-09-05 17:37:31'),
+('307b981c-46bb-4c23-8eca-aa5a065a7fca', 'muhammadalisheikh.ups@logicworks.com', '$2b$10$pl4/09lWNCJjZZc815TxSOeUN0lVz/BElcYgJzBL2OhbcYqTVzrVm', 'Muhammad Ali Sheikh', 0, 1, '2025-08-11 14:43:46', '2025-09-05 22:09:48', '2025-08-11 14:43:46', '2025-09-05 22:09:48'),
 ('32ecaf78-c507-4140-bb07-a0cf57f6c813', 'adnanshafaqat.fro@logicworks.com', '$2b$10$pl4/09lWNCJjZZc815TxSOeUN0lVz/BElcYgJzBL2OhbcYqTVzrVm', 'Adnan Shafaqat', 0, 1, '2025-07-31 11:41:12', NULL, '2025-07-31 11:41:12', '2025-08-28 20:33:07'),
 ('52e63558-b2ae-4661-97c7-47ca56a1cf7b', 'inactive_1753920693888@inactive.com', '$2b$10$default.hash.for.supabase.user', NULL, 0, 1, NULL, NULL, '2025-07-28 16:28:12', '2025-08-28 17:43:02'),
 ('722d6008-7cec-43d3-8648-926a14f765c9', 'admin@logicworks.com', '$2b$10$pl4/09lWNCJjZZc815TxSOeUN0lVz/BElcYgJzBL2OhbcYqTVzrVm', 'CRM Admin', 1, 1, '2025-07-30 17:21:07', '2025-09-05 19:30:28', '2025-07-30 17:21:07', '2025-09-05 19:30:28'),
@@ -570,7 +571,7 @@ CREATE TABLE `employees` (
   `id` varchar(36) NOT NULL,
   `department` text NOT NULL,
   `email` text NOT NULL,
-  `performance` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT json_object() CHECK (json_valid(`performance`)),
+  `performance` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `full_name` text DEFAULT NULL,
@@ -753,6 +754,7 @@ CREATE TABLE `front_seller_performance` (
 --
 
 INSERT INTO `front_seller_performance` (`id`, `seller_id`, `month`, `accounts_achieved`, `total_gross`, `total_cash_in`, `total_remaining`, `created_at`, `updated_at`) VALUES
+('', 'f3efd012-5e4b-4ea4-917a-a9deb3a272a9', '2025-09', 1, 1000, 500, 500, NULL, NULL),
 ('677151e9-265f-4541-a057-a970ddc12aa7', 'b7a4394a-acb2-48cf-91d9-d3f082ed2db0', '2025-08-01', 6, 23500, 21500, 2000, '2025-08-25T22:07:51.265941+00:00', '2025-08-26T16:14:05.885145+00:00'),
 ('67a2d132-f40c-4e50-b1d4-ecc15d554a75', '78294d98-4280-40c1-bb6d-b85b7203b370', '2025-08-01', 2, 7500, 3500, 4000, '2025-08-18T20:07:12.170291+00:00', '2025-08-26T16:14:09.47065+00:00');
 
@@ -1820,18 +1822,6 @@ INSERT INTO `roles` (`id`, `name`, `display_name`, `description`, `hierarchy_lev
 ('26dc37fe-bd9a-4e1d-a3d0-7466404e614f', 'upseller', 'Upseller', 'Make an upsell on on-board accounts and manage their projects.', 50, 0, '[{\"module_name\":\"hr\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"project_assignment\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"kanban\",\"can_create\":1,\"can_read\":1,\"can_update\":1,\"can_delete\":1,\"screen_visible\":1},{\"module_name\":\"upsell\",\"can_create\":1,\"can_read\":1,\"can_update\":1,\"can_delete\":1,\"screen_visible\":1},{\"module_name\":\"employees\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"messages\",\"can_create\":1,\"can_read\":1,\"can_update\":1,\"can_delete\":1,\"screen_visible\":1},{\"module_name\":\"dashboard\",\"can_create\":1,\"can_read\":1,\"can_update\":1,\"can_delete\":1,\"screen_visible\":1},{\"module_name\":\"automation\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"my_dashboard\",\"can_create\":1,\"can_read\":1,\"can_update\":1,\"can_delete\":1,\"screen_visible\":1},{\"module_name\":\"customers\",\"can_create\":1,\"can_read\":1,\"can_update\":1,\"can_delete\":1,\"screen_visible\":1},{\"module_name\":\"sales_form\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"other\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"development\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"leads\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"better_ask_saul\",\"can_create\":1,\"can_read\":1,\"can_update\":1,\"can_delete\":1,\"screen_visible\":1},{\"module_name\":\"project_detail\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"upseller_management\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"user_management\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"calendar\",\"can_create\":true,\"can_read\":true,\"can_update\":true,\"can_delete\":true,\"screen_visible\":true},{\"module_name\":\"customer_profile\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"management\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"role_management\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"payments\",\"can_create\":1,\"can_read\":1,\"can_update\":1,\"can_delete\":1,\"screen_visible\":1},{\"module_name\":\"upseller\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"all_projects\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"front_sales_management\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"recurring_service_detail\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"production\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"recurring_services\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"front_sales\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"documents\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"marketing\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"settings\",\"can_create\":1,\"can_read\":1,\"can_update\":1,\"can_delete\":1,\"screen_visible\":1},{\"module_name\":\"projects\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"my_projects\",\"can_create\":1,\"can_read\":1,\"can_update\":1,\"can_delete\":1,\"screen_visible\":1},{\"module_name\":\"marketing_automation\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0}]', '2025-08-11 14:43:10', '2025-08-28 18:09:48'),
 ('ae936867-cbed-466c-bdef-778f05da133d', 'front_sales', 'Front Seller', 'Front Seller Dashboard', 50, 0, '[{\"module_name\":\"messages\",\"can_create\":1,\"can_read\":1,\"can_update\":1,\"can_delete\":1,\"screen_visible\":1},{\"module_name\":\"leads\",\"can_create\":1,\"can_read\":1,\"can_update\":1,\"can_delete\":0,\"screen_visible\":1},{\"module_name\":\"calendar\",\"can_create\":true,\"can_read\":true,\"can_update\":true,\"can_delete\":true,\"screen_visible\":true},{\"module_name\":\"better_ask_saul\",\"can_create\":1,\"can_read\":1,\"can_update\":1,\"can_delete\":1,\"screen_visible\":1},{\"module_name\":\"settings\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"sales_form\",\"can_create\":1,\"can_read\":1,\"can_update\":1,\"can_delete\":1,\"screen_visible\":1},{\"module_name\":\"front_sales_management\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0},{\"module_name\":\"customers\",\"can_create\":1,\"can_read\":1,\"can_update\":1,\"can_delete\":1,\"screen_visible\":1},{\"module_name\":\"my_dashboard\",\"can_create\":1,\"can_read\":1,\"can_update\":1,\"can_delete\":1,\"screen_visible\":1},{\"module_name\":\"front_sales\",\"can_create\":0,\"can_read\":0,\"can_update\":0,\"can_delete\":0,\"screen_visible\":0}]', '2025-07-28 16:12:07', '2025-09-05 18:27:19'),
 ('e2dbe44a-491f-4dd6-a1f6-d542c8d041d9', 'admin', 'Administrator', 'Full system access with all permissions', 100, 1, '[{\"action\":\"*\",\"resource\":\"*\"},{\"action\":\"manage\",\"resource\":\"users\"},{\"action\":\"manage\",\"resource\":\"roles\"},{\"action\":\"view\",\"resource\":\"audit\"}]', '2025-07-28 16:07:29', '2025-08-28 17:49:47');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `role_hierarchies`
---
-
-CREATE TABLE `role_hierarchies` (
-  `parent_role_id` varchar(36) NOT NULL,
-  `child_role_id` varchar(36) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ;
 
 -- --------------------------------------------------------
 
@@ -3047,13 +3037,6 @@ ALTER TABLE `roles`
   ADD KEY `idx_roles_hierarchy` (`hierarchy_level`);
 
 --
--- Indexes for table `role_hierarchies`
---
-ALTER TABLE `role_hierarchies`
-  ADD PRIMARY KEY (`parent_role_id`,`child_role_id`),
-  ADD KEY `child_role_id` (`child_role_id`);
-
---
 -- Indexes for table `role_permissions`
 --
 ALTER TABLE `role_permissions`
@@ -3235,7 +3218,7 @@ ALTER TABLE `workspaces`
 -- AUTO_INCREMENT for table `auth_audit_log`
 --
 ALTER TABLE `auth_audit_log`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=193;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=194;
 
 --
 -- Constraints for dumped tables
@@ -3258,13 +3241,6 @@ ALTER TABLE `auth_user_sessions`
 --
 ALTER TABLE `permission_audit_log`
   ADD CONSTRAINT `permission_audit_log_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `auth_users` (`id`) ON DELETE SET NULL;
-
---
--- Constraints for table `role_hierarchies`
---
-ALTER TABLE `role_hierarchies`
-  ADD CONSTRAINT `role_hierarchies_ibfk_1` FOREIGN KEY (`parent_role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `role_hierarchies_ibfk_2` FOREIGN KEY (`child_role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
