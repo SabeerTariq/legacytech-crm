@@ -1,39 +1,20 @@
-import mysql from 'mysql2/promise';
-import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
 import express from 'express';
-
-dotenv.config();
-
-const mysqlConfig = {
-  host: process.env.MYSQL_HOST || 'localhost',
-  user: process.env.MYSQL_USER || 'dev_root',
-  password: process.env.MYSQL_PASSWORD || 'Developer@1234',
-  database: process.env.MYSQL_DATABASE || 'logicworks_crm',
-  port: process.env.MYSQL_PORT || 3306,
-  multipleStatements: false
-};
+import DatabaseService from '../../src/lib/database/dbService.js';
 
 const router = express.Router();
 
 // GET /api/sales/services - Get all services
 router.get('/services', async (req, res) => {
   try {
-    const mysqlConnection = await mysql.createConnection(mysqlConfig);
-    
-    try {
-      const [services] = await mysqlConnection.execute(`
-        SELECT * FROM services ORDER BY name
-      `);
+    const services = await DatabaseService.query(`
+      SELECT * FROM services ORDER BY name
+    `);
 
-      res.status(200).json({
-        success: true,
-        data: services || []
-      });
-
-    } finally {
-      await mysqlConnection.end();
-    }
+    res.status(200).json({
+      success: true,
+      data: services || []
+    });
 
   } catch (error) {
     console.error('Error in getServices:', error);
@@ -46,10 +27,8 @@ router.get('/services', async (req, res) => {
 
 // POST /api/sales/upsell - Create a complete upsell with all related data
 router.post('/upsell', async (req, res) => {
-  const mysqlConnection = await mysql.createConnection(mysqlConfig);
-  
   try {
-    await mysqlConnection.beginTransaction();
+    const result = await DatabaseService.transaction(async (connection) => {
 
     const {
       customerName,
@@ -96,10 +75,10 @@ router.post('/upsell', async (req, res) => {
       });
     }
 
-    // 1. Create payment plan first if needed
-    let paymentPlanId = null;
-    if (paymentPlanType !== 'one_time') {
-      const [paymentPlanResult] = await mysqlConnection.execute(`
+      // 1. Create payment plan first if needed
+      let paymentPlanId = null;
+      if (paymentPlanType !== 'one_time') {
+        const [paymentPlanResult] = await connection.execute(`
         INSERT INTO payment_plans (
           id, name, type, description, amount, frequency, 
           total_installments, installment_amount, next_payment_date, is_active
@@ -120,11 +99,11 @@ router.post('/upsell', async (req, res) => {
       paymentPlanId = paymentPlanResult.insertId;
     }
 
-    // 2. Create sales disposition
-    const salesDispositionId = uuidv4();
-    const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      // 2. Create sales disposition
+      const salesDispositionId = uuidv4();
+      const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-    await mysqlConnection.execute(`
+      await connection.execute(`
       INSERT INTO sales_dispositions (
         id, sale_date, customer_name, phone_number, email, front_brand,
         business_name, service_sold, services_included, turnaround_time,
@@ -192,52 +171,43 @@ router.post('/upsell', async (req, res) => {
       paymentPlanType === 'installments' ? installmentFrequency : null
     ]);
 
-    // 3. Upsells are sales dispositions only - no projects created
-    // Projects are created separately when needed for actual work
+      // 3. Upsells are sales dispositions only - no projects created
+      // Projects are created separately when needed for actual work
 
-    await mysqlConnection.commit();
+      return {
+        salesDispositionId,
+        paymentPlanId
+      };
+    });
 
     res.status(201).json({
       success: true,
       message: 'Upsell created successfully',
-      data: {
-        salesDispositionId,
-        paymentPlanId
-      }
+      data: result
     });
 
   } catch (error) {
-    await mysqlConnection.rollback();
     console.error('Error in createUpsell:', error);
     res.status(500).json({ 
       error: 'Internal server error',
       message: 'Failed to create upsell'
     });
-  } finally {
-    await mysqlConnection.end();
   }
 });
 
 // GET /api/sales/customers - Get customers for selection
 router.get('/customers', async (req, res) => {
   try {
-    const mysqlConnection = await mysql.createConnection(mysqlConfig);
-    
-    try {
-      const [customers] = await mysqlConnection.execute(`
-        SELECT id, customer_name, email, phone_number, business_name, last_purchase_date
-        FROM customers
-        ORDER BY customer_name
-      `);
+    const customers = await DatabaseService.query(`
+      SELECT id, customer_name, email, phone_number, business_name, last_purchase_date
+      FROM customers
+      ORDER BY customer_name
+    `);
 
-      res.status(200).json({
-        success: true,
-        data: customers || []
-      });
-
-    } finally {
-      await mysqlConnection.end();
-    }
+    res.status(200).json({
+      success: true,
+      data: customers || []
+    });
 
   } catch (error) {
     console.error('Error in getCustomers:', error);

@@ -1,41 +1,22 @@
-import mysql from 'mysql2/promise';
-import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
 import express from 'express';
-
-dotenv.config();
-
-const mysqlConfig = {
-  host: process.env.MYSQL_HOST || 'localhost',
-  user: process.env.MYSQL_USER || 'dev_root',
-  password: process.env.MYSQL_PASSWORD || 'Developer@1234',
-  database: process.env.MYSQL_DATABASE || 'logicworks_crm',
-  port: process.env.MYSQL_PORT || 3306,
-  multipleStatements: false
-};
+import DatabaseService from '../../src/lib/database/dbService.js';
 
 const router = express.Router();
 
 // GET /api/sales/leads - Get leads for selection
 router.get('/leads', async (req, res) => {
   try {
-    const mysqlConnection = await mysql.createConnection(mysqlConfig);
-    
-    try {
-      const [leads] = await mysqlConnection.execute(`
-        SELECT * FROM leads 
-        WHERE status != 'converted'
-        ORDER BY created_at DESC
-      `);
+    const leads = await DatabaseService.query(`
+      SELECT * FROM leads 
+      WHERE status != 'converted'
+      ORDER BY created_at DESC
+    `);
 
-      res.status(200).json({
-        success: true,
-        data: leads || []
-      });
-
-    } finally {
-      await mysqlConnection.end();
-    }
+    res.status(200).json({
+      success: true,
+      data: leads || []
+    });
 
   } catch (error) {
     console.error('Error in getLeads:', error);
@@ -48,10 +29,8 @@ router.get('/leads', async (req, res) => {
 
 // POST /api/sales/disposition - Create a complete sales disposition with all related data
 router.post('/disposition', async (req, res) => {
-  const mysqlConnection = await mysql.createConnection(mysqlConfig);
-  
   try {
-    await mysqlConnection.beginTransaction();
+    const result = await DatabaseService.transaction(async (connection) => {
 
     const {
       customerName,
@@ -98,35 +77,35 @@ router.post('/disposition', async (req, res) => {
       });
     }
 
-    // 1. Create payment plan first if needed
-    let paymentPlanId = null;
-    if (paymentPlanType !== 'one_time') {
-      const [paymentPlanResult] = await mysqlConnection.execute(`
-        INSERT INTO payment_plans (
-          id, name, type, description, amount, frequency, 
-          total_installments, installment_amount, next_payment_date, is_active
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [
-        uuidv4(),
-        `${customerName} - ${paymentPlanType} Payment Plan`,
-        paymentPlanType,
-        `Payment plan for ${customerName} services`,
-        grossValue,
-        paymentPlanType === 'recurring' ? recurringFrequency : null,
-        paymentPlanType === 'installments' ? totalInstallments : 1,
-        paymentPlanType === 'installments' ? installmentAmount : null,
-        paymentPlanType === 'recurring' ? nextPaymentDate : null,
-        true
-      ]);
+      // 1. Create payment plan first if needed
+      let paymentPlanId = null;
+      if (paymentPlanType !== 'one_time') {
+        const [paymentPlanResult] = await connection.execute(`
+          INSERT INTO payment_plans (
+            id, name, type, description, amount, frequency, 
+            total_installments, installment_amount, next_payment_date, is_active
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          uuidv4(),
+          `${customerName} - ${paymentPlanType} Payment Plan`,
+          paymentPlanType,
+          `Payment plan for ${customerName} services`,
+          grossValue,
+          paymentPlanType === 'recurring' ? recurringFrequency : null,
+          paymentPlanType === 'installments' ? totalInstallments : 1,
+          paymentPlanType === 'installments' ? installmentAmount : null,
+          paymentPlanType === 'recurring' ? nextPaymentDate : null,
+          true
+        ]);
 
-      paymentPlanId = paymentPlanResult.insertId;
-    }
+        paymentPlanId = paymentPlanResult.insertId;
+      }
 
-    // 2. Create sales disposition
-    const salesDispositionId = uuidv4();
-    const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      // 2. Create sales disposition
+      const salesDispositionId = uuidv4();
+      const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-    await mysqlConnection.execute(`
+      await connection.execute(`
       INSERT INTO sales_dispositions (
         id, sale_date, customer_name, phone_number, email, front_brand,
         business_name, service_sold, services_included, turnaround_time,
@@ -194,11 +173,11 @@ router.post('/disposition', async (req, res) => {
       paymentPlanType === 'installments' ? installmentFrequency : null
     ]);
 
-    // 3. Create projects for each service
-    const projectIds = [];
-    for (const service of selectedServices) {
-      const projectId = uuidv4();
-      await mysqlConnection.execute(`
+      // 3. Create projects for each service
+      const projectIds = [];
+      for (const service of selectedServices) {
+        const projectId = uuidv4();
+        await connection.execute(`
         INSERT INTO projects (
           id, name, client, description, sales_disposition_id, lead_id,
           total_amount, amount_paid, budget, status, created_at, updated_at,
@@ -229,10 +208,10 @@ router.post('/disposition', async (req, res) => {
       projectIds.push(projectId);
     }
 
-    // 4. Create recurring payment schedule if needed
-    let recurringScheduleId = null;
-    if (paymentPlanType === 'recurring' && projectIds.length > 0) {
-      const [scheduleResult] = await mysqlConnection.execute(`
+      // 4. Create recurring payment schedule if needed
+      let recurringScheduleId = null;
+      if (paymentPlanType === 'recurring' && projectIds.length > 0) {
+        const [scheduleResult] = await connection.execute(`
         INSERT INTO recurring_payment_schedule (
           id, project_id, frequency, amount, next_payment_date,
           total_payments, payments_completed, is_active
@@ -251,35 +230,33 @@ router.post('/disposition', async (req, res) => {
       recurringScheduleId = scheduleResult.insertId;
     }
 
-    // 5. Update lead status to converted if one was selected
-    if (selectedLeadId) {
-      await mysqlConnection.execute(`
-        UPDATE leads SET status = 'converted' WHERE id = ?
-      `, [selectedLeadId]);
-    }
+      // 5. Update lead status to converted if one was selected
+      if (selectedLeadId) {
+        await connection.execute(`
+          UPDATE leads SET status = 'converted' WHERE id = ?
+        `, [selectedLeadId]);
+      }
 
-    await mysqlConnection.commit();
-
-    res.status(201).json({
-      success: true,
-      message: 'Sales disposition created successfully',
-      data: {
+      return {
         salesDispositionId,
         projectIds,
         paymentPlanId,
         recurringScheduleId
-      }
+      };
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Sales disposition created successfully',
+      data: result
     });
 
   } catch (error) {
-    await mysqlConnection.rollback();
     console.error('Error in createSalesDisposition:', error);
     res.status(500).json({ 
       error: 'Internal server error',
       message: 'Failed to create sales disposition'
     });
-  } finally {
-    await mysqlConnection.end();
   }
 });
 
