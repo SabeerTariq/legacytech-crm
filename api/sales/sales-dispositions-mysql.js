@@ -111,7 +111,7 @@ router.get('/', async (req, res) => {
 
       // Add sales_disposition_ids filter
       if (sales_disposition_ids) {
-        const ids = sales_disposition_ids.split(',').map(id => id.trim());
+        const ids = sales_disposition_ids.split(',').map(id => id.trim()).filter(id => id);
         if (ids.length > 0) {
           const placeholders = ids.map(() => '?').join(',');
           baseQuery += ` AND id IN (${placeholders})`;
@@ -151,7 +151,7 @@ router.get('/', async (req, res) => {
       }
 
       if (sales_disposition_ids) {
-        const ids = sales_disposition_ids.split(',').map(id => id.trim());
+        const ids = sales_disposition_ids.split(',').map(id => id.trim()).filter(id => id);
         if (ids.length > 0) {
           const placeholders = ids.map(() => '?').join(',');
           countQuery += ` AND id IN (${placeholders})`;
@@ -159,7 +159,7 @@ router.get('/', async (req, res) => {
         }
       }
 
-      const [countResult] = await mysqlConnection.execute(countQuery, countParams);
+      const countResult = await DatabaseService.query(countQuery, countParams);
       const totalCount = countResult[0].total;
 
       res.status(200).json({
