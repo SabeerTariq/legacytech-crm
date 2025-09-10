@@ -19,6 +19,11 @@ router.get('/', async (req, res) => {
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
     
+    // Validate sort_by to prevent SQL injection
+    const allowedSortColumns = ['created_at', 'updated_at', 'sale_date', 'customer_name', 'gross_value'];
+    const validSortBy = allowedSortColumns.includes(sort_by) ? sort_by : 'created_at';
+    const validSortOrder = sort_order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+    
     // Build the base query
     let baseQuery = `
       SELECT 
@@ -105,8 +110,8 @@ router.get('/', async (req, res) => {
       }
     }
 
-    // Add sorting and pagination
-    baseQuery += ` ORDER BY ${sort_by} ${sort_order} LIMIT ? OFFSET ?`;
+    // Add sorting and pagination - FIXED: Use validated values
+    baseQuery += ` ORDER BY ${validSortBy} ${validSortOrder} LIMIT ? OFFSET ?`;
     queryParams.push(parseInt(limit), offset);
 
     console.log('Sales dispositions query:', baseQuery);
